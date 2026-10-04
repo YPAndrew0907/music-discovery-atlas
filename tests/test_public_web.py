@@ -34,7 +34,7 @@ class PublicWebTests(unittest.TestCase):
         self.assertNotIn('DS4300', response.text)
         for path in ['/search-studio/src/app.mjs', '/search-studio/style.css',
                      '/listen-lab/src/encoder.mjs', '/listen-lab/runtime/ort.wasm.min.mjs',
-                     '/notices/track-attribution.html']:
+                     '/notices/track-attribution.html', '/notices/search-privacy.html']:
             result = self.client.get(path)
             self.assertEqual(result.status_code, 200, path)
             self.assertEqual(result.headers['x-content-type-options'], 'nosniff')

@@ -296,3 +296,5 @@
 __pycache__/
 .env*
 .git/
+!/tests/web_public_app_handlers.test.mjs
+!/web/notices/search-privacy.html

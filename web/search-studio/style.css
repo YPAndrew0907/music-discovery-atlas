@@ -40,3 +40,6 @@ body[data-direction=field]{--paper:#111b25;--ink:#ecf0f2;--muted:#a2b2bb;--rule:
 body[data-direction=field] .result .preview-unavailable{grid-column:1/-1;grid-row:auto;width:auto;margin-top:4px}
 #audio-availability{line-height:1.45;max-width:42em;margin:8px 0 14px}
 #shelf .preview-unavailable,#node-inspector .preview-unavailable{font-size:11px;line-height:1.35}
+
+/* Query transmission is disclosed beside the deliberate submit control. */
+.search-privacy{font-size:12px;line-height:1.5;color:var(--muted);margin:7px 0 0;max-width:64em}.search-privacy a{white-space:nowrap;margin-left:4px}

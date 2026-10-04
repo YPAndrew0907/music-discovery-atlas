@@ -453,8 +453,8 @@
     },
     {
       "path": "web-manifest.json",
-      "bytes": 8242,
-      "sha256": "bcd0f751061f7e7cac14be515e8e805d7423b8d7574b7dfec60917938c2e8abe"
+      "bytes": 8404,
+      "sha256": "f1d2912b7c8a0df87dbfcb46758e652dcd23d32052f931bdf96c580ebdcb6bf1"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -587,6 +587,11 @@
       "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc"
     },
     {
+      "path": "web/notices/search-privacy.html",
+      "bytes": 1729,
+      "sha256": "ffaffb5b6596b6404827ced7a282daeecd482ccd04a2f68be78ee8b2f93be8cb"
+    },
+    {
       "path": "web/notices/track-attribution.html",
       "bytes": 87026,
       "sha256": "7397eb566e74c744e20ffc49cf3d0e3815d5bc52465794ccf373d92266177c64"
@@ -633,13 +638,13 @@
     },
     {
       "path": "web/search-studio/index.html",
-      "bytes": 8928,
-      "sha256": "1eaf158fa7a4a418d3d9ca7e79651b1ff4211e6192af3289d7a8a8fd935a2ca8"
+      "bytes": 9348,
+      "sha256": "ac1f724f0b8e2451e29540ac0093faecc4afbd51245fdf37921e0b0221bda181"
     },
     {
       "path": "web/search-studio/src/app.mjs",
-      "bytes": 28116,
-      "sha256": "ac88b13941c8721ffc8724bcd2759c211f2af4c817f4c561020f386dcd322ed8"
+      "bytes": 31194,
+      "sha256": "e8b192508f03ae0cedaf5fdb1da9054218a981a8206c56a434af93140c0e1138"
     },
     {
       "path": "web/search-studio/src/audio-delivery.mjs",
@@ -688,8 +693,8 @@
     },
     {
       "path": "web/search-studio/style.css",
-      "bytes": 20959,
-      "sha256": "f76dd843bb0ddad12761390bcca12eb936ca41e6c4a9d3723fdd599ac0434654"
+      "bytes": 21186,
+      "sha256": "4e21cef124a31755a68d65d65de2134325de61ddcbe16aa68e16fe8913ee625a"
     }
   ]
 }

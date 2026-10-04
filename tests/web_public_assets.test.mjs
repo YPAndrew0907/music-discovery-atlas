@@ -58,7 +58,7 @@ test('public HTML exposes no audio source; result, inspector and shelf buttons s
   assert.equal([...app.matchAll(/\$\{playButton\(row\)\}/g)].length,2);
   assert.deepEqual([...app.matchAll(/audio\.src\s*=\s*([^;]+);/g)].map(m=>m[1]),['approved.url']);
   assert.match(app,/async function play\(row\)\{const approved=preview\(row\);if\(!approved.available\)/);
-  assert.match(app,/engineSelection='recorded'/);assert.match(app,/loadDeploymentConfig\(\{pageOrigin:location.origin\}\)/);
+  assert.match(app,/engineSelection='server'/);assert.match(app,/loadDeploymentConfig\(\{pageOrigin:location.origin\}\)/);
   assert.match(app,/examples.examples.map/);
   assert.doesNotMatch(html+app,/DS4300|Original course|listen-lab\/compare|listen-lab\/rights/);
 });
@@ -89,4 +89,15 @@ test('optional browser encoder never creates a worker until opt-in and unload re
   const second=encoder.prepare();const active=workers[1];old.onmessage({data:{type:'ready',...oldMessage}});assert.equal(encoder.state,'loading');
   active.onmessage({data:{...active.sent,type:'ready'}});await second;assert.equal(encoder.state,'ready');
   encoder.cancel();assert.equal(active.terminated,true);assert.equal(encoder.state,'unloaded');
+});
+
+test('every served asset has an explicit Docker and Git export allowance',async()=>{
+  const web=JSON.parse(await readFile(new URL('../web-manifest.json',import.meta.url)));
+  const docker=new Set((await readFile(new URL('../.dockerignore',import.meta.url),'utf8')).split(/\r?\n/));
+  const git=new Set((await readFile(new URL('../.gitignore',import.meta.url),'utf8')).split(/\r?\n/));
+  for(const file of web.files){
+    assert.ok(docker.has('!web/'+file.path),'Missing Docker build-context allowance: '+file.path);
+    assert.ok(git.has('!/web/'+file.path),'Missing Git export allowance: '+file.path);
+  }
+  assert.ok(git.has('!/tests/web_public_app_handlers.test.mjs'));
 });

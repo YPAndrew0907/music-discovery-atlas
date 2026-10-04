@@ -24,7 +24,9 @@ export function sameOriginApi(endpoint, pageOrigin) {
 }
 
 export class ServerSearch {
-  constructor({endpoint = null, pageOrigin = globalThis.location?.origin, expected = null, fetcher = fetch} = {}) {
+  // Window.fetch rejects a ServerSearch receiver. Bind only the native default;
+  // callers' injected fetchers retain their existing behavior.
+  constructor({endpoint = null, pageOrigin = globalThis.location?.origin, expected = null, fetcher = globalThis.fetch.bind(globalThis)} = {}) {
     this.endpoint = endpoint; this.pageOrigin = pageOrigin; this.expected = expected; this.fetcher = fetcher;
     this.generation = 0; this.abort = null; this.current = null; this.manifest = null;
   }

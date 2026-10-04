@@ -9,6 +9,32 @@ const identity={...expected,requestId:'r',generation:1,engineId:'e',deploymentGe
 const response={...identity,results:[{id:'fma:1',rank:1,cosineSimilarity:.5}]};
 const client=(fetcher,overrides={})=>new ServerSearch({endpoint:'/v1/',pageOrigin:origin,expected,fetcher,...overrides});
 
+test('native default fetch keeps its global receiver for connect, search and cancellation',async()=>{
+  const original=globalThis.fetch,calls=[];let resolveSearch;
+  // Node's built-in fetch tolerates the wrong receiver; Window.fetch does not.
+  globalThis.fetch=function(url,options){
+    assert.equal(this,globalThis,'Browser fetch would throw Illegal invocation');
+    calls.push(url.pathname);
+    if(url.pathname==='/v1/manifest')return Promise.resolve({ok:true,json:async()=>manifest});
+    if(url.pathname==='/v1/cancel')return Promise.resolve({ok:true});
+    const body=JSON.parse(options.body);
+    return new Promise(resolve=>{resolveSearch=()=>resolve({ok:true,json:async()=>({...manifest,...body,results:[]})});});
+  };
+  try {
+    const c=new ServerSearch({endpoint:'/v1/',pageOrigin:origin,expected});
+    await c.connect();
+    const result=c.search('A public instrumental example',ids);c.cancel();resolveSearch();
+    await assert.rejects(result,{name:'AbortError'});
+    assert.deepEqual(calls,['/v1/manifest','/v1/search','/v1/cancel']);
+  } finally {globalThis.fetch=original;}
+});
+
+test('explicitly injected fetcher is not replaced or rebound',async()=>{
+  let observed;
+  const injected=function(){observed=this;return Promise.resolve({ok:true,json:async()=>manifest});};
+  const c=client(injected);assert.equal(c.fetcher,injected);await c.connect();assert.equal(observed,c);
+});
+
 test('response validates query generation, catalog, graph, encoder and deployment identities',()=>{
   assert.equal(validateResponse(response,identity),response);
   for(const field of ['requestId','generation','catalogId','graphId','indexSha256','vectorsSha256','catalogSha256','engineId','deploymentGeneration']) {

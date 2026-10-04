@@ -194,8 +194,8 @@
     },
     {
       "path": "search-studio/src/contracts.mjs",
-      "bytes": 4890,
-      "sha256": "6d183b0f0974ecf15f0b14abd9d04f315d305418bba923326f4abf3cad9b87b1"
+      "bytes": 5063,
+      "sha256": "31988d78c679bc505abf79ea558d1d9cfb887ff087619fb829bed63684997ea7"
     },
     {
       "path": "search-studio/src/graph.mjs",

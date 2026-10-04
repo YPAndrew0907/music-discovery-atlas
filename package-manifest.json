@@ -1,0 +1,695 @@
+{
+  "schemaVersion": 1,
+  "kind": "music-q8-server-build-context",
+  "nativeRuntime": {
+    "package": "onnxruntime",
+    "version": "1.23.2",
+    "provider": "CPUExecutionProvider",
+    "intraOpThreads": 1,
+    "interOpThreads": 1,
+    "graphOptimizationLevel": "all",
+    "executionMode": "sequential",
+    "transformers": "4.57.1",
+    "python": "3.12.14"
+  },
+  "queryProfileId": "experimental-native-q8:ea6dd665180b9b3f2a2999941fe7cff736bbefafa597d26312fd520cc0e5ea31",
+  "graphId": "experimental-clap-audio-graph:1a5628114c82a6ba01f891e9e2a1354251d5b8b6333ae13b452b108d07a818b7",
+  "catalogId": "fma108:d440beae31b28758956db0a39e221e9842852d6a088c1cf6ab0e50cd8f967320",
+  "files": [
+    {
+      "path": "audio-delivery.json",
+      "bytes": 323,
+      "sha256": "4d6470234f3ea373be942b34a8f32c1bd495e9c46f8d5fc32ed00ddb9d2f372a"
+    },
+    {
+      "path": "model/config.json",
+      "bytes": 699,
+      "sha256": "39c6d90fe29cf2cce650dd5c92c38a1e35b130d9ce0bb98585222ad687ad979b"
+    },
+    {
+      "path": "model/merges.txt",
+      "bytes": 456318,
+      "sha256": "1ce1664773c50f3e0cc8842619a93edc4624525b728b188a9e0be33b7726adc5"
+    },
+    {
+      "path": "model/model-space-q8.json",
+      "bytes": 2208,
+      "sha256": "af765397efb6230ae8bf88d3b863a3773a2f453a0d3cec52dd2645cd6786ed0c"
+    },
+    {
+      "path": "model/preprocessor_config.json",
+      "bytes": 541,
+      "sha256": "9739f58296aa6f9ac18008fd0150fb2649bc554985fbde86d0a4041c882ac753"
+    },
+    {
+      "path": "model/special_tokens_map.json",
+      "bytes": 280,
+      "sha256": "06e405a36dfe4b9604f484f6a1e619af1a7f7d09e34a8555eb0b77b66318067f"
+    },
+    {
+      "path": "model/text_model_quantized.onnx",
+      "bytes": 126603263,
+      "sha256": "1a3df8b197e249816e08415fd040434c44762b2eea7eb7bf8a48a0f0bf3c14e5"
+    },
+    {
+      "path": "model/tokenizer.json",
+      "bytes": 2108774,
+      "sha256": "dc239041d98de27ffc3975473a1a23e3db4c937b23c138c38bbc66588bd247e5"
+    },
+    {
+      "path": "model/tokenizer_config.json",
+      "bytes": 1392,
+      "sha256": "2c964a338683aec3695ea37687271e75b40905233f5d2a5bbb9be8cb40c4d0a0"
+    },
+    {
+      "path": "model/vocab.json",
+      "bytes": 798293,
+      "sha256": "ed19656ea1707df69134c4af35c8ceda2cc9860bf2c3495026153a133670ab5e"
+    },
+    {
+      "path": "music-search-studio/data/catalog.json",
+      "bytes": 141978,
+      "sha256": "e7cfd8347b77929c5c593afdaec9e390509acaed725cacadc448fc6bcae1c013"
+    },
+    {
+      "path": "music-search-studio/data/ids.json",
+      "bytes": 1589,
+      "sha256": "548e6a7dbda957f2c53c201dd462a313b7fcde325373e0a435f5029e2d9a4453"
+    },
+    {
+      "path": "music-search-studio/data/index.json",
+      "bytes": 3078,
+      "sha256": "d81d64a4ab0d35aa827eb0cb3c516eae88c595d5f76078acb4088d63218192d6"
+    },
+    {
+      "path": "music-search-studio/data/manifest.json",
+      "bytes": 7586,
+      "sha256": "8b2e7b0d179e32420a274df85cb2bd1eafbd39740fed7eb66d6200cee0743c1d"
+    },
+    {
+      "path": "music-search-studio/data/vectors.f32",
+      "bytes": 221184,
+      "sha256": "ec8e5c9996f229028cf9859dbfb11306a604af42be1e6465f61d9aa50b4d6fd8"
+    },
+    {
+      "path": "notices/DEPENDENCIES.json",
+      "bytes": 68250,
+      "sha256": "fdf18ea6651ae92ab661bba7f417ef0e13c2d81aeb5c4991337f2ad89a573ad2"
+    },
+    {
+      "path": "notices/dependencies/flatbuffers-25.12.19-LICENSE.pinned.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "notices/dependencies/tokenizers-0.22.2-LICENSE.pinned.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/installed-dependencies/annotated-doc/annotated_doc-0.0.5.dist-info/licenses/LICENSE",
+      "bytes": 1086,
+      "sha256": "fff170779a6acbf65abdb405c087f1cee1786691e4a96a4034517e4a504a0cdf"
+    },
+    {
+      "path": "notices/installed-dependencies/annotated-types/annotated_types-0.8.0.dist-info/licenses/LICENSE",
+      "bytes": 1083,
+      "sha256": "fe1049884b1a0d9342901e88e07f32925d24b3121d9972b6a6805fb9824b095d"
+    },
+    {
+      "path": "notices/installed-dependencies/anyio/anyio-4.14.2.dist-info/licenses/LICENSE",
+      "bytes": 1081,
+      "sha256": "5361ac9dc58f2ef5fd2e9b09c68297c17f04950909bbc8023bdb82eacf22c2b0"
+    },
+    {
+      "path": "notices/installed-dependencies/certifi/certifi-2026.7.22.dist-info/licenses/LICENSE",
+      "bytes": 989,
+      "sha256": "e93716da6b9c0d5a4a1df60fe695b370f0695603d21f6f83f053e42cfc10caf7"
+    },
+    {
+      "path": "notices/installed-dependencies/charset-normalizer/charset_normalizer-3.5.1.dist-info/licenses/LICENSE",
+      "bytes": 1071,
+      "sha256": "6d0d41bfe170ac6c7dc248c9a63e254d0fb45a60d50a8257d0af92c6e249b887"
+    },
+    {
+      "path": "notices/installed-dependencies/click/click-8.4.2.dist-info/licenses/LICENSE.txt",
+      "bytes": 1475,
+      "sha256": "9a8ad106a394e853bfe21f42f4e72d592819a22805d991b5f3275029292b658d"
+    },
+    {
+      "path": "notices/installed-dependencies/coloredlogs/coloredlogs-15.0.1.dist-info/LICENSE.txt",
+      "bytes": 1056,
+      "sha256": "0bef4ffb1855b65570304f2018c6d44e4bab97bd5df8716ecd7800014d717267"
+    },
+    {
+      "path": "notices/installed-dependencies/fastapi/fastapi-0.141.1.dist-info/licenses/LICENSE",
+      "bytes": 1086,
+      "sha256": "4ec89ffc81485b97fec584b2d4a961032eeffe834453894fd9c1274906cc744e"
+    },
+    {
+      "path": "notices/installed-dependencies/filelock/filelock-4.0.9.dist-info/licenses/LICENSE",
+      "bytes": 1088,
+      "sha256": "608c89d5060ae9921adccf3236695bc654a9946e12323ef6c021dfa04e294d48"
+    },
+    {
+      "path": "notices/installed-dependencies/fsspec/fsspec-2026.9.0.dist-info/licenses/LICENSE",
+      "bytes": 1513,
+      "sha256": "2dc35496ce53a7307915c008a844aad53e772b49b34cdd00445067691407ec94"
+    },
+    {
+      "path": "notices/installed-dependencies/h11/h11-0.16.0.dist-info/licenses/LICENSE.txt",
+      "bytes": 1124,
+      "sha256": "37db5bb85926db28a427a25867f10b1232003aea1be69ccb851138adb8e6f361"
+    },
+    {
+      "path": "notices/installed-dependencies/hf-xet/hf_xet-1.6.0.dist-info/licenses/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/installed-dependencies/huggingface-hub/huggingface_hub-0.36.2.dist-info/licenses/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/installed-dependencies/humanfriendly/humanfriendly-10.0.dist-info/LICENSE.txt",
+      "bytes": 1056,
+      "sha256": "4ac48f4117809f2734066150450f120b3bb110ac1d3b32170795e0560dbbc1f5"
+    },
+    {
+      "path": "notices/installed-dependencies/idna/idna-3.18.dist-info/licenses/LICENSE.md",
+      "bytes": 1541,
+      "sha256": "1a9a4f0e3d479a27240ddd59a9137a66ab4a0f9dfdc8ca6188cc0bfd85187f04"
+    },
+    {
+      "path": "notices/installed-dependencies/mpmath/mpmath-1.3.0.dist-info/LICENSE",
+      "bytes": 1537,
+      "sha256": "c26cae81da4508e5e249985777a33821f183223ebb74d7f8cfbf90fe7eef2fb7"
+    },
+    {
+      "path": "notices/installed-dependencies/numpy/numpy-2.3.5.dist-info/LICENSE.txt",
+      "bytes": 47768,
+      "sha256": "2046a3130e50b11c01659b3a0d963e6ae0b7436ff8e89cbcfd9e87bc6112d595"
+    },
+    {
+      "path": "notices/installed-dependencies/numpy/numpy/_core/include/numpy/random/LICENSE.txt",
+      "bytes": 1018,
+      "sha256": "fbc539f47d0cf83bc61378080fb873d5c14630126cacbfe754035c3926daa5ec"
+    },
+    {
+      "path": "notices/installed-dependencies/numpy/numpy/ma/LICENSE",
+      "bytes": 1593,
+      "sha256": "05f3b88351988ecfad10abe92c0c50e5875c6452d5009a0084cc291551ffcca6"
+    },
+    {
+      "path": "notices/installed-dependencies/numpy/numpy/random/LICENSE.md",
+      "bytes": 3511,
+      "sha256": "103166b62b80443afb9eb3488e052ea06be0cff566b908f199e561fde49af19f"
+    },
+    {
+      "path": "notices/installed-dependencies/onnxruntime/onnxruntime/LICENSE",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "path": "notices/installed-dependencies/onnxruntime/onnxruntime/ThirdPartyNotices.txt",
+      "bytes": 326866,
+      "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc"
+    },
+    {
+      "path": "notices/installed-dependencies/packaging/packaging-26.3.dist-info/licenses/LICENSE",
+      "bytes": 197,
+      "sha256": "cad1ef5bd340d73e074ba614d26f7deaca5c7940c3d8c34852e65c4909686c48"
+    },
+    {
+      "path": "notices/installed-dependencies/packaging/packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+      "bytes": 10174,
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "path": "notices/installed-dependencies/packaging/packaging-26.3.dist-info/licenses/LICENSE.BSD",
+      "bytes": 1344,
+      "sha256": "b70e7e9b742f1cc6f948b34c16aa39ffece94196364bc88ff0d2180f0028fac5"
+    },
+    {
+      "path": "notices/installed-dependencies/protobuf/protobuf-7.36.2.dist-info/LICENSE",
+      "bytes": 1732,
+      "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d"
+    },
+    {
+      "path": "notices/installed-dependencies/pydantic-core/pydantic_core-2.46.4.dist-info/licenses/LICENSE",
+      "bytes": 1080,
+      "sha256": "2afdd30d54b4d62b6f488a6bcc1546e84ec5061f13f4209c03d012348783795a"
+    },
+    {
+      "path": "notices/installed-dependencies/pydantic/pydantic-2.13.4.dist-info/licenses/LICENSE",
+      "bytes": 1129,
+      "sha256": "a9e186f3ca16b5eef84318e7a701721351a00cb7b8ae3a4394b67b49e3529ef3"
+    },
+    {
+      "path": "notices/installed-dependencies/pyyaml/pyyaml-6.0.3.dist-info/licenses/LICENSE",
+      "bytes": 1101,
+      "sha256": "8d3928f9dc4490fd635707cb88eb26bd764102a7282954307d3e5167a577e8a4"
+    },
+    {
+      "path": "notices/installed-dependencies/regex/regex-2026.9.29.dist-info/licenses/LICENSE.txt",
+      "bytes": 11584,
+      "sha256": "bff55ef4cdcc8c14ce259f8e8ab60e264418440d6335f4dc138273fbd506144d"
+    },
+    {
+      "path": "notices/installed-dependencies/requests/requests-2.34.2.dist-info/licenses/LICENSE",
+      "bytes": 10142,
+      "sha256": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b"
+    },
+    {
+      "path": "notices/installed-dependencies/requests/requests-2.34.2.dist-info/licenses/NOTICE",
+      "bytes": 38,
+      "sha256": "f5110972dedad2b4e9d314518daf3b7d72d6e02e499acd802181de6f74571dcc"
+    },
+    {
+      "path": "notices/installed-dependencies/safetensors/safetensors-0.8.0.dist-info/licenses/LICENSE",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/installed-dependencies/starlette/starlette-1.6.0.dist-info/licenses/LICENSE.md",
+      "bytes": 1518,
+      "sha256": "dcb95677a02240243187e964f941847d19b17821cf99e5afae684fab328c19bf"
+    },
+    {
+      "path": "notices/installed-dependencies/sympy/sympy-1.14.0.dist-info/licenses/LICENSE",
+      "bytes": 7885,
+      "sha256": "07a5e9819f727b4986ad2829c7a29a6320d42575f720eb24d71b7fef573a0286"
+    },
+    {
+      "path": "notices/installed-dependencies/sympy/sympy/parsing/latex/LICENSE.txt",
+      "bytes": 1075,
+      "sha256": "007bc30a58fa40a996e772047120de4eaf31f5110e4f9c3b5f93fcdfbe2eaca1"
+    },
+    {
+      "path": "notices/installed-dependencies/tqdm/tqdm-4.70.1.dist-info/licenses/LICENCE",
+      "bytes": 1985,
+      "sha256": "fcff87c3a47ce8028a8512aa182d4fcf0ad1c90544ee75cf9b343684cac194de"
+    },
+    {
+      "path": "notices/installed-dependencies/transformers/transformers-4.57.1.dist-info/licenses/LICENSE",
+      "bytes": 11418,
+      "sha256": "77fd4710def9ec3c0f6225800e0235f15a425abd4a8b03559127fcd782612049"
+    },
+    {
+      "path": "notices/installed-dependencies/typing-extensions/typing_extensions-4.16.0.dist-info/licenses/LICENSE",
+      "bytes": 13936,
+      "sha256": "3b2f81fe21d181c499c59a256c8e1968455d6689d269aa85373bfb6af41da3bf"
+    },
+    {
+      "path": "notices/installed-dependencies/typing-inspection/typing_inspection-0.4.3.dist-info/licenses/LICENSE",
+      "bytes": 1090,
+      "sha256": "804b59b25f2c31bd278f9202a19ae49a3945aa2664387e2d0a128c7cacc61ec3"
+    },
+    {
+      "path": "notices/installed-dependencies/urllib3/urllib3-2.8.0.dist-info/licenses/LICENSE.txt",
+      "bytes": 1093,
+      "sha256": "130e3a64d5fdd5d096a752694634a7d9df284469de86e5732100268041e3d686"
+    },
+    {
+      "path": "notices/installed-dependencies/uvicorn/uvicorn-0.52.1.dist-info/licenses/LICENSE.md",
+      "bytes": 1526,
+      "sha256": "efe1acf3e62fb99c288b0ec73e5a773b7268ef4320fe757ea994214e4b63c371"
+    },
+    {
+      "path": "notices/pinned-upstream-dependencies/flatbuffers-25.12.19-LICENSE.pinned.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "notices/pinned-upstream-dependencies/receipt.json",
+      "bytes": 3089,
+      "sha256": "63adf27e2254cb879250e784a67dc4af0e3ef871210cd54fdc303fc140d497dc"
+    },
+    {
+      "path": "notices/pinned-upstream-dependencies/tokenizers-0.22.2-LICENSE.pinned.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/track-attribution.html",
+      "bytes": 87026,
+      "sha256": "7397eb566e74c744e20ffc49cf3d0e3815d5bc52465794ccf373d92266177c64"
+    },
+    {
+      "path": "notices/upstream/conditional_source_ancestry/LAION-CLAP-code-CC0.txt",
+      "bytes": 7048,
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    },
+    {
+      "path": "notices/upstream/conditional_source_ancestry/OpenAI-CLIP-MIT.txt",
+      "bytes": 1064,
+      "sha256": "987e63b32f6c89ff5160e429458a872ff048e6860b590a3912e938f9da8f14db"
+    },
+    {
+      "path": "notices/upstream/conditional_source_ancestry/OpenAI-GPT2-Modified-MIT.txt",
+      "bytes": 1403,
+      "sha256": "0dbeda4bc78823b1d67ec0ee414d8690ee4cad826bc9c147b215adc3af202436"
+    },
+    {
+      "path": "notices/upstream/conditional_source_ancestry/Optimum-converter-Apache-2.0.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/upstream/conditional_source_ancestry/Transformers-4.57.1-Apache-2.0.txt",
+      "bytes": 11418,
+      "sha256": "77fd4710def9ec3c0f6225800e0235f15a425abd4a8b03559127fcd782612049"
+    },
+    {
+      "path": "notices/upstream/conditional_source_ancestry/Transformers-js-converter-Apache-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "notices/upstream/model_tokenizer/Apache-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "notices/upstream/model_tokenizer/LAION_MODEL_CARD.md",
+      "bytes": 4454,
+      "sha256": "3542c5c4ce25e7868f2c9c97c16229d876bd8d02049e1e0f4d7675da0e5b5db6"
+    },
+    {
+      "path": "notices/upstream/model_tokenizer/RoBERTa-fairseq-MIT.txt",
+      "bytes": 1086,
+      "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+    },
+    {
+      "path": "notices/upstream/model_tokenizer/XENOVA_MODEL_CARD.md",
+      "bytes": 2963,
+      "sha256": "70e3f41aa233307522430cc73f19d4e0e982a7fd7c7799aaf7c1f0dface8388b"
+    },
+    {
+      "path": "notices/upstream/runtime/ONNX-Runtime-1.23.2-MIT.txt",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "path": "notices/upstream/runtime/ONNX-Runtime-1.23.2-ThirdPartyNotices-UPSTREAM-SUPERSET.txt",
+      "bytes": 326866,
+      "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc"
+    },
+    {
+      "path": "requirements.lock",
+      "bytes": 728,
+      "sha256": "1530fe89113d0828721545f08793c2d649c771308e1205126444940d0053867f"
+    },
+    {
+      "path": "runtime-assets.json",
+      "bytes": 657,
+      "sha256": "3536dad41474af3761f429bf9d97d80d033f948bd3942db6c7009196a4772b49"
+    },
+    {
+      "path": "scripts/fetch_model.py",
+      "bytes": 2090,
+      "sha256": "1be5bdc5ec601fabab9e1e7ea5ac6aba4df2fbfe09b4033a965605e04c02b13f"
+    },
+    {
+      "path": "scripts/install_audio_release.py",
+      "bytes": 8153,
+      "sha256": "7b372f3a5df6a4214be0a4aa14132a004d4c24c25a514b1569ddc956dff74bb1"
+    },
+    {
+      "path": "server/api.py",
+      "bytes": 15939,
+      "sha256": "02b98c04d60197092bf67806bf6c880d10ee363c14c241df9e10e2c25556c067"
+    },
+    {
+      "path": "server/encoder.py",
+      "bytes": 3716,
+      "sha256": "234584ed0cfc521404c299ead8528cae47a8e5d4f448e96dc56241640a63a531"
+    },
+    {
+      "path": "server/hnsw_trace.py",
+      "bytes": 12699,
+      "sha256": "0edbe3d199a7d1cad6868789a9b75d531515dcec1816557c0513f2c674b687ed"
+    },
+    {
+      "path": "server/hosting.py",
+      "bytes": 5639,
+      "sha256": "af6b4f4f33c8d0e93c8e82ffff3239cea13083fd5a7ce49ece294f44350cdc12"
+    },
+    {
+      "path": "server/loopback_service.py",
+      "bytes": 5492,
+      "sha256": "21f5e770a34a4122cca9b193146a246fc7d5b36b80c6f7da9a315a190f9e245d"
+    },
+    {
+      "path": "server/public_boundary.py",
+      "bytes": 12987,
+      "sha256": "b1bd2aa1c9f6c74c8adf854da2477d5d542c740855cb58290047438b897fdbf7"
+    },
+    {
+      "path": "server/web_gateway.py",
+      "bytes": 10604,
+      "sha256": "4852f60fb94837a769f80ef126daeb27df41b0f03b67b63560b2744954b734c4"
+    },
+    {
+      "path": "web-manifest.json",
+      "bytes": 8242,
+      "sha256": "cb2b749f9269c73bdc519bbd665ce4bb6ce16a634ce1cb86b40bdea3448176c8"
+    },
+    {
+      "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
+      "bytes": 20321,
+      "sha256": "90a557d15c02bac4504d95b67f431d8594635ed2a0a62a7f2cd83d090ff91d3e"
+    },
+    {
+      "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.wasm",
+      "bytes": 11905541,
+      "sha256": "45eaee27761ad883742a8d4b8fce1538d60ce43b51adf1726fafccc59b8c1a15"
+    },
+    {
+      "path": "web/listen-lab/runtime/ort.wasm.min.mjs",
+      "bytes": 49856,
+      "sha256": "69751720f611e37d1ce2fa3c6ebaa80f949014752636c5f8887a63d40feadcc7"
+    },
+    {
+      "path": "web/listen-lab/src/assets.mjs",
+      "bytes": 1292,
+      "sha256": "d7219df75ee867800bd84a05bb71b4a6c5c1ddfabe1d01b49d98ae36bb754a87"
+    },
+    {
+      "path": "web/listen-lab/src/controller.mjs",
+      "bytes": 2352,
+      "sha256": "5a8d2e62411e2c19f7a707a3bb94590ff8748d1017bb02d55c2141c9ee293ad4"
+    },
+    {
+      "path": "web/listen-lab/src/encoder.mjs",
+      "bytes": 2703,
+      "sha256": "caec99e5e18a557c3f4b16f2b30305f9f3fac2d7f3b689398eb1c5fc0c64251d"
+    },
+    {
+      "path": "web/listen-lab/src/pins.mjs",
+      "bytes": 785,
+      "sha256": "31714e5f17d3adafc3d314bfd4f33a0c1c3562c0c3fbbb242a266b226385d956"
+    },
+    {
+      "path": "web/listen-lab/src/release.mjs",
+      "bytes": 4806,
+      "sha256": "1343f13477cdf4adabc909a7915ada2f1480e2bb3c36942d5a758c8db38cccba"
+    },
+    {
+      "path": "web/listen-lab/src/retrieval.mjs",
+      "bytes": 2371,
+      "sha256": "b5119df08fb4f2bcf7fc6be9b4905d2ee8f3aad00eb7ecf60216096951d0791e"
+    },
+    {
+      "path": "web/listen-lab/src/tokenizer.mjs",
+      "bytes": 23866,
+      "sha256": "39bf14381ff3c42b2bd9d9050045318f9de0fd6d73b8973cdb4598d07f8c8fb5"
+    },
+    {
+      "path": "web/listen-lab/src/worker.mjs",
+      "bytes": 1962,
+      "sha256": "577a78b5a04c20f073831b7c1f4bfd0a6fb227b51d67dcdbd221369cd6cbfab8"
+    },
+    {
+      "path": "web/notices/conditional_source_ancestry/LAION-CLAP-code-CC0.txt",
+      "bytes": 7048,
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    },
+    {
+      "path": "web/notices/conditional_source_ancestry/OpenAI-CLIP-MIT.txt",
+      "bytes": 1064,
+      "sha256": "987e63b32f6c89ff5160e429458a872ff048e6860b590a3912e938f9da8f14db"
+    },
+    {
+      "path": "web/notices/conditional_source_ancestry/OpenAI-GPT2-Modified-MIT.txt",
+      "bytes": 1403,
+      "sha256": "0dbeda4bc78823b1d67ec0ee414d8690ee4cad826bc9c147b215adc3af202436"
+    },
+    {
+      "path": "web/notices/conditional_source_ancestry/Optimum-converter-Apache-2.0.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "web/notices/conditional_source_ancestry/Transformers-4.57.1-Apache-2.0.txt",
+      "bytes": 11418,
+      "sha256": "77fd4710def9ec3c0f6225800e0235f15a425abd4a8b03559127fcd782612049"
+    },
+    {
+      "path": "web/notices/conditional_source_ancestry/Transformers-js-converter-Apache-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "web/notices/dependencies/flatbuffers-25.12.19-LICENSE.pinned.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "web/notices/dependencies/tokenizers-0.22.2-LICENSE.pinned.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "web/notices/index.html",
+      "bytes": 3007,
+      "sha256": "e3c6c8c45a008deea875ed7704db142e76c4443ac8d0965fad84136cc45f262a"
+    },
+    {
+      "path": "web/notices/model_tokenizer/Apache-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "web/notices/model_tokenizer/LAION_MODEL_CARD.md",
+      "bytes": 4454,
+      "sha256": "3542c5c4ce25e7868f2c9c97c16229d876bd8d02049e1e0f4d7675da0e5b5db6"
+    },
+    {
+      "path": "web/notices/model_tokenizer/RoBERTa-fairseq-MIT.txt",
+      "bytes": 1086,
+      "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+    },
+    {
+      "path": "web/notices/model_tokenizer/XENOVA_MODEL_CARD.md",
+      "bytes": 2963,
+      "sha256": "70e3f41aa233307522430cc73f19d4e0e982a7fd7c7799aaf7c1f0dface8388b"
+    },
+    {
+      "path": "web/notices/runtime/ONNX-Runtime-1.23.2-MIT.txt",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "path": "web/notices/runtime/ONNX-Runtime-1.23.2-ThirdPartyNotices-UPSTREAM-SUPERSET.txt",
+      "bytes": 326866,
+      "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc"
+    },
+    {
+      "path": "web/notices/track-attribution.html",
+      "bytes": 87026,
+      "sha256": "7397eb566e74c744e20ffc49cf3d0e3815d5bc52465794ccf373d92266177c64"
+    },
+    {
+      "path": "web/search-studio/data/artist-records.json",
+      "bytes": 8958,
+      "sha256": "0735cc1473115cdb51da43a5c8d83a336a6e8a251dec632b44f0ef4dbc47c9cf"
+    },
+    {
+      "path": "web/search-studio/data/catalog.json",
+      "bytes": 141978,
+      "sha256": "e7cfd8347b77929c5c593afdaec9e390509acaed725cacadc448fc6bcae1c013"
+    },
+    {
+      "path": "web/search-studio/data/examples.json",
+      "bytes": 972234,
+      "sha256": "12437479af5603bdfbaa250ca3df6b47c379931e2728cf7dde1763eba1abac15"
+    },
+    {
+      "path": "web/search-studio/data/ids.json",
+      "bytes": 1589,
+      "sha256": "548e6a7dbda957f2c53c201dd462a313b7fcde325373e0a435f5029e2d9a4453"
+    },
+    {
+      "path": "web/search-studio/data/index.json",
+      "bytes": 3078,
+      "sha256": "d81d64a4ab0d35aa827eb0cb3c516eae88c595d5f76078acb4088d63218192d6"
+    },
+    {
+      "path": "web/search-studio/data/layout.json",
+      "bytes": 10708,
+      "sha256": "6a5e46637040fb6893dc5b9d15ea3c9413a344bede3aac77a9f82c87ee623429"
+    },
+    {
+      "path": "web/search-studio/data/manifest.json",
+      "bytes": 14879,
+      "sha256": "cc51fc93d48d82c99f7fcc257001ce260d398f00a0cf9e6ad55172b4649739be"
+    },
+    {
+      "path": "web/search-studio/data/vectors.f32",
+      "bytes": 221184,
+      "sha256": "ec8e5c9996f229028cf9859dbfb11306a604af42be1e6465f61d9aa50b4d6fd8"
+    },
+    {
+      "path": "web/search-studio/index.html",
+      "bytes": 8928,
+      "sha256": "1eaf158fa7a4a418d3d9ca7e79651b1ff4211e6192af3289d7a8a8fd935a2ca8"
+    },
+    {
+      "path": "web/search-studio/src/app.mjs",
+      "bytes": 28116,
+      "sha256": "ac88b13941c8721ffc8724bcd2759c211f2af4c817f4c561020f386dcd322ed8"
+    },
+    {
+      "path": "web/search-studio/src/audio-delivery.mjs",
+      "bytes": 2834,
+      "sha256": "e08a4b4150ec3a81a2a862798f7294d2502f5941662df231c46ff968ecad4fe5"
+    },
+    {
+      "path": "web/search-studio/src/contracts.mjs",
+      "bytes": 4890,
+      "sha256": "6d183b0f0974ecf15f0b14abd9d04f315d305418bba923326f4abf3cad9b87b1"
+    },
+    {
+      "path": "web/search-studio/src/graph.mjs",
+      "bytes": 14186,
+      "sha256": "06fc5623d774bd35f2607bc38d40e16743f8062b25d50410b2c8cf7b8314a598"
+    },
+    {
+      "path": "web/search-studio/src/hnsw.mjs",
+      "bytes": 10135,
+      "sha256": "da9d421f511df4dfbe5d21c4c4b748821d0b5f14b9e37a5f09c1b32c7ba0031d"
+    },
+    {
+      "path": "web/search-studio/src/query-limits.mjs",
+      "bytes": 2364,
+      "sha256": "695e140d5cf0737e532a16a2309d8a96f009b59f9048910ff308c78ec01c6345"
+    },
+    {
+      "path": "web/search-studio/src/rerank.mjs",
+      "bytes": 3721,
+      "sha256": "28d7288150b842ce816c2a073ef360147a937bb591595f82aaabbd088dcbebb4"
+    },
+    {
+      "path": "web/search-studio/src/search-motion.mjs",
+      "bytes": 2961,
+      "sha256": "15ba707a6c10666de904fcce08560f027399861d2eb6d21f353aaf2fba4a9ee2"
+    },
+    {
+      "path": "web/search-studio/src/server-config.mjs",
+      "bytes": 1449,
+      "sha256": "7a2bd25150d2a3d5b901093e0e85e3e45f6cf60dda5c9bffd83159bfe16526ee"
+    },
+    {
+      "path": "web/search-studio/src/studio-release.mjs",
+      "bytes": 199,
+      "sha256": "d7d248681386088a05a76692fb0c8a17a9d45a2bb2f222c80080737014c75879"
+    },
+    {
+      "path": "web/search-studio/style.css",
+      "bytes": 20959,
+      "sha256": "f76dd843bb0ddad12761390bcca12eb936ca41e6c4a9d3723fdd599ac0434654"
+    }
+  ]
+}

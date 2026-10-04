@@ -1,0 +1,27 @@
+{
+  "status": "passed_bounded_native_process_check",
+  "freshProcesses": 2,
+  "coldReadinessMs": [
+    1951.606669004832,
+    1730.407994997222
+  ],
+  "queryHttpMs": {
+    "n": 10,
+    "p50": 26.22168249945389,
+    "p95": 62.20848010125336
+  },
+  "sampledPeakRssBytes": 271151104,
+  "rusagePeakRssBytes": 279625728,
+  "firstRunFixtureAssertionCorrected": true,
+  "sourceUnchanged": true,
+  "modelDownloads": 0,
+  "audioTowerLoaded": false,
+  "caveats": [
+    "Shared cloud host with concurrent low-priority render; not Render hardware",
+    "Fresh process, but OS file cache was not flushed: not a truly cold filesystem/image pull",
+    "No cgroup hard limit/0.1 CPU throttle, clean image build, container peak, or hosted sleep/wake measured",
+    "Cancellation control response checked; concurrent in-flight cancellation/admission are separate prior tests",
+    "First process completed readiness and five queries but stopped at an incorrect fixture assertion; range/stale/cancel checks completed only in the corrected second process",
+    "Public queries and numerical trace identity do not establish subjective music relevance"
+  ]
+}

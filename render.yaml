@@ -1,0 +1,19 @@
+# Candidate preview recipe. Complete README build/resource gates before deployment.
+services:
+  - type: web
+    name: music-clap108-api-preview
+    runtime: docker
+    plan: free
+    autoDeployTrigger: off
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: MUSIC_SERVICE_MODE
+        value: authenticated
+      - key: MUSIC_ENABLE_ANONYMOUS_PREVIEW
+        value: "0"
+      - key: MUSIC_API_AUTH_TOKEN
+        sync: false
+      - key: MUSIC_DEPLOYMENT_GENERATION
+        sync: false

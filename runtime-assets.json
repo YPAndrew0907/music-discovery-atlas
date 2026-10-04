@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "weights": [
+    {
+      "path": "model/text_model_quantized.onnx",
+      "bytes": 126603263,
+      "sha256": "1a3df8b197e249816e08415fd040434c44762b2eea7eb7bf8a48a0f0bf3c14e5",
+      "url": "https://huggingface.co/Xenova/clap-htsat-unfused/resolve/c28f2883575e590e04d3146ff0713c2448d691ba/onnx/text_model_quantized.onnx"
+    }
+  ],
+  "nativeRuntime": {
+    "package": "onnxruntime",
+    "version": "1.23.2",
+    "provider": "CPUExecutionProvider",
+    "intraOpThreads": 1,
+    "interOpThreads": 1,
+    "graphOptimizationLevel": "all",
+    "executionMode": "sequential",
+    "transformers": "4.57.1",
+    "python": "3.12.14"
+  }
+}

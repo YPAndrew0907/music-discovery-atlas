@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "kind": "music-public-web-assets",
+  "files": [
+    {
+      "path": "listen-lab/runtime/ort-wasm-simd-threaded.mjs",
+      "bytes": 20321,
+      "sha256": "90a557d15c02bac4504d95b67f431d8594635ed2a0a62a7f2cd83d090ff91d3e"
+    },
+    {
+      "path": "listen-lab/runtime/ort-wasm-simd-threaded.wasm",
+      "bytes": 11905541,
+      "sha256": "45eaee27761ad883742a8d4b8fce1538d60ce43b51adf1726fafccc59b8c1a15"
+    },
+    {
+      "path": "listen-lab/runtime/ort.wasm.min.mjs",
+      "bytes": 49856,
+      "sha256": "69751720f611e37d1ce2fa3c6ebaa80f949014752636c5f8887a63d40feadcc7"
+    },
+    {
+      "path": "listen-lab/src/assets.mjs",
+      "bytes": 1292,
+      "sha256": "d7219df75ee867800bd84a05bb71b4a6c5c1ddfabe1d01b49d98ae36bb754a87"
+    },
+    {
+      "path": "listen-lab/src/controller.mjs",
+      "bytes": 2352,
+      "sha256": "5a8d2e62411e2c19f7a707a3bb94590ff8748d1017bb02d55c2141c9ee293ad4"
+    },
+    {
+      "path": "listen-lab/src/encoder.mjs",
+      "bytes": 2703,
+      "sha256": "caec99e5e18a557c3f4b16f2b30305f9f3fac2d7f3b689398eb1c5fc0c64251d"
+    },
+    {
+      "path": "listen-lab/src/pins.mjs",
+      "bytes": 785,
+      "sha256": "31714e5f17d3adafc3d314bfd4f33a0c1c3562c0c3fbbb242a266b226385d956"
+    },
+    {
+      "path": "listen-lab/src/release.mjs",
+      "bytes": 4806,
+      "sha256": "1343f13477cdf4adabc909a7915ada2f1480e2bb3c36942d5a758c8db38cccba"
+    },
+    {
+      "path": "listen-lab/src/retrieval.mjs",
+      "bytes": 2371,
+      "sha256": "b5119df08fb4f2bcf7fc6be9b4905d2ee8f3aad00eb7ecf60216096951d0791e"
+    },
+    {
+      "path": "listen-lab/src/tokenizer.mjs",
+      "bytes": 23866,
+      "sha256": "39bf14381ff3c42b2bd9d9050045318f9de0fd6d73b8973cdb4598d07f8c8fb5"
+    },
+    {
+      "path": "listen-lab/src/worker.mjs",
+      "bytes": 1962,
+      "sha256": "577a78b5a04c20f073831b7c1f4bfd0a6fb227b51d67dcdbd221369cd6cbfab8"
+    },
+    {
+      "path": "notices/conditional_source_ancestry/LAION-CLAP-code-CC0.txt",
+      "bytes": 7048,
+      "sha256": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499"
+    },
+    {
+      "path": "notices/conditional_source_ancestry/OpenAI-CLIP-MIT.txt",
+      "bytes": 1064,
+      "sha256": "987e63b32f6c89ff5160e429458a872ff048e6860b590a3912e938f9da8f14db"
+    },
+    {
+      "path": "notices/conditional_source_ancestry/OpenAI-GPT2-Modified-MIT.txt",
+      "bytes": 1403,
+      "sha256": "0dbeda4bc78823b1d67ec0ee414d8690ee4cad826bc9c147b215adc3af202436"
+    },
+    {
+      "path": "notices/conditional_source_ancestry/Optimum-converter-Apache-2.0.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/conditional_source_ancestry/Transformers-4.57.1-Apache-2.0.txt",
+      "bytes": 11418,
+      "sha256": "77fd4710def9ec3c0f6225800e0235f15a425abd4a8b03559127fcd782612049"
+    },
+    {
+      "path": "notices/conditional_source_ancestry/Transformers-js-converter-Apache-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "notices/dependencies/flatbuffers-25.12.19-LICENSE.pinned.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "notices/dependencies/tokenizers-0.22.2-LICENSE.pinned.txt",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "notices/index.html",
+      "bytes": 3007,
+      "sha256": "e3c6c8c45a008deea875ed7704db142e76c4443ac8d0965fad84136cc45f262a"
+    },
+    {
+      "path": "notices/model_tokenizer/Apache-2.0.txt",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "notices/model_tokenizer/LAION_MODEL_CARD.md",
+      "bytes": 4454,
+      "sha256": "3542c5c4ce25e7868f2c9c97c16229d876bd8d02049e1e0f4d7675da0e5b5db6"
+    },
+    {
+      "path": "notices/model_tokenizer/RoBERTa-fairseq-MIT.txt",
+      "bytes": 1086,
+      "sha256": "52412d7bc7ce4157ea628bbaacb8829e0a9cb3c58f57f99176126bc8cf2bfc85"
+    },
+    {
+      "path": "notices/model_tokenizer/XENOVA_MODEL_CARD.md",
+      "bytes": 2963,
+      "sha256": "70e3f41aa233307522430cc73f19d4e0e982a7fd7c7799aaf7c1f0dface8388b"
+    },
+    {
+      "path": "notices/runtime/ONNX-Runtime-1.23.2-MIT.txt",
+      "bytes": 1073,
+      "sha256": "2f07c72751aed99790b8a4869cf2311df85a860b22ded05fa22803587a48922c"
+    },
+    {
+      "path": "notices/runtime/ONNX-Runtime-1.23.2-ThirdPartyNotices-UPSTREAM-SUPERSET.txt",
+      "bytes": 326866,
+      "sha256": "e9e90971a8e75a9a8ac0c6412e29c1202d079998389915aa485f46c816c3b4cc"
+    },
+    {
+      "path": "notices/track-attribution.html",
+      "bytes": 87026,
+      "sha256": "7397eb566e74c744e20ffc49cf3d0e3815d5bc52465794ccf373d92266177c64"
+    },
+    {
+      "path": "search-studio/data/artist-records.json",
+      "bytes": 8958,
+      "sha256": "0735cc1473115cdb51da43a5c8d83a336a6e8a251dec632b44f0ef4dbc47c9cf"
+    },
+    {
+      "path": "search-studio/data/catalog.json",
+      "bytes": 141978,
+      "sha256": "e7cfd8347b77929c5c593afdaec9e390509acaed725cacadc448fc6bcae1c013"
+    },
+    {
+      "path": "search-studio/data/examples.json",
+      "bytes": 972234,
+      "sha256": "12437479af5603bdfbaa250ca3df6b47c379931e2728cf7dde1763eba1abac15"
+    },
+    {
+      "path": "search-studio/data/ids.json",
+      "bytes": 1589,
+      "sha256": "548e6a7dbda957f2c53c201dd462a313b7fcde325373e0a435f5029e2d9a4453"
+    },
+    {
+      "path": "search-studio/data/index.json",
+      "bytes": 3078,
+      "sha256": "d81d64a4ab0d35aa827eb0cb3c516eae88c595d5f76078acb4088d63218192d6"
+    },
+    {
+      "path": "search-studio/data/layout.json",
+      "bytes": 10708,
+      "sha256": "6a5e46637040fb6893dc5b9d15ea3c9413a344bede3aac77a9f82c87ee623429"
+    },
+    {
+      "path": "search-studio/data/manifest.json",
+      "bytes": 14879,
+      "sha256": "cc51fc93d48d82c99f7fcc257001ce260d398f00a0cf9e6ad55172b4649739be"
+    },
+    {
+      "path": "search-studio/data/vectors.f32",
+      "bytes": 221184,
+      "sha256": "ec8e5c9996f229028cf9859dbfb11306a604af42be1e6465f61d9aa50b4d6fd8"
+    },
+    {
+      "path": "search-studio/index.html",
+      "bytes": 8928,
+      "sha256": "1eaf158fa7a4a418d3d9ca7e79651b1ff4211e6192af3289d7a8a8fd935a2ca8"
+    },
+    {
+      "path": "search-studio/src/app.mjs",
+      "bytes": 28116,
+      "sha256": "ac88b13941c8721ffc8724bcd2759c211f2af4c817f4c561020f386dcd322ed8"
+    },
+    {
+      "path": "search-studio/src/audio-delivery.mjs",
+      "bytes": 2834,
+      "sha256": "e08a4b4150ec3a81a2a862798f7294d2502f5941662df231c46ff968ecad4fe5"
+    },
+    {
+      "path": "search-studio/src/contracts.mjs",
+      "bytes": 4890,
+      "sha256": "6d183b0f0974ecf15f0b14abd9d04f315d305418bba923326f4abf3cad9b87b1"
+    },
+    {
+      "path": "search-studio/src/graph.mjs",
+      "bytes": 14186,
+      "sha256": "06fc5623d774bd35f2607bc38d40e16743f8062b25d50410b2c8cf7b8314a598"
+    },
+    {
+      "path": "search-studio/src/hnsw.mjs",
+      "bytes": 10135,
+      "sha256": "da9d421f511df4dfbe5d21c4c4b748821d0b5f14b9e37a5f09c1b32c7ba0031d"
+    },
+    {
+      "path": "search-studio/src/query-limits.mjs",
+      "bytes": 2364,
+      "sha256": "695e140d5cf0737e532a16a2309d8a96f009b59f9048910ff308c78ec01c6345"
+    },
+    {
+      "path": "search-studio/src/rerank.mjs",
+      "bytes": 3721,
+      "sha256": "28d7288150b842ce816c2a073ef360147a937bb591595f82aaabbd088dcbebb4"
+    },
+    {
+      "path": "search-studio/src/search-motion.mjs",
+      "bytes": 2961,
+      "sha256": "15ba707a6c10666de904fcce08560f027399861d2eb6d21f353aaf2fba4a9ee2"
+    },
+    {
+      "path": "search-studio/src/server-config.mjs",
+      "bytes": 1449,
+      "sha256": "7a2bd25150d2a3d5b901093e0e85e3e45f6cf60dda5c9bffd83159bfe16526ee"
+    },
+    {
+      "path": "search-studio/src/studio-release.mjs",
+      "bytes": 199,
+      "sha256": "d7d248681386088a05a76692fb0c8a17a9d45a2bb2f222c80080737014c75879"
+    },
+    {
+      "path": "search-studio/style.css",
+      "bytes": 20959,
+      "sha256": "f76dd843bb0ddad12761390bcca12eb936ca41e6c4a9d3723fdd599ac0434654"
+    }
+  ]
+}

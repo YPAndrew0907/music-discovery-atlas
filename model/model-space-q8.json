@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "experimental-fma-q8:3d5a3ebe3ac4bd09fa96f05fdefc2df1ae841d2562dea913abb8a5990b377566",
+  "identity": {
+    "family": "clap-htsat-unfused",
+    "repo": "Xenova/clap-htsat-unfused",
+    "revision": "c28f2883575e590e04d3146ff0713c2448d691ba",
+    "dimensions": 512,
+    "textModelSha256": "1a3df8b197e249816e08415fd040434c44762b2eea7eb7bf8a48a0f0bf3c14e5",
+    "audioModelSha256": "3fcff2c8824e7bcb83a983f2a49edab3b60cbcf4872ac70efee517355173bd1f",
+    "tokenizerSha256": "dc239041d98de27ffc3975473a1a23e3db4c937b23c138c38bbc66588bd247e5",
+    "preprocessorConfigSha256": "9739f58296aa6f9ac18008fd0150fb2649bc554985fbde86d0a4041c882ac753",
+    "audioPreprocessing": {
+      "decodePolicy": "Decode full excerpt once, cap30seconds, then slice decoded samples at fixed starts",
+      "sampleRateHz": 48000,
+      "channels": 1,
+      "pcm": "float32-le",
+      "clipSeconds": 10,
+      "windowStartSeconds": [
+        0,
+        10,
+        20
+      ],
+      "source": "FMA 30-second excerpts; source excerpt offsets within original full recordings are not known",
+      "extractor": "Transformers 4.57.1 ClapFeatureExtractor, pinned preprocessor config",
+      "randomness": "Fixed non-overlapping windows; no random crop; numpy seed 20261003",
+      "shortAudio": "Nonempty windows only; repeatpad under source processor when shorter than 480000 samples; empty windows logged",
+      "aggregation": "L2 each projected clip; arithmetic mean across present clips; L2 track",
+      "durationMeaning": "Audio clip duration does not certify original recording duration"
+    },
+    "audioExecutionProfile": {
+      "onnxruntime": "1.23.2",
+      "provider": "CPUExecutionProvider",
+      "graphOptimizationLevel": "all",
+      "executionMode": "sequential",
+      "intraOpThreads": 2,
+      "interOpThreads": 1,
+      "transformers": "4.57.1",
+      "numpy": "2.3.5",
+      "torch": "2.9.0+cpu",
+      "ffmpeg": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers"
+    },
+    "textInput": "exact raw text; RoBERTa; max77 tokens; projected output L2 normalized",
+    "audioQuantization": "QUInt8 existing pinned export",
+    "textQuantization": "QInt8"
+  }
+}

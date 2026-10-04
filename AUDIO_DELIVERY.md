@@ -1,0 +1,37 @@
+# Optional audio preview delivery
+
+Playback is disabled in `audio-delivery.json`. Catalog `audio/...` paths are provenance references, and historical FMA `sourceUrl` pages are attribution links, not verified audio endpoints. No private Site URL is usable as an anonymous delivery contract. Search remains useful without playback; the UI should show **Preview unavailable** for any unlisted or unverified track, without trying alternative origins.
+
+## Local pack input
+
+This 108-row catalog has an existing verified audio pack: 108 unchanged MP3 excerpts, **100,944,096 bytes total**, with no mismatches against catalog `e7cfd8347b77929c5c593afdaec9e390509acaed725cacadc448fc6bcae1c013`. The largest clip is 1,202,438 bytes. The pack is outside this public source export. A 101,205,244-byte archive has been prepared and verified; it has not been uploaded or published. Its SHA-256 is 507bad0f5f87f3b51965640d69ec680619cb5b8359b3c7ba0e16c751f3dbc132.
+
+An operator may provide a local directory containing only the selected `NNNNNN.mp3` files. `scripts/verify_audio_pack.py --audio-dir PATH` checks every filename, length and SHA-256 against the pinned catalog, rejects missing/extra/nested/symlinked files, and prints an inventory. Optional `--subset-ids PATH` accepts a JSON array of unique catalog IDs for a smaller preview pack. This script never downloads, copies, uploads or enables playback. Its output deliberately has `available: false`, `url: null`, and `publicDeliveryVerified: false`.
+
+## Option A: reviewed GitHub Release assets
+
+A versioned project release can hold these associated app assets outside Git history. GitHub documents up to 1,000 assets per release and each asset below 2 GiB, so this bounded pack fits. GitHub presents Releases as distribution for project software and associated binaries; treating this demonstration's asset pack as an associated project download is an assessment of that documented use, not permission to run an unlimited music CDN. Excessive file-hosting use can be throttled or suspended. [Release quotas](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases#storage-and-bandwidth-quotas), [large-binary distribution](https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github#distributing-large-binaries), [acceptable use](https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies#9-excessive-bandwidth-use)
+
+The bounded option is one versioned archive containing only the verified clips, audio inventory, all credits/supplied notices/modification statements, and applicable CC license texts. After the concrete repository/release and publication scope are approved, prepare and review the exact archive; record its length and SHA-256, then publish it. Obtain the actual asset URL from the resulting release. The exact archive is prepared locally; no GitHub Release or upload exists yet.
+
+The optional build-time scripts/install_audio_release.py implements this pinned pack installation: exact versioned project Release URL, bounded HTTPS redirects, 101,205,244-byte/600-second ceiling, full archive SHA-256, exact 112-entry inventory, and per-clip checksums. The Docker build accepts MUSIC_AUDIO_RELEASE_URL as an optional non-secret build argument. It verifies/extracts clips to /app/audio-preview and retains their credits; no runtime downloader is added. An empty argument keeps playback disabled. After an approved successful build, set MUSIC_ENABLE_AUDIO_PREVIEWS=1, MUSIC_AUDIO_PACK_DIR=/app/audio-preview, and MUSIC_AUDIO_MANIFEST_PATH=/app/audio-delivery.verified.json. The original disabled manifest is preserved. Browser playback/range/credits at the actual host are still release acceptance checks. This avoids runtime FMA archive-range requests and sleep-time reacquisition. It adds image size and Render outbound bandwidth usage; it does not make free hosting unlimited. Runtime-only caches are lost on free-service sleep/restart. [Render filesystem and usage limits](https://render.com/docs/free)
+
+Alternatively, publish individual clips plus notices as version-specific release assets. Record each real `browser_download_url`, asset ID, size and digest from GitHub. Public release assets support unauthenticated access and may redirect, but the API docs do not guarantee the CORS/range/content-disposition/streaming behavior this player needs. Retain canonical version-specific URLs, not `latest`, guessed links or expiring redirect destinations. Direct playback stays disabled until those checks pass. [Release asset API](https://docs.github.com/en/rest/releases/assets)
+
+GitHub's optional immutable-release setting can protect a completed release, but enabling it is a separate repository decision; it was not changed. Review/upload assets in a draft before any deliberate immutable publication. [Immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases)
+
+## Option B: an explicitly selected audio host
+
+Use one selected HTTPS destination containing exactly the approved clips. No new account or unrelated hosting service is assumed. Before setting any track available, test its actual URL without cookies or credentials; reject login/HTML responses; follow only a bounded HTTPS redirect chain; verify complete length and SHA-256; check MP3 MIME behavior, playback and seeking/range support. If the player fetches bytes for verification or uses Web Audio, verify the required CORS response as well. Keep creator/title/source/license/notices beside playback and make the full credits accessible.
+
+## Optional acquisition mapping, not implemented as a downloader
+
+For an installation without local clips, an operator must supply a reviewed mapping of `trackId`, exact HTTPS file URL, expected length and SHA-256, bound to this catalog. No usable public audio mapping is present in this candidate. Any future on-demand proxy must accept only catalog IDs, never caller-provided URLs; enforce an approved origin allowlist, exact per-file byte limits, deadline and low concurrency; verify the full digest before serving/cache admission; bound aggregate cache bytes; and fail with Preview unavailable. No automatic origin rotation, blind retries, bulk archive fetch or startup acquisition is appropriate.
+
+Archive-range acquisition additionally requires the exact archive identity/length and each member's offset, compressed length, compression method and expected output hash. Abort on ignored Range requests or mismatched Content-Range/archive identity. Those range inputs are absent. The existing 650 MB acquisition ceiling and acquisition stop markers are unchanged; this candidate starts no acquisition.
+
+## Availability contract and larger indexes
+
+Keep playback availability separate from the retrieval catalog. Bind a delivery manifest to `catalogId` and `catalogSha256`; each enabled row must include `id`, `available: true`, a verified URL, expected bytes/hash, verification date and destination/version provenance. Unlisted rows or rows with `available: false` must have no playable URL. Do not infer availability from a catalog audio path.
+
+A future 5k/10k searchable index may honestly have a smaller licensed playable subset. The UI must state that coverage, keep unavailable results searchable and disable their play/download controls. A single release cannot hold 5k/10k individual clips under the 1,000-asset limit. No future catalog or audio expansion is implemented or authorized by this file.

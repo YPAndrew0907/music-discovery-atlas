@@ -1,0 +1,442 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "fma108:d440beae31b28758956db0a39e221e9842852d6a088c1cf6ab0e50cd8f967320",
+  "sourceSha256": "24f167cb6ff698799aeca94ef12792160b713795f542fae6492e2ab940f65cb7",
+  "meaning": "Original FMA artist record IDs; not a claim that aliases resolve to unique people",
+  "metadataLicense": "CC-BY-4.0",
+  "attribution": "FMA dataset metadata, Defferrard et al. (2017), https://github.com/mdeff/fma",
+  "rows": [
+    {
+      "trackId": "fma:1382",
+      "artistId": "fma:artist:233"
+    },
+    {
+      "trackId": "fma:1383",
+      "artistId": "fma:artist:233"
+    },
+    {
+      "trackId": "fma:3727",
+      "artistId": "fma:artist:889"
+    },
+    {
+      "trackId": "fma:3832",
+      "artistId": "fma:artist:1615"
+    },
+    {
+      "trackId": "fma:3859",
+      "artistId": "fma:artist:965"
+    },
+    {
+      "trackId": "fma:3861",
+      "artistId": "fma:artist:965"
+    },
+    {
+      "trackId": "fma:3933",
+      "artistId": "fma:artist:210"
+    },
+    {
+      "trackId": "fma:3939",
+      "artistId": "fma:artist:210"
+    },
+    {
+      "trackId": "fma:3944",
+      "artistId": "fma:artist:1036"
+    },
+    {
+      "trackId": "fma:3948",
+      "artistId": "fma:artist:1036"
+    },
+    {
+      "trackId": "fma:3957",
+      "artistId": "fma:artist:1037"
+    },
+    {
+      "trackId": "fma:3959",
+      "artistId": "fma:artist:1037"
+    },
+    {
+      "trackId": "fma:3976",
+      "artistId": "fma:artist:1042"
+    },
+    {
+      "trackId": "fma:3981",
+      "artistId": "fma:artist:1042"
+    },
+    {
+      "trackId": "fma:4004",
+      "artistId": "fma:artist:214"
+    },
+    {
+      "trackId": "fma:4037",
+      "artistId": "fma:artist:1622"
+    },
+    {
+      "trackId": "fma:4071",
+      "artistId": "fma:artist:1134"
+    },
+    {
+      "trackId": "fma:4073",
+      "artistId": "fma:artist:1134"
+    },
+    {
+      "trackId": "fma:4076",
+      "artistId": "fma:artist:1134"
+    },
+    {
+      "trackId": "fma:4078",
+      "artistId": "fma:artist:1134"
+    },
+    {
+      "trackId": "fma:5147",
+      "artistId": "fma:artist:1353"
+    },
+    {
+      "trackId": "fma:5152",
+      "artistId": "fma:artist:1353"
+    },
+    {
+      "trackId": "fma:6674",
+      "artistId": "fma:artist:1771"
+    },
+    {
+      "trackId": "fma:6675",
+      "artistId": "fma:artist:1771"
+    },
+    {
+      "trackId": "fma:6679",
+      "artistId": "fma:artist:1771"
+    },
+    {
+      "trackId": "fma:6684",
+      "artistId": "fma:artist:1771"
+    },
+    {
+      "trackId": "fma:6778",
+      "artistId": "fma:artist:889"
+    },
+    {
+      "trackId": "fma:6854",
+      "artistId": "fma:artist:1615"
+    },
+    {
+      "trackId": "fma:6855",
+      "artistId": "fma:artist:1615"
+    },
+    {
+      "trackId": "fma:6856",
+      "artistId": "fma:artist:1615"
+    },
+    {
+      "trackId": "fma:7549",
+      "artistId": "fma:artist:1433"
+    },
+    {
+      "trackId": "fma:7552",
+      "artistId": "fma:artist:1433"
+    },
+    {
+      "trackId": "fma:7553",
+      "artistId": "fma:artist:1433"
+    },
+    {
+      "trackId": "fma:7554",
+      "artistId": "fma:artist:1433"
+    },
+    {
+      "trackId": "fma:10694",
+      "artistId": "fma:artist:2631"
+    },
+    {
+      "trackId": "fma:10695",
+      "artistId": "fma:artist:2631"
+    },
+    {
+      "trackId": "fma:10696",
+      "artistId": "fma:artist:2631"
+    },
+    {
+      "trackId": "fma:10698",
+      "artistId": "fma:artist:2631"
+    },
+    {
+      "trackId": "fma:11206",
+      "artistId": "fma:artist:2888"
+    },
+    {
+      "trackId": "fma:11918",
+      "artistId": "fma:artist:3070"
+    },
+    {
+      "trackId": "fma:11920",
+      "artistId": "fma:artist:3070"
+    },
+    {
+      "trackId": "fma:11921",
+      "artistId": "fma:artist:3070"
+    },
+    {
+      "trackId": "fma:11922",
+      "artistId": "fma:artist:3070"
+    },
+    {
+      "trackId": "fma:14344",
+      "artistId": "fma:artist:3949"
+    },
+    {
+      "trackId": "fma:20086",
+      "artistId": "fma:artist:5337"
+    },
+    {
+      "trackId": "fma:20088",
+      "artistId": "fma:artist:16198"
+    },
+    {
+      "trackId": "fma:20089",
+      "artistId": "fma:artist:5339"
+    },
+    {
+      "trackId": "fma:20090",
+      "artistId": "fma:artist:5340"
+    },
+    {
+      "trackId": "fma:20091",
+      "artistId": "fma:artist:5340"
+    },
+    {
+      "trackId": "fma:20092",
+      "artistId": "fma:artist:5341"
+    },
+    {
+      "trackId": "fma:20093",
+      "artistId": "fma:artist:5341"
+    },
+    {
+      "trackId": "fma:20094",
+      "artistId": "fma:artist:5350"
+    },
+    {
+      "trackId": "fma:20095",
+      "artistId": "fma:artist:5349"
+    },
+    {
+      "trackId": "fma:20096",
+      "artistId": "fma:artist:5344"
+    },
+    {
+      "trackId": "fma:20097",
+      "artistId": "fma:artist:5345"
+    },
+    {
+      "trackId": "fma:20098",
+      "artistId": "fma:artist:5346"
+    },
+    {
+      "trackId": "fma:20099",
+      "artistId": "fma:artist:5347"
+    },
+    {
+      "trackId": "fma:20100",
+      "artistId": "fma:artist:5348"
+    },
+    {
+      "trackId": "fma:20101",
+      "artistId": "fma:artist:5348"
+    },
+    {
+      "trackId": "fma:24418",
+      "artistId": "fma:artist:6274"
+    },
+    {
+      "trackId": "fma:24420",
+      "artistId": "fma:artist:6274"
+    },
+    {
+      "trackId": "fma:24429",
+      "artistId": "fma:artist:6274"
+    },
+    {
+      "trackId": "fma:24430",
+      "artistId": "fma:artist:6274"
+    },
+    {
+      "trackId": "fma:28546",
+      "artistId": "fma:artist:7169"
+    },
+    {
+      "trackId": "fma:30702",
+      "artistId": "fma:artist:7561"
+    },
+    {
+      "trackId": "fma:34463",
+      "artistId": "fma:artist:8449"
+    },
+    {
+      "trackId": "fma:35008",
+      "artistId": "fma:artist:7561"
+    },
+    {
+      "trackId": "fma:36459",
+      "artistId": "fma:artist:8449"
+    },
+    {
+      "trackId": "fma:36477",
+      "artistId": "fma:artist:8449"
+    },
+    {
+      "trackId": "fma:36533",
+      "artistId": "fma:artist:8449"
+    },
+    {
+      "trackId": "fma:37119",
+      "artistId": "fma:artist:2008"
+    },
+    {
+      "trackId": "fma:37976",
+      "artistId": "fma:artist:9080"
+    },
+    {
+      "trackId": "fma:37977",
+      "artistId": "fma:artist:9080"
+    },
+    {
+      "trackId": "fma:37978",
+      "artistId": "fma:artist:9080"
+    },
+    {
+      "trackId": "fma:37979",
+      "artistId": "fma:artist:9080"
+    },
+    {
+      "trackId": "fma:38859",
+      "artistId": "fma:artist:7561"
+    },
+    {
+      "trackId": "fma:39607",
+      "artistId": "fma:artist:9403"
+    },
+    {
+      "trackId": "fma:42373",
+      "artistId": "fma:artist:9067"
+    },
+    {
+      "trackId": "fma:42766",
+      "artistId": "fma:artist:10019"
+    },
+    {
+      "trackId": "fma:42767",
+      "artistId": "fma:artist:10019"
+    },
+    {
+      "trackId": "fma:42772",
+      "artistId": "fma:artist:10019"
+    },
+    {
+      "trackId": "fma:45103",
+      "artistId": "fma:artist:10397"
+    },
+    {
+      "trackId": "fma:47068",
+      "artistId": "fma:artist:10779"
+    },
+    {
+      "trackId": "fma:47072",
+      "artistId": "fma:artist:10779"
+    },
+    {
+      "trackId": "fma:51111",
+      "artistId": "fma:artist:1977"
+    },
+    {
+      "trackId": "fma:51113",
+      "artistId": "fma:artist:1977"
+    },
+    {
+      "trackId": "fma:51115",
+      "artistId": "fma:artist:1977"
+    },
+    {
+      "trackId": "fma:51118",
+      "artistId": "fma:artist:1977"
+    },
+    {
+      "trackId": "fma:53685",
+      "artistId": "fma:artist:4375"
+    },
+    {
+      "trackId": "fma:53686",
+      "artistId": "fma:artist:11885"
+    },
+    {
+      "trackId": "fma:53687",
+      "artistId": "fma:artist:4375"
+    },
+    {
+      "trackId": "fma:53688",
+      "artistId": "fma:artist:11885"
+    },
+    {
+      "trackId": "fma:53690",
+      "artistId": "fma:artist:11885"
+    },
+    {
+      "trackId": "fma:53691",
+      "artistId": "fma:artist:4375"
+    },
+    {
+      "trackId": "fma:54465",
+      "artistId": "fma:artist:11989"
+    },
+    {
+      "trackId": "fma:54466",
+      "artistId": "fma:artist:11989"
+    },
+    {
+      "trackId": "fma:54467",
+      "artistId": "fma:artist:11989"
+    },
+    {
+      "trackId": "fma:54468",
+      "artistId": "fma:artist:11989"
+    },
+    {
+      "trackId": "fma:58213",
+      "artistId": "fma:artist:12612"
+    },
+    {
+      "trackId": "fma:61007",
+      "artistId": "fma:artist:12347"
+    },
+    {
+      "trackId": "fma:61010",
+      "artistId": "fma:artist:12347"
+    },
+    {
+      "trackId": "fma:61011",
+      "artistId": "fma:artist:12347"
+    },
+    {
+      "trackId": "fma:61012",
+      "artistId": "fma:artist:12347"
+    },
+    {
+      "trackId": "fma:61491",
+      "artistId": "fma:artist:13115"
+    },
+    {
+      "trackId": "fma:61492",
+      "artistId": "fma:artist:13115"
+    },
+    {
+      "trackId": "fma:64334",
+      "artistId": "fma:artist:6104"
+    },
+    {
+      "trackId": "fma:64626",
+      "artistId": "fma:artist:13493"
+    },
+    {
+      "trackId": "fma:64627",
+      "artistId": "fma:artist:13493"
+    }
+  ]
+}

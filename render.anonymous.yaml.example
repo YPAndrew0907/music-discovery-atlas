@@ -1,0 +1,20 @@
+# INERT REVIEW EXAMPLE: opt-in is deliberately false and origin is unset.
+# Host a separately reviewed public frontend on this same exact origin.
+services:
+  - type: web
+    name: music-clap108-anonymous-preview
+    runtime: docker
+    plan: free
+    autoDeployTrigger: off
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    envVars:
+      - key: MUSIC_SERVICE_MODE
+        value: anonymous-preview
+      - key: MUSIC_ENABLE_ANONYMOUS_PREVIEW
+        value: "0"
+      - key: MUSIC_PUBLIC_ORIGIN
+        sync: false
+      - key: MUSIC_DEPLOYMENT_GENERATION
+        sync: false

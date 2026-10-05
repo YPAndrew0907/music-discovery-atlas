@@ -3871,3 +3871,7 @@ __pycache__/
 !/HYDRATION_2000.md
 !/NATIVE_2000_HYDRATION_MEASUREMENT.json
 !/tests/test_audio_hydration.py
+!/web/search-studio/src/results-view.mjs
+!/tests/web_scale_views.test.mjs
+!/tests/test_ui_static_package.py
+!/tests/browser_search_ui.mjs

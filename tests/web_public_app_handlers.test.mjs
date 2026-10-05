@@ -1,3 +1,4 @@
+import {sourceGenres,refineCandidates,resultPage,resultScope} from '../web/search-studio/src/results-view.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -99,7 +100,7 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
     ServerSearch:class extends ServerSearch{constructor(options){super({...options,fetcher});}},
     loadDeploymentConfig:options=>loadDeploymentConfig({...options,fetcher}),
     loadAudioDelivery:options=>loadAudioDelivery({...options,fetcher}),previewForTrack,UNAVAILABLE_PREVIEW,SERVER_CONFIG,
-    reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,
+    sourceGenres,refineCandidates,resultPage,resultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,
     fetch:fetcher,crypto:webcrypto,TextDecoder,TextEncoder,Float32Array,Uint8Array,URL,Blob,DOMException,performance,
     getComputedStyle:()=>({getPropertyValue:()=> '#000'}),
     document:{body:{dataset:{}},activeElement:null,querySelector:el,querySelectorAll:selector=>selector==='[data-needs-catalog]'?[el('#search'),el('#enable-local')]:[],addEventListener(name,fn){clicks[name]=fn;}},
@@ -262,4 +263,79 @@ test('BFCache audio restoration completes during a new query without replacing s
   h.events.pagehide({persisted:true});const obsolete=h.events.pageshow({persisted:true});await until(()=>h.audioRequests.length===3);
   h.events.pagehide({persisted:true});h.audioRequests[2].resolve();await obsolete;
   assert.equal(vm.runInContext('audioDelivery.size',h.context),0);assert.equal(h.el('#player').hidden,true);
+});
+
+test('sound candidates page 12 then 4 without fetching deeper results or changing source ranks',async()=>{
+  const h=await harness();
+  const first=Array.from(vm.runInContext('rows.map(r=>r.row)',h.context));
+  assert.equal(first.length,12);assert.match(h.el('#result-scope').textContent,/12 of 16 from 16 retrieved sound candidates/);
+  h.el('#next-page').onclick();
+  const next=Array.from(vm.runInContext('rows.map(r=>r.row)',h.context));
+  assert.equal(next.length,4);assert.equal(new Set([...first,...next]).size,16);
+  assert.equal(h.el('#next-page').disabled,true);assert.equal(h.searches.length,0);
+  assert.deepEqual(Array.from(vm.runInContext('rows.map(r=>r.sourceRank)',h.context)),[13,14,15,16]);
+  assert.equal(h.map.searches.at(-1).options.animate,false);
+});
+
+test('collection browse and source-genre/name refinements cover the full real catalog locally',async()=>{
+  const h=await harness();h.el('#browse-collection').onclick();
+  assert.match(h.el('#query-label').textContent,/title or artist/);assert.match(h.el('#query').placeholder,/title or artist/);
+  assert.equal(vm.runInContext('candidateRows.length',h.context),catalog.tracks.length);
+  assert.match(h.el('#result-scope').textContent,/2,000 recordings in the collection/);
+  const genre=catalog.tracks[1200].genre;h.el('#genre-filter').value=genre;h.el('#genre-filter').handlers.change();
+  const expected=catalog.tracks.filter(t=>t.genre===genre).length;
+  assert.equal(vm.runInContext('viewPage.total',h.context),expected);assert.ok(vm.runInContext('rows.length',h.context)<=12);
+  h.el('#refine-text').value=catalog.tracks[1200].artist;h.el('#refine-text').handlers.input();
+  assert.ok(vm.runInContext('viewPage.total',h.context)>0);assert.equal(h.searches.length,0);
+  h.el('#clear-refinements').onclick();assert.equal(vm.runInContext('viewPage.total',h.context),catalog.tracks.length);
+});
+
+test('empty refined sound results can be cleared without issuing a new query or misreporting scope',async()=>{
+  const h=await harness();h.el('#refine-text').value='No such recorded name 000000';h.el('#refine-text').handlers.input();
+  assert.equal(h.el('#results-empty').hidden,false);assert.equal(h.el('#focus-track').disabled,true);
+  assert.match(h.el('#result-scope').textContent,/Showing 0 from 16/);
+  assert.match(h.el('#empty-detail').textContent,/retrieved sound candidates/);
+  h.el('#empty-clear').onclick();assert.equal(h.el('#results-empty').hidden,true);assert.equal(h.searches.length,0);
+  h.el('#refine-text').value='No such recorded name 000000';h.el('#refine-text').handlers.input();
+  let focused=false;h.el('#results-heading').focus=()=>{focused=true;};h.el('#empty-browse').onclick();
+  assert.equal(h.el('#results-empty').hidden,true);assert.equal(h.el('#refine-text').value,'');assert.equal(focused,true);
+  assert.equal(vm.runInContext('viewPage.total',h.context),catalog.tracks.length);assert.equal(h.searches.length,0);
+});
+
+test('cancel returns to the previous result state and rejects a late successful response',async()=>{
+  const h=await harness({deferSearch:true});const previous=h.el('#results-source').textContent;
+  await h.submit('new cancellable query');assert.equal(h.el('#results-region').attributes['aria-busy'],'true');
+  assert.equal(h.el('#cancel-search').hidden,false);h.el('#cancel-search').onclick();h.resolveSearch(0,1);await flush();
+  assert.equal(h.el('#results-region').attributes['aria-busy'],'false');assert.equal(h.el('#cancel-search').hidden,true);
+  assert.equal(h.el('#results-source').textContent,previous);assert.match(h.el('#status').textContent,/cancelled.*Previous results/);
+  assert.equal(h.searches[0].options.signal.aborted,true);
+});
+
+test('current playback survives result paging and stays marked when its row returns',async()=>{
+  const h=await harness();h.api.enableAudio=true;await h.events.pageshow({persisted:true});
+  h.el('#browse-collection').onclick();await vm.runInContext('play(0)',h.context);h.el('#audio').handlers.play();
+  assert.match(h.el('#results').innerHTML,/is-playing/);assert.match(h.el('#results').innerHTML,/>Playing</);
+  const url=h.el('#audio').src;h.el('#next-page').onclick();
+  assert.equal(h.el('#audio').src,url);assert.equal(h.el('#player').hidden,false);
+  h.el('#previous-page').onclick();assert.match(h.el('#results').innerHTML,/>Playing</);
+  h.el('#audio').pause();h.el('#audio').handlers.pause();assert.match(h.el('#results').innerHTML,/>Paused</);
+  assert.equal(h.searches.length,0);
+});
+
+test('paged list, map and kept-track export agree on absolute display ranks',async()=>{
+  const h=await harness();h.el('#next-page').onclick();
+  assert.deepEqual(Array.from(h.map.searches.at(-1).rows.map(r=>r.displayRank)),[13,14,15,16]);
+  vm.runInContext('keep(rows[0].row)',h.context);h.el('#export').onclick();
+  const exported=JSON.parse(h.el('#export-content').value);
+  assert.equal(exported.view.page,2);assert.equal(exported.view.candidateCount,16);
+  assert.deepEqual(exported.rankingContext.displayed.map(r=>r.displayRank),[13,14,15,16]);
+});
+
+test('cancelling on-device work unloads the worker and does not silently change engine',async()=>{
+  const h=await harness();await h.el('#enable-local').onclick();await h.submit('local cancellable');
+  assert.equal(h.encoder.state,'encoding');h.el('#cancel-search').onclick();
+  assert.equal(h.encoder.state,'unloaded');assert.equal(vm.runInContext('inflight',h.context),null);
+  assert.match(h.el('#status').textContent,/cancelled and model unloaded/);assert.equal(h.el('#open-engine').textContent,'On-device off');
+  h.encodes[0].reject(new DOMException('Stopped fixture worker','AbortError'));await flush();
+  assert.equal(h.el('#results-region').attributes['aria-busy'],'false');assert.equal(h.searches.length,0);
 });

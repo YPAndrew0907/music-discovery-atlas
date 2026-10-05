@@ -18168,8 +18168,8 @@
     },
     {
       "path": "web-manifest.json",
-      "bytes": 8415,
-      "sha256": "cae52dbe21d716f756b99eec0529009131c673ed69b6314a2dd3f1f2d6d8d297"
+      "bytes": 8585,
+      "sha256": "11dc71d6b8cbedb3ac69b503464e8b31cddd0a3e4d476bebead335b64d1e635f"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18353,13 +18353,13 @@
     },
     {
       "path": "web/search-studio/index.html",
-      "bytes": 9421,
-      "sha256": "dede9eadd0e045f106d4db152176f77af1ad03e9deb626672026f50dceea47da"
+      "bytes": 11795,
+      "sha256": "8a731a99d4b22720533dd14d9ddd5b3d74adcb657954bbc888a3a322b155a5f9"
     },
     {
       "path": "web/search-studio/src/app.mjs",
-      "bytes": 31211,
-      "sha256": "c7604f4aed7234b0fbfdb75d2dd0da778e56049b301147095ba6dc6a17cf6b78"
+      "bytes": 37997,
+      "sha256": "b4c2e356dc11b3a2c2e6042fd6bb3ec6f17bffe83b9d02efaab28256ff29bd0b"
     },
     {
       "path": "web/search-studio/src/audio-delivery.mjs",
@@ -18373,8 +18373,8 @@
     },
     {
       "path": "web/search-studio/src/graph.mjs",
-      "bytes": 15491,
-      "sha256": "835b225141779e740c29d90efa7be040d0688846938c22947df6b3ad1833f0e8"
+      "bytes": 18234,
+      "sha256": "b85e7e0ae38ebd118a93e6d7a9cbd23387d45897375c052523071fead252cfe7"
     },
     {
       "path": "web/search-studio/src/hnsw.mjs",
@@ -18390,6 +18390,11 @@
       "path": "web/search-studio/src/rerank.mjs",
       "bytes": 3721,
       "sha256": "28d7288150b842ce816c2a073ef360147a937bb591595f82aaabbd088dcbebb4"
+    },
+    {
+      "path": "web/search-studio/src/results-view.mjs",
+      "bytes": 2373,
+      "sha256": "228db21b352f0936d90c8503d80042bea9eb58f3cdc3953b3f1907cbadcec85f"
     },
     {
       "path": "web/search-studio/src/search-motion.mjs",
@@ -18408,8 +18413,8 @@
     },
     {
       "path": "web/search-studio/style.css",
-      "bytes": 21186,
-      "sha256": "4e21cef124a31755a68d65d65de2134325de61ddcbe16aa68e16fe8913ee625a"
+      "bytes": 14630,
+      "sha256": "8549082e0c3ad1c0f162357818e5a3acdcae504535eb1aed9d24ac708974ae83"
     }
   ]
 }

@@ -17,21 +17,46 @@ function boundsFor(positions,ids=null){
   if(ids)for(const id of ids)include(positions[id]);else for(const point of positions)include(point);
   return {x0,x1,y0,y1};
 }
+// A display budget, never a change to the graph or catalog. Every retained
+// point is an actual row and every retained edge is an existing index link.
+export function visibleGraphContext(points,connections,{width,height,detail=1,important=[]}={}){
+  const nodeBudget=detail<1.6?320:600,edgeBudget=detail<1.6?0:160,cell=detail<1.6?14:9;
+  const ids=[],seen=new Set(),cells=new Set(),priority=new Set(important.filter(Number.isInteger));
+  const add=id=>{
+    if(seen.has(id)||ids.length>=nodeBudget||!points[id])return;
+    const [x,y]=points[id];if(x<0||x>width||y<70||y>height-125)return;
+    const key=`${Math.floor(x/cell)},${Math.floor(y/cell)}`;
+    if(!priority.has(id)&&cells.has(key))return;
+    cells.add(key);seen.add(id);ids.push(id);
+  };
+  for(const id of priority)add(id);
+  for(let id=0;id<points.length&&ids.length<nodeBudget;id++)add(id);
+  const preferred=[],other=[];
+  if(edgeBudget)for(const edge of connections){
+    if(!seen.has(edge.from)||!seen.has(edge.to))continue;
+    const p=points[edge.from],q=points[edge.to];if(Math.hypot(p[0]-q[0],p[1]-q[1])<2)continue;
+    const target=priority.has(edge.from)||priority.has(edge.to)?preferred:other;
+    if(target.length<edgeBudget)target.push(edge);
+  }
+  return {ids,edges:[...preferred,...other].slice(0,edgeBudget),nodeBudget,edgeBudget};
+}
 export class AudioMap {
-  constructor(canvas,{positions,tracks,connections=[],colors,onSelect,onHover,onTrace}){this.canvas=canvas;this.ctx=canvas.getContext('2d');this.positions=positions;this.allBounds=boundsFor(positions);this.resultBounds=null;this.tracks=tracks;this.connections=connections;this.colors=colors;this.onSelect=onSelect;this.onHover=onHover;this.onTrace=onTrace;this.scale=1;this.offset=[0,0];this.focus='results';this.selected=0;this.inspected=null;this.results=[];this.events=[];this.visited=new Set();this.visitedCursor=0;this.cursor=0;this.elapsed=0;this.duration=1;this.beats=[];this.reveal=1;this.playing=false;this.raf=0;this.motionGeneration=0;this.camera=null;this.cameraTransition=null;this.hover=null;this.pointer=null;this.motion=matchMedia('(prefers-reduced-motion: reduce)');this.abort=new AbortController();const opt={signal:this.abort.signal};this.resize=new ResizeObserver(()=>{this.camera=null;this.cameraTransition=null;this.draw();});this.resize.observe(canvas);canvas.addEventListener('pointerdown',e=>{if(this.pointer)return;this.cameraTransition=null;this.pointer={id:e.pointerId,x:e.clientX,y:e.clientY,offset:[...this.offset],moved:false};canvas.setPointerCapture(e.pointerId);},opt);canvas.addEventListener('pointermove',e=>{if(this.pointer){if(e.pointerId!==this.pointer.id)return;const dx=e.clientX-this.pointer.x,dy=e.clientY-this.pointer.y;if(Math.hypot(dx,dy)>5)this.pointer.moved=true;if(this.pointer.moved){this.offset=[this.pointer.offset[0]+dx,this.pointer.offset[1]+dy];this.draw();}return;}const id=this.hit(e);if(id!==this.hover){this.hover=id;this.onHover(id,e);this.draw();}},opt);canvas.addEventListener('pointerup',e=>{const p=this.pointer;if(!p||e.pointerId!==p.id)return;this.pointer=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(!p.moved){const id=this.hit(e);if(id!==null)this.onSelect(id);}},opt);for(const event of ['pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{this.pointer=null;},opt);canvas.addEventListener('pointerleave',()=>{this.hover=null;this.onHover(null);this.draw();},opt);canvas.addEventListener('keydown',e=>{if(e.key==='Home'){e.preventDefault();this.fit();}if(e.key==='+'||e.key==='='){e.preventDefault();this.zoom(1.2);}if(e.key==='-'){e.preventDefault();this.zoom(1/1.2);}if(e.key==='Escape'){this.hover=null;this.onHover(null);this.draw();}},opt);document.addEventListener('visibilitychange',()=>{if(document.hidden&&this.playing)this.pause();},opt);this.motion.addEventListener('change',()=>{if(this.motion.matches)this.finish();},opt);this.draw();}
+  constructor(canvas,{positions,tracks,connections=[],colors,onSelect,onHover,onTrace,onDensity=()=>{}}){this.canvas=canvas;this.ctx=canvas.getContext('2d');this.positions=positions;this.allBounds=boundsFor(positions);this.resultBounds=null;this.tracks=tracks;this.connections=connections;this.colors=colors;this.onSelect=onSelect;this.onHover=onHover;this.onTrace=onTrace;this.onDensity=onDensity;this._visibleIds=[];this._hitPoints=[];this.scale=1;this.offset=[0,0];this.focus='results';this.selected=0;this.inspected=null;this.results=[];this.resultRanks=new Map();this.events=[];this.visited=new Set();this.visitedCursor=0;this.cursor=0;this.elapsed=0;this.duration=1;this.beats=[];this.reveal=1;this.playing=false;this.raf=0;this.motionGeneration=0;this.camera=null;this.cameraTransition=null;this.hover=null;this.pointer=null;this.motion=matchMedia('(prefers-reduced-motion: reduce)');this.abort=new AbortController();const opt={signal:this.abort.signal};this.resize=new ResizeObserver(()=>{this.camera=null;this.cameraTransition=null;this.draw();});this.resize.observe(canvas);canvas.addEventListener('pointerdown',e=>{if(this.pointer)return;this.cameraTransition=null;this.pointer={id:e.pointerId,x:e.clientX,y:e.clientY,offset:[...this.offset],moved:false};canvas.setPointerCapture(e.pointerId);},opt);canvas.addEventListener('pointermove',e=>{if(this.pointer){if(e.pointerId!==this.pointer.id)return;const dx=e.clientX-this.pointer.x,dy=e.clientY-this.pointer.y;if(Math.hypot(dx,dy)>5)this.pointer.moved=true;if(this.pointer.moved){this.offset=[this.pointer.offset[0]+dx,this.pointer.offset[1]+dy];this.draw();}return;}const id=this.hit(e);if(id!==this.hover){this.hover=id;this.onHover(id,e);this.draw();}},opt);canvas.addEventListener('pointerup',e=>{const p=this.pointer;if(!p||e.pointerId!==p.id)return;this.pointer=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(!p.moved){const id=this.hit(e);if(id!==null)this.onSelect(id);}},opt);for(const event of ['pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{this.pointer=null;},opt);canvas.addEventListener('pointerleave',()=>{this.hover=null;this.onHover(null);this.draw();},opt);canvas.addEventListener('keydown',e=>{if(e.key==='Home'){e.preventDefault();this.fit('all');}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();this.cameraTransition=null;this.offset[0]+=e.key==='ArrowLeft'?35:e.key==='ArrowRight'?-35:0;this.offset[1]+=e.key==='ArrowUp'?35:e.key==='ArrowDown'?-35:0;this.draw();}if(e.key==='+'||e.key==='='){e.preventDefault();this.zoom(1.2);}if(e.key==='-'){e.preventDefault();this.zoom(1/1.2);}if(e.key==='Escape'){this.hover=null;this.onHover(null);this.draw();}},opt);document.addEventListener('visibilitychange',()=>{if(document.hidden&&this.playing)this.pause();},opt);this.motion.addEventListener('change',()=>{if(this.motion.matches)this.finish();},opt);this.draw();}
   geometry(mode=this.focus){
-    const {x0,x1,y0,y1}=mode==='results'&&this.resultBounds?this.resultBounds:this.allBounds;
+    let bounds=mode==='results'&&this.resultBounds?this.resultBounds:this.allBounds;
+    if(mode==='selected'&&Number.isInteger(this.selected)){const p=this.positions[this.selected],radius=Math.max(this.allBounds.x1-this.allBounds.x0,this.allBounds.y1-this.allBounds.y0)/8;bounds={x0:p[0]-radius,x1:p[0]+radius,y0:p[1]-radius,y1:p[1]+radius};}
+    const {x0,x1,y0,y1}=bounds;
     const top=82,bottom=this.height-130;
-    return{cx:(x0+x1)/2,cy:(y0+y1)/2,screenX:this.width/2-20,screenY:(top+bottom)/2,size:Math.min((this.width-170)/Math.max(.25,x1-x0),(bottom-top-30)/Math.max(.25,y1-y0))};
+    return{cx:(x0+x1)/2,cy:(y0+y1)/2,screenX:this.width/2-20,screenY:(top+bottom)/2,size:Math.max(1,Math.min((this.width-170)/Math.max(.25,x1-x0),(bottom-top-30)/Math.max(.25,y1-y0)))};
   }
   project(id,g){const p=this.positions[id];return[g.screenX+(p[0]-g.cx)*g.size*this.scale+this.offset[0],g.screenY+(p[1]-g.cy)*g.size*this.scale+this.offset[1]];}
   point(id){return this._drawingPoints?.[id]??this.project(id,this._drawingGeometry??this.camera??this.geometry());}
   hit(e){
     const r=this.canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,g=this.camera??this.geometry();let best=null,d=14;
-    const inspect=id=>{const p=this.project(id,g);if(p[1]<70||p[1]>this.height-125)return;const n=Math.hypot(x-p[0],y-p[1]);if(n<d){d=n;best=id;}};
+    const inspect=id=>{const p=this._hitPoints[id]??this.project(id,g);if(p[1]<70||p[1]>this.height-125)return;const n=Math.hypot(x-p[0],y-p[1]);if(n<d){d=n;best=id;}};
     // Keep result-first tie behavior without allocating a second catalog-sized array.
-    for(const id of this.results)inspect(id);
-    for(let id=0;id<this.tracks.length;id++)inspect(id);
+    for(const id of this.results)if(this._visibleIds.includes(id))inspect(id);
+    for(const id of this._visibleIds)if(!this.results.includes(id))inspect(id);
     return best;
   }
   visitedThroughCursor(){
@@ -47,7 +72,7 @@ export class AudioMap {
     const viewport=this.canvas.getBoundingClientRect();this.width=viewport.width;this.height=viewport.height;
     const base=this.width&&this.results.length?this.camera??this.geometry():null;
     const previous=base?{...base,size:base.size*this.scale,screenX:base.screenX+this.offset[0],screenY:base.screenY+this.offset[1]}:null;
-    this.pause();this.events=trace?.events??[];this.visited.clear();this.visitedCursor=0;this.results=rows.map(r=>r.row);this.resultBounds=this.results.length?boundsFor(this.positions,this.results):null;
+    this.pause();this.events=trace?.events??[];this.visited.clear();this.visitedCursor=0;this.results=rows.map(r=>r.row);this.resultRanks=new Map(rows.map((r,i)=>[r.row,r.displayRank??i+1]));this.resultBounds=this.results.length?boundsFor(this.positions,this.results):null;
     this.beats=searchBeats(this.events);this.duration=this.beats.reduce((sum,b)=>sum+b.duration,0)||1;
     this.cursor=this.events.length;this.elapsed=this.duration;this.reveal=1;
     this.selected=rows[0]?.row??null;this.inspected=null;
@@ -91,8 +116,8 @@ export class AudioMap {
   }
   pause(){this.playing=false;this.motionGeneration++;cancelAnimationFrame(this.raf);this.notify();}
   finish(){this.pause();this.cursor=this.events.length;this.elapsed=this.duration;this.reveal=1;this.camera=this.searchView();this.cameraTransition=null;this.draw();this.notify();}
-  fit(mode='results'){this.camera=null;this.cameraTransition=null;this.focus=mode;this.scale=1;this.offset=[0,0];this.draw();}
-  zoom(f){this.cameraTransition=null;this.scale=Math.max(.6,Math.min(4,this.scale*f));this.draw();}
+  fit(mode='results'){this.pause();this.cursor=this.events.length;this.elapsed=this.duration;this.reveal=1;this.camera=null;this.cameraTransition=null;this.focus=mode;this.scale=1;this.offset=[0,0];this.draw();this.notify();}
+  zoom(f){this.pause();this.cameraTransition=null;this.scale=Math.max(.6,Math.min(8,this.scale*f));this.draw();}
   draw(){
     const rect=this.canvas.getBoundingClientRect();this.width=rect.width;this.height=rect.height;
     if(!this.width||!this.height)return;
@@ -110,8 +135,12 @@ export class AudioMap {
     const frontier=new Set(event?.frontier?.map(x=>x.id)??[]);
     // All context lines are deduplicated stored index links, never proximity guesses.
     // Offscreen links and subpixel segments are omitted only as level-of-detail.
-    const overviewSize=this.geometry('all').size,detail=Math.min(2,(this._drawingGeometry.size*this.scale)/overviewSize);
-    for(const edge of this.connections){
+    const overviewSize=this.geometry('all').size,detail=(this._drawingGeometry.size*this.scale)/overviewSize;
+    const currentId=!done?(event?.type==='expand'?event.id:event?.entryIds?.[0]):null;
+    const context=visibleGraphContext(this._drawingPoints,this.connections,{width:this.width,height:this.height,detail,important:[...this.results,this.selected,this.hover,currentId,...frontier]});
+    this._visibleIds=context.ids;this._hitPoints=this._drawingPoints;
+    this.onDensity({visible:context.ids.length,edges:context.edges.length,total:this.tracks.length});
+    for(const edge of context.edges){
       const p=this.point(edge.from),q=this.point(edge.to);
       if((p[0]<0&&q[0]<0)||(p[0]>this.width&&q[0]>this.width)||(p[1]<70&&q[1]<70)||(p[1]>this.height-125&&q[1]>this.height-125)||Math.hypot(p[0]-q[0],p[1]-q[1])<2)continue;
       const examined=visited.has(edge.from)&&visited.has(edge.to);
@@ -135,14 +164,14 @@ export class AudioMap {
       ctx.beginPath();ctx.moveTo(...p);ctx.lineTo(p[0]+(q[0]-p[0])*eased,p[1]+(q[1]-p[1])*eased);ctx.stroke();
     }
     ctx.globalAlpha=1;
-    for(let id=0;id<this.tracks.length;id++){
+    for(const id of context.ids){
       const [x,y]=this.point(id);
       if(x< -20||x>this.width+20||y<50||y>this.height-105)continue;
       const rank=this.results.indexOf(id),explicit=id===this.inspected;
       const reveal=rank<0?0:done||explicit?1:Math.max(0,Math.min(1,(this.reveal-rank/Math.max(1,this.results.length)*.45)/.55));
       const selected=id===this.selected&&reveal>0,active=id===activeId;
       ctx.globalAlpha=visited.has(id)?(done?.5:.85):.55;ctx.fillStyle=visited.has(id)?colors.visited:colors.node;
-      ctx.beginPath();ctx.arc(x,y,2.6,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(x,y,rank>=0?2.6:1.7,0,Math.PI*2);ctx.fill();
       if(!done&&frontier.has(id)){
         ctx.globalAlpha=.85;ctx.strokeStyle=colors.frontier;ctx.lineWidth=1.3;
         ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.stroke();
@@ -156,7 +185,7 @@ export class AudioMap {
       if(reveal>0){
         ctx.globalAlpha=reveal;ctx.fillStyle=colors.result;ctx.beginPath();ctx.arc(x,y,(selected?8:6)*(.7+.3*reveal),0,Math.PI*2);ctx.fill();
         if(selected){ctx.strokeStyle=colors.result;ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.stroke();}
-        ctx.font='11px Arial';ctx.fillStyle=colors.paper;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(rank+1),x,y+.5);
+        ctx.font='11px Arial';ctx.fillStyle=colors.paper;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(this.resultRanks.get(id)),x,y+.5);
       }
       if(id===this.hover){ctx.globalAlpha=1;ctx.strokeStyle=colors.result;ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.stroke();}
     }
@@ -164,9 +193,9 @@ export class AudioMap {
     const labels=done||this.reveal>.65?[this.selected,...this.results.filter(id=>id!==this.selected).slice(0,this.width<500?1:3)]:[this.inspected,activeId];
     const boxes=[];
     for(const id of [...new Set(labels)]){
-      if(id===null||id===undefined)continue;
+      if(id===null||id===undefined||!context.ids.includes(id))continue;
       const p=this.point(id),rank=this.results.indexOf(id),isActive=id===activeId;
-      const prefix=isActive?(beat.kind==='entry'?'Start · ':beat.kind==='descent'?'Look closer · ':''):(rank>=0?String(rank+1)+'. ':'');
+      const prefix=isActive?(beat.kind==='entry'?'Start · ':beat.kind==='descent'?'Look closer · ':''):(rank>=0?String(this.resultRanks.get(id))+'. ':'');
       let title=prefix+this.tracks[id].title;if(title.length>35)title=title.slice(0,33)+'…';
       ctx.font=(isActive||id===this.selected?'600 ':'')+'12px Arial';const textWidth=ctx.measureText(title).width;
       const placed=placeLabel(p,textWidth,boxes,[...new Set([this.selected,activeId,...this.results])].filter(i=>Number.isInteger(i)).map(i=>this.point(i)),this.width,this.height),{x,y}=placed;boxes.push(placed.rect);

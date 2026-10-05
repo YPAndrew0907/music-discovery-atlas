@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "corpus-release:f278752268eb78ceeb74b66c7ea86ba80406c5850dd16d0e78f9a1720f1c31f5",
+  "catalogId": "fma1000:34acf35899ea199b77c6e5917b83dbd2b30d7e480066daddd27a049422eafe05",
+  "graphId": "experimental-clap-audio-graph:bd708123b087d18a983d849339fb51feb41bb6f2bdca91d17822defdbe235555",
+  "count": 1000,
+  "dimensions": 512,
+  "vectorBytes": 2048000,
+  "coreBytes": 6178953,
+  "uniqueEvidenceFiles": 1000,
+  "evidenceBytes": 3703722,
+  "rightsStatus": "recorded reviews and local evidence verified; not an independent legal determination",
+  "currentStaticVectorLimitSatisfied": true,
+  "runtimeActivated": false,
+  "playbackEnabled": false,
+  "licenses": {
+    "CC-BY-4.0": 612,
+    "CC-BY-3.0": 286,
+    "CC0-1.0": 102
+  },
+  "artists": 548,
+  "genres": {
+    "Rock": 109,
+    "Folk": 49,
+    "International": 32,
+    "Experimental": 197,
+    "Hip-Hop": 97,
+    "Electronic": 325,
+    "Old-Time / Historic": 15,
+    "Classical": 56,
+    "Instrumental": 63,
+    "Pop": 23,
+    "Blues": 7,
+    "Country": 19,
+    "Easy Listening": 6,
+    "Jazz": 2
+  },
+  "audioBytes": 986348600,
+  "releaseManifestSha256": "f278752268eb78ceeb74b66c7ea86ba80406c5850dd16d0e78f9a1720f1c31f5"
+}

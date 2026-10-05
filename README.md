@@ -1,3 +1,27 @@
+# Music Discovery Atlas: approved 2,000-track deployment
+
+Read [HYDRATION_2000.md](HYDRATION_2000.md) for exact official-source range pins, bounded all-or-nothing build hydration, current local acceptance and deployment gates. The Docker build verifies all 2,000 audio files before the service can become ready.
+
+The following sections retain earlier local-review history.
+
+# Separate 2,000-track local candidate
+
+Read [CORPUS_2000.md](CORPUS_2000.md) for real corpus identities, local acceptance, memory/performance measurements and deployment boundaries. The accepted 1,000 rows remain an exact unchanged prefix. This candidate is local and unpublished.
+
+The following notes are retained parent-release history.
+
+# Separate 1,000-track local candidate
+
+Read [CORPUS_1000.md](CORPUS_1000.md) for the actual data, acceptance evidence and boundaries. This local candidate preserves the accepted 500 data prefix. It has not been pushed or deployed; the 500 source and archive remain unchanged.
+
+The following 500 notes are retained as parent-release context.
+
+# Music discovery: reviewed 500-track candidate
+
+The current candidate and exact deployment gates are documented in [CORPUS_RELEASE.md](CORPUS_RELEASE.md). It has 500 real, screened FMA recordings and paired CLAP embeddings; deployment remains pending until the actual versioned audio asset URL and existing-host controls are available. The original 108 source pack remains unchanged for history and strict legacy behavior.
+
+The following notes describe the original 108 baseline and its historical measurements; they are not measurements of the 500 candidate.
+
 # CLAP108 music discovery preview
 
 Experimental native CLAP text search over 108 attributed FMA-derived audio vectors. This is a small, biased demonstration catalog, not a production music catalog or a GB–TB retrieval benchmark. Cosine similarity is not a relevance probability, and ANN agreement is not a listener-quality measurement.

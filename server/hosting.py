@@ -1,4 +1,4 @@
-"""Single-process hosting adapter. The frozen encoder/API source is unchanged."""
+"""Single-process hosting adapter with preserved authentication boundaries."""
 import json
 import logging
 import os
@@ -79,8 +79,11 @@ def build_application(*, mode='authenticated', token='', generation='',
         return gate
     from web_gateway import WebGateway
     root = Path(__file__).resolve().parent.parent
+    from active_corpus import selected_corpus
+    selected=selected_corpus(root,json.loads((root / 'package-manifest.json').read_text()))
+    catalog_path=(selected.directory if selected else root / 'music-search-studio/data') / 'catalog.json'
     return WebGateway(gate, web_root=root / 'web', web_manifest=root / 'web-manifest.json',
-        catalog_path=root / 'music-search-studio/data/catalog.json', mode=mode,
+        catalog_path=catalog_path, catalog_bytes=selected.release.assets['catalog'] if selected else None, mode=mode,
         public_origin=public_origin, audio_manifest=audio_manifest_path or root / 'audio-delivery.json',
         enable_audio=enable_audio, audio_directory=audio_directory)
 

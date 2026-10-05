@@ -39,8 +39,8 @@
     },
     {
       "path": "listen-lab/src/release.mjs",
-      "bytes": 4806,
-      "sha256": "1343f13477cdf4adabc909a7915ada2f1480e2bb3c36942d5a758c8db38cccba"
+      "bytes": 4725,
+      "sha256": "6f99c2a2e11f4ba5f65986a0d225d6fa50e6f576f9a65bf15a169ed5342050ee"
     },
     {
       "path": "listen-lab/src/retrieval.mjs",
@@ -139,58 +139,58 @@
     },
     {
       "path": "notices/track-attribution.html",
-      "bytes": 87026,
-      "sha256": "7397eb566e74c744e20ffc49cf3d0e3815d5bc52465794ccf373d92266177c64"
+      "bytes": 3841149,
+      "sha256": "326fdaed6241ddcc14af98218be36a7a6b8ad790a37bf79a59b4ec76df1c5983"
     },
     {
       "path": "search-studio/data/artist-records.json",
-      "bytes": 8958,
-      "sha256": "0735cc1473115cdb51da43a5c8d83a336a6e8a251dec632b44f0ef4dbc47c9cf"
+      "bytes": 161468,
+      "sha256": "177386a56328d363f848934cdceec2cddba544de53a3c6ecc54f8bef103a10ef"
     },
     {
       "path": "search-studio/data/catalog.json",
-      "bytes": 141978,
-      "sha256": "e7cfd8347b77929c5c593afdaec9e390509acaed725cacadc448fc6bcae1c013"
+      "bytes": 4533193,
+      "sha256": "86cc72f6f0b5ebad47e059544c1587907e2b5d7b9b385efd77d09580f180ee07"
     },
     {
       "path": "search-studio/data/examples.json",
-      "bytes": 972234,
-      "sha256": "12437479af5603bdfbaa250ca3df6b47c379931e2728cf7dde1763eba1abac15"
+      "bytes": 1195200,
+      "sha256": "2e566885c88bf443ba811599f469871b99ed8d0c3ea5eb51e0ac348f5d889c1c"
     },
     {
       "path": "search-studio/data/ids.json",
-      "bytes": 1589,
-      "sha256": "548e6a7dbda957f2c53c201dd462a313b7fcde325373e0a435f5029e2d9a4453"
+      "bytes": 31288,
+      "sha256": "43a0444151ed99df4c7663c770c0f9439603c8ebb262dac7e55b50479e7f95d0"
     },
     {
       "path": "search-studio/data/index.json",
-      "bytes": 3078,
-      "sha256": "d81d64a4ab0d35aa827eb0cb3c516eae88c595d5f76078acb4088d63218192d6"
+      "bytes": 122320,
+      "sha256": "998b8201462bd548f9af5a632d82bea313ca7f315e1ebc231d3ca278c258314e"
     },
     {
       "path": "search-studio/data/layout.json",
-      "bytes": 10708,
-      "sha256": "6a5e46637040fb6893dc5b9d15ea3c9413a344bede3aac77a9f82c87ee623429"
+      "bytes": 168360,
+      "sha256": "de16280503f1759d5dd0fb6e2ba08a58022d55a4046e50b0c37c5f154c599d5a"
     },
     {
       "path": "search-studio/data/manifest.json",
-      "bytes": 14879,
-      "sha256": "cc51fc93d48d82c99f7fcc257001ce260d398f00a0cf9e6ad55172b4649739be"
+      "bytes": 48098,
+      "sha256": "d0de747a2b80a4734c11a3e19693bc9ed084ddd5de5ba875f8c222674eeb8381"
     },
     {
       "path": "search-studio/data/vectors.f32",
-      "bytes": 221184,
-      "sha256": "ec8e5c9996f229028cf9859dbfb11306a604af42be1e6465f61d9aa50b4d6fd8"
+      "bytes": 4096000,
+      "sha256": "12c1dfc0c23f27c14d0530799a284df92bb3a740ef4a22749aab53d00af2ae8d"
     },
     {
       "path": "search-studio/index.html",
-      "bytes": 9348,
-      "sha256": "ac1f724f0b8e2451e29540ac0093faecc4afbd51245fdf37921e0b0221bda181"
+      "bytes": 9421,
+      "sha256": "dede9eadd0e045f106d4db152176f77af1ad03e9deb626672026f50dceea47da"
     },
     {
       "path": "search-studio/src/app.mjs",
-      "bytes": 31194,
-      "sha256": "e8b192508f03ae0cedaf5fdb1da9054218a981a8206c56a434af93140c0e1138"
+      "bytes": 31211,
+      "sha256": "c7604f4aed7234b0fbfdb75d2dd0da778e56049b301147095ba6dc6a17cf6b78"
     },
     {
       "path": "search-studio/src/audio-delivery.mjs",
@@ -204,8 +204,8 @@
     },
     {
       "path": "search-studio/src/graph.mjs",
-      "bytes": 14186,
-      "sha256": "06fc5623d774bd35f2607bc38d40e16743f8062b25d50410b2c8cf7b8314a598"
+      "bytes": 15491,
+      "sha256": "835b225141779e740c29d90efa7be040d0688846938c22947df6b3ad1833f0e8"
     },
     {
       "path": "search-studio/src/hnsw.mjs",
@@ -234,8 +234,8 @@
     },
     {
       "path": "search-studio/src/studio-release.mjs",
-      "bytes": 199,
-      "sha256": "d7d248681386088a05a76692fb0c8a17a9d45a2bb2f222c80080737014c75879"
+      "bytes": 195,
+      "sha256": "81c1ac6e961e98a49b5e5218d500692cd9cadc39267d0884148d916cec5e2bba"
     },
     {
       "path": "search-studio/style.css",

@@ -40,11 +40,12 @@ def confined_file(root, relative):
 
 
 class AudioDelivery:
-    def __init__(self, manifest_path, catalog_path, *, enabled=False, directory=None):
+    def __init__(self, manifest_path, catalog_path, *, enabled=False, directory=None, catalog_bytes=None):
         catalog_path = Path(catalog_path)
-        catalog = json.loads(catalog_path.read_text())
+        catalog_bytes = bytes(catalog_bytes) if catalog_bytes is not None else catalog_path.read_bytes()
+        catalog = json.loads(catalog_bytes)
         self.disabled = {'schemaVersion': 1, 'catalogId': catalog['id'],
-            'catalogSha256': digest(catalog_path), 'enabled': False,
+            'catalogSha256': hashlib.sha256(catalog_bytes).hexdigest(), 'enabled': False,
             'publicDeliveryVerified': False, 'tracks': [],
             'unlistedTrackBehavior': 'Preview unavailable'}
         self.manifest, self.paths = self.disabled, {}
@@ -108,7 +109,7 @@ class AudioDelivery:
 class WebGateway:
     def __init__(self, api, *, web_root, web_manifest, catalog_path,
                  mode='authenticated', public_origin='', audio_manifest=None,
-                 enable_audio=False, audio_directory=None):
+                 enable_audio=False, audio_directory=None, catalog_bytes=None):
         self.api, self.mode, self.public_origin = api, mode, public_origin
         self.web_root = Path(web_root)
         manifest = json.loads(Path(web_manifest).read_text())
@@ -129,7 +130,7 @@ class WebGateway:
         if total > 30_000_000 or 'search-studio/index.html' not in self.assets:
             raise ValueError('Unexpected public web package')
         self.audio = AudioDelivery(audio_manifest, catalog_path,
-                                   enabled=enable_audio, directory=audio_directory)
+                                   enabled=enable_audio, directory=audio_directory, catalog_bytes=catalog_bytes)
         if hasattr(getattr(self.api, 'app', None), 'audio_enabled'):
             self.api.app.audio_enabled = self.audio.manifest['enabled']
 

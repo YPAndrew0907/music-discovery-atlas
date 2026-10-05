@@ -1,0 +1,187 @@
+{
+  "schemaVersion": 1,
+  "scope": "Local exact-corpus cache staging plus native app acceptance; seven tiny live official range probes and independent process-deadline review. Actual Render build/hosted playback remain pending.",
+  "hydration": {
+    "tracks": 2000,
+    "audioBytes": 2034768876,
+    "elapsedSeconds": 2.794433597002353,
+    "rangeBytesReservedIncludingRetries": 0,
+    "networkAttempts": 0,
+    "localCacheTest": true,
+    "runtimeEnabled": false,
+    "hostedDeliveryTested": false,
+    "peakRssMiB": 63.03125,
+    "requestsVersion": "2.34.2",
+    "scope": "Complete actual2000 local cached-byte staging test; no full-network hydration or hosted result claimed"
+  },
+  "smoke": {
+    "scope": "Real native 2000 model/API/graph/static/audio in an in-process HTTPS-origin test client; no browser rendering, container limits or public deployment measured.",
+    "queries": [
+      {
+        "query": "Warm acoustic guitar and quiet singing for a calm evening.",
+        "elapsedMs": 101.68209300172748,
+        "serverComputeMs": 90.74550800141878,
+        "topResults": [
+          {
+            "id": "fma:118492",
+            "title": "XVII",
+            "retainedParent1000": true
+          },
+          {
+            "id": "fma:129007",
+            "title": "keep your heart close to your chest.",
+            "retainedParent1000": false
+          },
+          {
+            "id": "fma:115768",
+            "title": "Lost Star",
+            "retainedParent1000": true
+          },
+          {
+            "id": "fma:142247",
+            "title": "Puzzle",
+            "retainedParent1000": false
+          }
+        ]
+      },
+      {
+        "query": "Fast breakbeats, dark synthesizers, and energetic bass.",
+        "elapsedMs": 103.74418499850435,
+        "serverComputeMs": 92.16482000192627,
+        "topResults": [
+          {
+            "id": "fma:150368",
+            "title": "Voice Print Identification",
+            "retainedParent1000": true
+          },
+          {
+            "id": "fma:116879",
+            "title": "El Siniestro Y La Vel\u00f3z",
+            "retainedParent1000": true
+          },
+          {
+            "id": "fma:122260",
+            "title": "haka",
+            "retainedParent1000": false
+          },
+          {
+            "id": "fma:39540",
+            "title": "Effects of Elevation (Sevenles",
+            "retainedParent1000": true
+          }
+        ]
+      },
+      {
+        "query": "Gentle solo piano with a spacious, reflective sound.",
+        "elapsedMs": 93.97095600434113,
+        "serverComputeMs": 84.82797699980438,
+        "topResults": [
+          {
+            "id": "fma:125202",
+            "title": "Remedy for Melancholy",
+            "retainedParent1000": false
+          },
+          {
+            "id": "fma:145914",
+            "title": "The Lion & The Snake",
+            "retainedParent1000": false
+          },
+          {
+            "id": "fma:145524",
+            "title": "Realness",
+            "retainedParent1000": false
+          },
+          {
+            "id": "fma:65786",
+            "title": "Night Palette",
+            "retainedParent1000": true
+          }
+        ]
+      },
+      {
+        "query": "Slow blues guitar with a steady relaxed rhythm.",
+        "elapsedMs": 92.68585699464893,
+        "serverComputeMs": 83.18613000301411,
+        "topResults": [
+          {
+            "id": "fma:141876",
+            "title": "Warmer",
+            "retainedParent1000": true
+          },
+          {
+            "id": "fma:129005",
+            "title": "a long night,",
+            "retainedParent1000": true
+          },
+          {
+            "id": "fma:130786",
+            "title": "Which That Is This?",
+            "retainedParent1000": false
+          },
+          {
+            "id": "fma:129004",
+            "title": "That feeling you give me.",
+            "retainedParent1000": false
+          }
+        ]
+      }
+    ],
+    "audioRanges": [
+      {
+        "id": "fma:1382",
+        "status": 206,
+        "contentRange": "bytes 0-1023/720629"
+      },
+      {
+        "id": "fma:107491",
+        "status": 206,
+        "contentRange": "bytes 0-1023/1202266"
+      },
+      {
+        "id": "fma:112984",
+        "status": 206,
+        "contentRange": "bytes 0-1023/1201157"
+      }
+    ],
+    "readinessSeconds": 5.319346955999208,
+    "catalogCount": 2000,
+    "engineId": "experimental-native-q8:ea6dd665180b9b3f2a2999941fe7cff736bbefafa597d26312fd520cc0e5ea31",
+    "graphId": "experimental-clap-audio-graph:a8f8c69981ace53cae41eea125a92d03deda519dd598d4af752ecc98f2560f82",
+    "quarantinedAudioStatus": 404,
+    "creditRows": 2000,
+    "peakRssMiB": 318.5546875
+  },
+  "resilience": {
+    "scope": "Four bounded real native-model requests through the actual2000 API with production-default admission limits; no browser, Docker or public host claim.",
+    "admittedCancellation": {
+      "controlStatus": 200,
+      "searchStatus": 499,
+      "cancelToFinishedMs": 4.724630998680368,
+      "activeAfterCompletion": 0
+    },
+    "replacementGeneration": {
+      "status": 200,
+      "generation": 2,
+      "results": 8
+    },
+    "tokenLimit": {
+      "status": 200,
+      "originalTokens": 88,
+      "usedTokens": 77,
+      "truncated": true,
+      "transform": "exact raw text",
+      "serverComputeMs": 125.80819899449125
+    },
+    "parent1000CatalogRejected": {
+      "status": 409
+    },
+    "healthAfterChecks": {
+      "ok": true
+    },
+    "peakRssMiB": 305.0
+  },
+  "pythonTests": 83,
+  "nodeTests": 38,
+  "liveDiagnosticBytes": 7281051,
+  "reviewedRuntimeScriptSha256": "8e6edf7b4f3136850f2efb2a37605f7f087e06716cc7b9500430b66408d421cb"
+}

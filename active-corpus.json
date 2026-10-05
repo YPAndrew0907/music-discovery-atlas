@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "enabled": true,
+  "directory": "corpus-releases/fma2000",
+  "manifestSha256": "af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283",
+  "maxTracks": 2000,
+  "coreByteBudget": 16000000,
+  "evidenceByteBudget": 8000000,
+  "audioArchive": null
+}

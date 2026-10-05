@@ -21,7 +21,7 @@ test('web manifest pins every collection asset, exact model identities and requi
   for(const pin of Object.values(manifest.files)){
     const bytes=await read('search-studio/data/'+pin.path);assert.equal(bytes.length,pin.bytes);assert.equal(hash(bytes),pin.sha256);
   }
-  assert.equal(catalog.tracks.length,108);assert.equal(catalog.id,RELEASE.catalogId);
+  assert.equal(catalog.tracks.length,manifest.count);assert.equal(catalog.id,RELEASE.catalogId);
   assert.deepEqual(PINS.artifacts,RELEASE.textAssets);
   assert.equal(RELEASE.modelSpace.revision,'c28f2883575e590e04d3146ff0713c2448d691ba');
   for(const pin of RELEASE.textAssets)assert.ok(pin.url.startsWith('https://huggingface.co/Xenova/clap-htsat-unfused/resolve/'+RELEASE.modelSpace.revision+'/'));
@@ -30,7 +30,7 @@ test('web manifest pins every collection asset, exact model identities and requi
   assert.equal(hash(await read('listen-lab/src/encoder.mjs')),RELEASE.queryProfile.encoderImplementationSha256);
 });
 
-test('six public recorded examples reproduce their exact results and use the same 108-row graph',async()=>{
+test('six public recorded examples reproduce their exact results and use the same active release graph',async()=>{
   assert.equal(examples.count,6);assert.equal(examples.examples.length,6);
   assert.equal(examples.graphId,manifest.graphId);assert.equal(examples.indexSha256,manifest.indexSha256);
   assert.deepEqual(examples.examples.map(e=>e.id),['dev-01','dev-02','dev-03','dev-04','dev-05','dev-06']);
@@ -46,7 +46,7 @@ test('six public recorded examples reproduce their exact results and use the sam
   }
   const artists=await json('search-studio/data/artist-records.json');
   assert.deepEqual(artists.rows.map(r=>r.trackId),catalog.tracks.map(r=>r.id));
-  const layout=await json('search-studio/data/layout.json');assert.equal(layout.positions.length,108);assert.equal(layout.graphId,manifest.graphId);
+  const layout=await json('search-studio/data/layout.json');assert.equal(layout.positions.length,manifest.count);assert.equal(layout.graphId,manifest.graphId);
 });
 
 test('public HTML exposes no audio source; result, inspector and shelf buttons share the verified delivery gate',async()=>{

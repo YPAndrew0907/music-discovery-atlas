@@ -1,0 +1,110 @@
+{
+  "scope": "Real native500 model/API/graph/static/audio in an in-process HTTPS-origin test client; no browser rendering, container limits or public deployment measured.",
+  "queries": [
+    {
+      "query": "Warm acoustic guitar and quiet singing for a calm evening.",
+      "elapsedMs": 44.1196920000948,
+      "serverComputeMs": 34.40458600380225,
+      "topResults": [
+        {
+          "id": "fma:115768",
+          "title": "Lost Star",
+          "retainedLegacy": false
+        },
+        {
+          "id": "fma:61011",
+          "title": "Week Seven",
+          "retainedLegacy": true
+        },
+        {
+          "id": "fma:6856",
+          "title": "Autumn Flow",
+          "retainedLegacy": true
+        },
+        {
+          "id": "fma:4037",
+          "title": "Oh! Mighty Engine",
+          "retainedLegacy": true
+        }
+      ]
+    },
+    {
+      "query": "Fast breakbeats, dark synthesizers, and energetic bass.",
+      "elapsedMs": 43.95916000066791,
+      "serverComputeMs": 35.80700299789896,
+      "topResults": [
+        {
+          "id": "fma:116879",
+          "title": "El Siniestro Y La Vel\u00f3z",
+          "retainedLegacy": false
+        },
+        {
+          "id": "fma:126646",
+          "title": "LifeCycle",
+          "retainedLegacy": false
+        },
+        {
+          "id": "fma:143057",
+          "title": "There Is Something Wrong",
+          "retainedLegacy": false
+        },
+        {
+          "id": "fma:89815",
+          "title": "Nigtht_City",
+          "retainedLegacy": false
+        }
+      ]
+    },
+    {
+      "query": "Gentle solo piano with a spacious, reflective sound.",
+      "elapsedMs": 40.67780599871185,
+      "serverComputeMs": 32.26537700538756,
+      "topResults": [
+        {
+          "id": "fma:115771",
+          "title": "Saying Goodbye In The Rain (piano)",
+          "retainedLegacy": false
+        },
+        {
+          "id": "fma:132448",
+          "title": "Liberosis (Instrumental)",
+          "retainedLegacy": false
+        },
+        {
+          "id": "fma:115769",
+          "title": "Moonsea",
+          "retainedLegacy": false
+        },
+        {
+          "id": "fma:113110",
+          "title": "The Tragedy of Loss",
+          "retainedLegacy": false
+        }
+      ]
+    }
+  ],
+  "audioRanges": [
+    {
+      "id": "fma:1382",
+      "status": 206,
+      "contentRange": "bytes 0-1023/720629"
+    },
+    {
+      "id": "fma:86634",
+      "status": 206,
+      "contentRange": "bytes 0-1023/1116907"
+    },
+    {
+      "id": "fma:11916",
+      "status": 206,
+      "contentRange": "bytes 0-1023/480760"
+    }
+  ],
+  "readinessSeconds": 1.725759780005319,
+  "catalogCount": 500,
+  "engineId": "experimental-native-q8:ea6dd665180b9b3f2a2999941fe7cff736bbefafa597d26312fd520cc0e5ea31",
+  "graphId": "experimental-clap-audio-graph:cbe385038ebccd7acbe47db264b5480b29530236802c32937313ba6cbdaf705d",
+  "quarantinedAudioStatus": 404,
+  "creditRows": 500,
+  "peakRssMiB": 287.1640625
+}

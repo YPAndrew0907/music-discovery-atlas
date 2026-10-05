@@ -114,9 +114,9 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
     resolveSearch(i,example=0){searches[i].resolve(new Response(JSON.stringify(responseFor(searches[i].body,example))));}};
 }
 
-test('actual bootstrap uses the unchanged 108-row graph, keeps recorded results labeled and sends no input/model work',async()=>{
+test('actual bootstrap uses the active release graph, keeps recorded results labeled and sends no input/model work',async()=>{
   const h=await harness();
-  assert.equal(h.map.options.tracks.length,108);assert.equal(h.map.searches.length,1);
+  assert.equal(h.map.options.tracks.length,manifest.count);assert.equal(h.map.searches.length,1);
   assert.equal(h.map.searches[0].options.animate,false);assert.ok(h.map.searches[0].trace.events.length);
   assert.equal(h.el('#engine-label').textContent,'Recorded example');assert.match(h.el('#results-source').textContent,/Recorded example/);
   assert.equal(h.el('#open-engine').textContent,'Server ready');assert.match(h.el('#search-processing').textContent,/Search is processed on this server/);
@@ -257,7 +257,7 @@ test('BFCache audio restoration completes during a new query without replacing s
   const restore=h.events.pageshow({persisted:true});await until(()=>h.audioRequests.length===2);
   await h.submit('new query during audio restoration');const searching=h.el('#status').textContent;
   h.audioRequests[1].resolve();await restore;
-  assert.match(h.el('#audio-availability').textContent,/1 of 108/);assert.equal(h.el('#status').textContent,searching);
+  assert.match(h.el('#audio-availability').textContent,new RegExp('1 of '+catalog.tracks.length));assert.equal(h.el('#status').textContent,searching);
   h.resolveSearch(0);await flush();assert.equal(h.el('#engine-label').textContent,'Live · server');
   h.events.pagehide({persisted:true});const obsolete=h.events.pageshow({persisted:true});await until(()=>h.audioRequests.length===3);
   h.events.pagehide({persisted:true});h.audioRequests[2].resolve();await obsolete;

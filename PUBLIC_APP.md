@@ -1,3 +1,13 @@
+# Separate 1,000-track local candidate
+
+The current local candidate is documented in [CORPUS_1000.md](CORPUS_1000.md), with its full ledger and exact identities under corpus-releases/fma1000/. It is not pushed or deployed. The following 500 and legacy notes are retained as parent-release history.
+
+# Active-release integration
+
+The current 500 candidate uses explicit package-pinned activation, snapshot-backed graph/catalog loading and the bounded reviewed audio installer described in [CORPUS_RELEASE.md](CORPUS_RELEASE.md). Its local real-model/API/audio checks passed. Public-host/browser acceptance remains pending.
+
+The original 108 integration contract below remains historical background; the current release identity and count come from the explicit selected manifest.
+
 # Public app integration
 
 The public UI is adapted from the simplified search studio. It presents the same 108-track graph and six explicitly labeled public recorded searches. There is no personal course dataset, private deployment configuration, old Git history, audio, or model weight in this tree.

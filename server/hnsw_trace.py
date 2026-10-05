@@ -173,7 +173,11 @@ class HNSW:
                 raise ValueError("Matrix shape mismatch") from error
         if len(matrix) != count * dimensions:
             raise ValueError("Matrix shape mismatch")
-        rows = tuple(tuple(matrix[offset:offset + dimensions]) for offset in range(0, len(matrix), dimensions))
+        # Keep an immutable packed float32 snapshot instead of allocating one
+        # Python float object per component. Iteration still yields the same
+        # exact binary32 values in the same order for binary64 accumulation.
+        packed = memoryview(matrix.tobytes()).cast('f')
+        rows = tuple(packed[offset:offset + dimensions] for offset in range(0, len(matrix), dimensions))
         for row in rows:
             assert_unit(row, dimensions)
         self.dimensions = int(dimensions)

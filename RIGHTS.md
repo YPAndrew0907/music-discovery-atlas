@@ -1,3 +1,13 @@
+# Separate 1,000-track local candidate
+
+The current local candidate is documented in [CORPUS_1000.md](CORPUS_1000.md), with its full ledger and exact identities under corpus-releases/fma1000/. It is not pushed or deployed. The following 500 and legacy notes are retained as parent-release history.
+
+# Current 500-track rights ledger
+
+The candidate 500 selection and its qualifications are documented in [CORPUS_RELEASE.md](CORPUS_RELEASE.md) and corpus-releases/fma500/rights.json. It excludes legacy fma:30702 pending resolution of conflicting source notices. Public audio publication requires the separately pinned approved archive.
+
+The original 108 assessment below is retained as historical context and is not an unconditional clearance of that conflicted row.
+
 # Release scope and attribution
 
 This is a public-source candidate for a 108-row experimental catalog, not a blanket rights clearance for music or model training data.

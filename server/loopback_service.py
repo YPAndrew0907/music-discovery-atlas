@@ -1,7 +1,7 @@
 """Deployment-only loader; copied as server/loopback_service.py by package_server.py.
 
-The encoder and API sources remain byte-identical. Only the data-loading adapter
-changes: this reads the reviewed release assets, never the research corpus.
+The encoder remains byte-identical. An explicit package-pinned corpus selection
+can choose a validated new release; disabled or absent selection preserves legacy pins. This loader reads the reviewed release assets, never the research corpus.
 """
 import os
 os.environ.update(HF_HUB_OFFLINE='1',TRANSFORMERS_OFFLINE='1',USE_TORCH='0',USE_TF='0',
@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 import sys
 import time
+from active_corpus import selected_corpus
 import numpy as np
 import onnxruntime as ort
 import transformers
@@ -60,31 +61,45 @@ class Engine:
         start=time.perf_counter()
         self.precision=precision
         package=verify_package()
-        data=WORK/'music-search-studio/data'
+        selected=selected_corpus(WORK,package)
+        data=selected.directory if selected else WORK/'music-search-studio/data'
         models=WORK/'model'
         self.pack=WORK/'not-a-research-pack'
         self.model=models/'text_model_quantized.onnx'
         if digest(self.model)!=Q8_SHA or digest(models/'tokenizer.json')!=TOKENIZER_SHA:
             raise RuntimeError('Pinned text artifact mismatch')
-        if digest(data/'vectors.f32')!=VECTORS_SHA or digest(data/'catalog.json')!=CATALOG_SHA:
+        if selected is None and (digest(data/'vectors.f32')!=VECTORS_SHA or digest(data/'catalog.json')!=CATALOG_SHA):
             raise RuntimeError('Pinned catalog/vector mismatch')
         self.pair=json.loads((WORK/'model/model-space-q8.json').read_text())
         if self.pair['id']!=PAIR_ID or PAIR_ID!='experimental-fma-q8:'+object_sha(self.pair['identity']):
             raise RuntimeError('Pinned pairing contract mismatch')
-        self.metadata=json.loads((data/'catalog.json').read_text())
-        self.catalog=self.metadata
-        self.catalog_version=CATALOG_ID
-        self.catalog_sha=CATALOG_SHA
-        if self.metadata['id']!=CATALOG_ID or self.metadata['dimensions']!=512:
-            raise RuntimeError('Catalog identity mismatch')
-        self.ids=[row['id'] for row in self.metadata['tracks']]
-        if len(self.ids)!=108 or len(set(self.ids))!=108 or self.ids!=json.loads((data/'ids.json').read_text()):
-            raise RuntimeError('Catalog order mismatch')
-        self.vectors=np.frombuffer((data/'vectors.f32').read_bytes(),dtype='<f4').reshape((108,512))
-        if not np.isfinite(self.vectors).all() or np.max(np.abs(np.linalg.norm(self.vectors,axis=1)-1))>1e-5:
-            raise RuntimeError('Invalid normalized audio vectors')
-        self.audio_receipt={'vectorsSha256':VECTORS_SHA,
-            'executionProfileSha256':object_sha(self.pair['identity']['audioExecutionProfile'])}
+        if selected is None:
+            self.metadata=json.loads((data/'catalog.json').read_text())
+            self.catalog=self.metadata
+            self.catalog_version=CATALOG_ID
+            self.catalog_sha=CATALOG_SHA
+            if self.metadata['id']!=CATALOG_ID or self.metadata['dimensions']!=512:
+                raise RuntimeError('Catalog identity mismatch')
+            self.ids=[row['id'] for row in self.metadata['tracks']]
+            if len(self.ids)!=108 or len(set(self.ids))!=108 or self.ids!=json.loads((data/'ids.json').read_text()):
+                raise RuntimeError('Catalog order mismatch')
+            self.vectors=np.frombuffer((data/'vectors.f32').read_bytes(),dtype='<f4').reshape((108,512))
+            if not np.isfinite(self.vectors).all() or np.max(np.abs(np.linalg.norm(self.vectors,axis=1)-1))>1e-5:
+                raise RuntimeError('Invalid normalized audio vectors')
+            self.audio_receipt={'vectorsSha256':VECTORS_SHA,
+                'executionProfileSha256':object_sha(self.pair['identity']['audioExecutionProfile'])}
+        else:
+            verified=selected.release
+            self.validated_release=verified
+            self.release_directory=selected.directory
+            self.metadata=json.loads(verified.assets['catalog'])
+            self.catalog=self.metadata
+            self.catalog_version=verified.catalog_id
+            self.catalog_sha=hashlib.sha256(verified.assets['catalog']).hexdigest()
+            self.ids=list(verified.ordered_ids)
+            self.vectors=np.frombuffer(verified.assets['vectors'],dtype='<f4').reshape((verified.count,verified.dimensions))
+            self.audio_receipt={'vectorsSha256':hashlib.sha256(verified.assets['vectors']).hexdigest(),
+                'executionProfileSha256':object_sha(self.pair['identity']['audioExecutionProfile'])}
         self.runtime={'package':'onnxruntime','version':ort.__version__,'provider':'CPUExecutionProvider',
             'intraOpThreads':1,'interOpThreads':1,'graphOptimizationLevel':'all','executionMode':'sequential',
             'transformers':transformers.__version__,'python':sys.version.split()[0]}

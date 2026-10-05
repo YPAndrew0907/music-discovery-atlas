@@ -19,6 +19,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from encoder import NativeEncoder, RequestControl, SearchCancelled
 from loopback_service import WORK, object_sha, digest
+from corpus_release import ValidatedRelease
 
 
 @dataclass
@@ -42,6 +43,28 @@ def valid_id(value):
 
 def load_graph(encoder, directory):
     from hnsw_trace import HNSW
+    release=getattr(encoder,'validated_release',None)
+    if isinstance(release,ValidatedRelease):
+        # Consume the approved immutable bytes, never reopen mutable candidate files.
+        if directory is None or Path(directory).resolve()!=Path(encoder.release_directory).resolve():
+            raise RuntimeError('Active corpus graph directory mismatch')
+        raw=release.assets
+        manifest=json.loads(raw['graphManifest']);graph=json.loads(raw['index'])
+        if (encoder.catalog_version!=release.catalog_id or encoder.ids!=list(release.ordered_ids)
+            or encoder.catalog_sha!=hashlib.sha256(raw['catalog']).hexdigest()
+            or encoder.audio_receipt['vectorsSha256']!=hashlib.sha256(raw['vectors']).hexdigest()
+            or encoder.vectors.shape!=(release.count,release.dimensions)
+            or encoder.vectors.tobytes()!=raw['vectors']):
+            raise RuntimeError('Active corpus encoder snapshot mismatch')
+        profile=manifest['allowedQueryProfiles'][0]
+        if encoder.engine!=profile['id'] or object_sha(encoder.query_profile)!=object_sha(profile['identity']):
+            raise RuntimeError('Active corpus query profile mismatch')
+        binding={'indexSpaceId':release.graph_id,'graphId':release.graph_id,
+                 'indexSha256':hashlib.sha256(raw['index']).hexdigest(),
+                 'graphManifestSha256':hashlib.sha256(raw['graphManifest']).hexdigest(),
+                 'orderedIdsSha256':object_sha(encoder.ids),'bindingStatus':'verified-corpus-release',
+                 'corpusReleaseSha256':release.manifest_sha256}
+        return HNSW(graph,raw['vectors']),binding
     if directory is None:
         # Temporary local fallback has its own audio-only identity. A release must
         # use the graph owner’s bound manifest via MUSIC_GRAPH_DIR.
@@ -114,7 +137,7 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
     async def lifespan(app):
         app.state.encoder=encoder or NativeEncoder(settings.precision)
         if graph is None:
-            app.state.graph,app.state.graph_binding=load_graph(app.state.encoder,settings.graph_dir)
+            app.state.graph,app.state.graph_binding=load_graph(app.state.encoder,getattr(app.state.encoder,'release_directory',settings.graph_dir))
         else:
             app.state.graph,app.state.graph_binding=graph,graph_binding
         app.state.executor=ThreadPoolExecutor(max_workers=1,thread_name_prefix='music-inference')
@@ -171,7 +194,7 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
     @app.get('/v1/manifest')
     async def manifest():
         enc=app.state.encoder
-        return {**enc.manifest(),**app.state.graph_binding,
+        return {**enc.manifest(),**({'quality':'Experimental reviewed-release catalog; no listener relevance judgments'} if isinstance(getattr(enc,'validated_release',None),ValidatedRelease) else {}),**app.state.graph_binding,
                 'deploymentGeneration':settings.deployment_generation,
                 'rankingAlgorithm':'exact-cosine-js-order-v1',
                 'traceAlgorithm':'hnsw-static-cosine-v1',

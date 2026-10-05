@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "kind": "music-corpus-release",
+  "catalogId": "fma500:49bc40f97a3bcd643ba78d23085af4651632ada2ce4065e6f9fa1ebba74fe578",
+  "count": 500,
+  "dimensions": 512,
+  "pairId": "experimental-fma-q8:3d5a3ebe3ac4bd09fa96f05fdefc2df1ae841d2562dea913abb8a5990b377566",
+  "assets": {
+    "catalog": {
+      "path": "catalog.json",
+      "bytes": 1269176,
+      "sha256": "209d25837808c272b5e862484b00e911694ca8850919c804cddd94a3dea9fc72"
+    },
+    "ids": {
+      "path": "ids.json",
+      "bytes": 7763,
+      "sha256": "e817f7f87978dd6abc8b37522b6c6a8350c578e1240422d7677a665d8bc3d3b9"
+    },
+    "vectors": {
+      "path": "vectors.f32",
+      "bytes": 1024000,
+      "sha256": "36ed88e3957662a3d88b4bea1609fec49837e2231d7f5886392314ec2af8e131"
+    },
+    "index": {
+      "path": "index.json",
+      "bytes": 24326,
+      "sha256": "3de9fb4a894db46360ad96934cc620018ffbf0b02778fe901787c17aa6b18f28"
+    },
+    "graphManifest": {
+      "path": "manifest.json",
+      "bytes": 14561,
+      "sha256": "3b2cd70695beba111985da807f6874effe2b51f0f2de39b75cbae2c06d7e1d75"
+    },
+    "rights": {
+      "path": "rights.json",
+      "bytes": 780597,
+      "sha256": "a767019ca81641bcf057a99aacc4364b88835a94f8e8459894628d631283d5a5"
+    }
+  }
+}

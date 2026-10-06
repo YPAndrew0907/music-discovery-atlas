@@ -1,8 +1,14 @@
 # Platform v2: release format, server and page for 20K–200K recordings
 
-Status, 2026-10-06: implemented on the local branch `platform-v2` and measured on this Mac. Not pushed or deployed. The live site and the repository default are unchanged: `active-corpus.json` still selects the v1 fma2000 release, and the Dockerfile and hydration are untouched.
+Status, 2026-10-06: implemented on the local branch `platform-v2` and measured on this Mac. Not pushed or deployed. The live site is unchanged. The repository default still selects a v1 fma2000 release: since the rights quarantine, the rebuilt 1,992-track one. For that selection the Dockerfile and hydration steps added by `v2-deploy` change nothing.
 
-The branch `v2-deploy` builds on this one and makes v2 deployable: the release installer, the v2 build hydration, the activation step, the audio publication verifier and the post-deploy live check. `docs/DEPLOY_PLAN_V2.md` has the steps, the local proof and the acceptance numbers. Where this document says something is unchanged or not written, it describes `platform-v2` alone.
+Since 2026-10-06 `platform-v2` also carries three branches, merged in this order:
+
+- **`v2-deploy`.** It makes v2 deployable: the release installer, the v2 build hydration, the activation step, the audio publication verifier and the post-deploy live check. `docs/DEPLOY_PLAN_V2.md` has the steps, the local proof and the acceptance numbers.
+- **`rights-fix-2000`.** fma2000 rebuilt without the eight quarantined recordings (`docs/RIGHTS_QUARANTINE.md`).
+- **`v2-scale-ui`.** Section 10.
+
+Fixes from the security review followed (`DEPLOY_PLAN_V2.md` section 2). Sections 1 to 9 describe the platform as first built. Where they say something is unchanged or not written, they describe it before those merges, and section 10 supersedes them where it says so.
 
 This document makes the v2 sketch in `corpus200k/SOURCES_AND_PLAN.md` (section 6.4) concrete for this codebase. It records what was built, what was measured and what a deployment would still need.
 
@@ -369,7 +375,7 @@ Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
    - Starting the budget at readiness is a one-line change. It would change v1 behaviour, so it is left for review.
    - v2 startup costs 1.4–1.9 CPU-seconds warm (v1: 3.8–9.8 at 2,000, 9.5–22 at 5,777).
    - Neighbor exploration now costs server CPU (about 10–20 ms each) and counts against the same hourly budget.
-   - `/collection/tracks` has a concurrency bound (8 pending, then 429) but no per-minute budget. Neighbors has one, and on `v2-scale-ui` so do tiles, links and credits.
+   - `/collection/tracks` had a concurrency bound (8 pending, then 429) but no per-minute budget. Neighbors had one, and on `v2-scale-ui` so do tiles, links and credits. Since `b34f0ab` it has one too: 300 a minute (`DEPLOY_PLAN_V2.md` section 7, item 6).
      - At 5,777 a lookup costs 3–10 ms.
      - At 200K a rare-word lookup costs 0.34–0.41 s of CPU. In anonymous mode that would drain the same 30 CPU-seconds per hour that live search needs.
      - Add a per-minute read budget before serving 200K anonymously. Release format 2.1's FTS5 prefilter (section 10.2) takes rare-word lookups to milliseconds, but a word in every row, or one of one or two letters, still scans.
@@ -383,7 +389,7 @@ Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
 
 ## 10. Scale UI and release format 2.1 (branch `v2-scale-ui`)
 
-Status, 2026-10-06: implemented on the local branch `v2-scale-ui`, which builds on `platform-v2`, and tested and measured on this Mac. Not pushed or deployed. `v2-integrate` was merging this branch at `da1ef62` while this was written. For this branch, this section supersedes what sections 2, 4, 5 and 9 say about the map overview, name lookups, the credits page and the open page features.
+Status, 2026-10-06: implemented on the local branch `v2-scale-ui` (built on `platform-v2`), tested and measured on this Mac, then merged into `platform-v2` after `v2-deploy` and `rights-fix-2000` (10.7). Not pushed or deployed. This section supersedes what sections 2, 4, 5 and 9 say about the map overview, name lookups, the credits page and the open page features.
 
 | Commit | What it adds |
 |---|---|
@@ -467,7 +473,7 @@ At 200K rows a title/artist lookup scanned the narrow `tracks` table with `instr
 
 **Tools.**
 
-- **Converter.** `convert_release_v1_to_v2.py` writes 2.1 by default. `--no-lookup-index` writes 2.0, byte-identical to the reviewed fma2000-v2 release (`806b19ed…`).
+- **Converter.** `convert_release_v1_to_v2.py` writes 2.1 by default. `--no-lookup-index` writes 2.0, byte-identical to the reviewed fma2000-v2 release (`806b19ed…`). For the 1,992-track release of the rights quarantine, the two conversions are 2.1 `b537a7ac…` (the deploy's pin) and 2.0 `279cd21b…`.
 - **Upgrader.** `scripts/upgrade_release_v2.py` turns a verified 2.0 directory into 2.1 without re-reading v1. A converted and an upgraded 2.1 catalog are byte-identical.
 - **Proofs.** Both run FTS5's integrity check against every row and a sampled lookup oracle, comparing index and scan pages, before publishing.
 - **Verifier.** `verify_release_v2.py` (`validate_rows`) re-runs the integrity check on a private copy, since the check needs a writable database.
@@ -664,16 +670,24 @@ A number typed into the box is now a draft:
 | mobile | 4× | local | 573.2 / 728.7 | 609.4 / 708.7 | -20.0 | 289–331 |
 | mobile | 4× | broadband | 1379 / 1486.1 | 1119.4 / 1184.8 | -301.3 | 289–325 |
 
-### 10.7 For the integration with `v2-deploy`
+### 10.7 The integration with `v2-deploy` and `rights-fix-2000`
 
-- **The release digest.** The converter now writes 2.1 by default, so `DEPLOY_PLAN_V2.md` 3.2's convert command run in a tree that includes this branch produces `aa54e992…`, not the reviewed `806b19ed…`. The activation's `--expected-manifest-sha256` then fails closed. Either add `--no-lookup-index` to that command, which reproduces `806b19ed…` byte for byte (checked 2026-10-06 with the server runtime), or review and pin the 2.1 release `aa54e992…`. At fma2000 the index buys little: lookups take 1–2 ms either way.
-- **The page data.** `layout.json` schema 3 changes the page-data manifest digest the plan quotes (`7e837997…`). `build_web_v2.py` now also writes `notices/track-attribution.html`, so the activation's list of changed files grows by one. `repin_web` already refreshes every listed web file.
-- **The tests to run.** Both browser fixtures and the Python and Node suites. Neither live check reads the credits pages, so also run `node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web/notices/track-attribution.html` after stage 2, from the activated tree.
-- **The commits.** `v2-integrate` was merging this branch at `da1ef62` (uncommitted) while this was written. `e038654`, `ca3b5c8` and this document came later.
+Merged on 2026-10-06 on `v2-integrate` and fast-forwarded into `platform-v2`. `validation/INTEGRATION_RECEIPT_V2.md`, in the project workspace, has the details.
+
+- **The merges.** Real merges, in this order: `558d6f7` (v2-deploy), `6bfae62` (rights-fix-2000), `5376b00` (this branch). Eight files conflicted in the last one; each keeps both sides.
+- **The release digest.** The deploy pins the 2.1 conversion of the 1,992-track release, `b537a7ac…` (`DEPLOY_PLAN_V2.md` 3.2). `--no-lookup-index` reproduces the 2.0 conversion `279cd21b…`, the fallback if the image's SQLite lacks FTS5 trigrams. On the 2,000-row release these were `aa54e992…` and `806b19ed…`.
+- **The page data.** After activation the page-data manifest is `cebbefa8…`, or `f6b89f93…` with the 2.0 release. The activation lists 38 changes, the credits page among them.
+- **The paged credits.** Their introduction states the quarantine exclusion that the static page states. `CREDITS_EXCLUSIONS` equals `build_corpus_credits.QUARANTINE_EXCLUSION`, and `test_api_v2` keeps the two equal and expects 404 for the listed IDs. The server never reads the list, so the sentence holds only for a release built with the list applied. The converter and the activation do not check that; it is an open item.
+- **What only the merge showed.** In a tree activated with the merged code, two rights-fix tests and the public link check failed: the web credits page there becomes the small page. Fixed in `fedde26`.
+- **The security review of `v2-deploy`.** Three fixes followed, each in its own commit:
+  - `87b6f11`: the activation refreshes only its own pins;
+  - `b34f0ab`: a per-minute budget for `/collection/tracks`;
+  - `09117d2`: the verifier keeps no cookies.
+- **The tests to run.** Both browser fixtures and the Python (170) and Node (92) suites. After stage 2, also `node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web/notices/track-attribution.html`, because neither live check reads the credits pages.
 
 ### 10.8 Still open
 
-- **The tracks budget.** `/collection/tracks` still has no per-minute budget. The 2.1 index takes rare and medium lookups from hundreds of milliseconds to a few at 100K–200K, but a word in every row, or one of one or two letters, still scans: 0.40–0.51 s at 200K in-process. A browse page near the end costs an OFFSET walk: 22–32 ms over HTTP at 100K.
+- **The tracks budget.** Since `b34f0ab`, `/collection/tracks` has a per-minute budget (300). The 2.1 index takes rare and medium lookups from hundreds of milliseconds to a few at 100K–200K. But a word in every row, or one of one or two letters, still scans: 0.40–0.51 s at 200K in-process. A browse page near the end costs an OFFSET walk: 22–32 ms over HTTP at 100K. At 200K the cap alone would let lookups spend the anonymous CPU budget quickly; the anonymous budget counts all process CPU (`DEPLOY_PLAN_V2.md` section 7, item 6).
 - **Measurement conditions.** fps and first paint were measured on a shared Mac whose load swung between 14 and 930 within minutes. The interleaved before/after pairs are the comparable figures; Render's single CPU will be slower per frame of server work, though the page's frame cost is the browser's own.
 - **Synthetic graphs.** The synthetic graphs are random (100K) or JS-built with a test-only orphan repair (200K, round 1). A real 200K build still needs the reviewed connectivity repair (9.4).
 - **The v1 credits page.** The checked-in v1 page still overflows on phones; it is v1 and left unchanged.

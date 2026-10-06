@@ -1,6 +1,6 @@
 # Rights quarantine
 
-Status, 2026-10-06: on the local branch `rights-fix-2000` (from `v2-deploy`). Nothing is pushed or deployed. The live site (`main` = `35cec9e`) still serves all 2,000 recordings, including the eight below, until this branch reaches `main`.
+Status, 2026-10-06: built on the local branch `rights-fix-2000` (from `v2-deploy`) and merged into `platform-v2`. Nothing is pushed or deployed. The live site (`main` = `35cec9e`) still serves all 2,000 recordings, including the eight below, until `platform-v2` reaches `main` (stage 1 of `DEPLOY_PLAN_V2.md`).
 
 This document explains the quarantine list, what the first entries are and why, what the rebuild without them changed, and the procedure for the next entry. The evidence comes from the rights research of 2026-10-06 (`rights/research/fma-dataset-and-automated-screen.md` in the project workspace, sections 0, 4.3, 4.5, 7 and 8, Appendix B).
 
@@ -78,8 +78,10 @@ The driver and every receipt are in `validation/rights-fix-2000/` (`rebuild.sh`,
 | Audio plan (`audio-hydration.json`) | `cc00b6d1…` | `edc829227393039b3ef46bfbfa12381b3e5cae84e7442208aec22c4bc9a557b4` |
 | v1 page manifest | `d0de747a…` | `afabc1692312ab4f8170a5c44112aa7250730be8051e3ff61d99062e23182766` |
 | Credits page | `326fdaed…` | `45ae129825ac4d6ae279eab4546553670eeab4738bb1bf4d68f4fb2d040ae569` |
-| v2 conversion (`release.json`) | `806b19ed…` | `279cd21b116f084001162c8e10177511e7ffda89064189328e31d73c5fea68b7` |
-| v2 page manifest after activation | `7e837997…` | `ca2b04956b9850e922fa6ce9fcb3c829db803d30bccf9e388b820b754ec3458e` |
+| v2 conversion, release format 2.0 (`release.json`) | `806b19ed…` | `279cd21b116f084001162c8e10177511e7ffda89064189328e31d73c5fea68b7` |
+| v2 page manifest after activation, before the scale-UI merge | `7e837997…` | `ca2b04956b9850e922fa6ce9fcb3c829db803d30bccf9e388b820b754ec3458e` |
+| v2 conversion, release format 2.1 (the merged converter's default; what stage 2 pins) | `aa54e992…` | `b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740` |
+| v2 page manifest after activation with the merged code (layout schema 3) | — | `cebbefa8a90dc43473b5c9ff77480e73ec6a52dcd58155292862e170f8dcaf4f` (2.1), `f6b89f937240bac91b10d95c1dc07a7b72c9889440c505d66deacfe975f71322` (2.0) |
 
 **Counts.**
 
@@ -234,12 +236,24 @@ Proposed `/notices/takedown.html`, linked from the credits page header and the A
 
 ## 7. Open items
 
-1. **Deploy.** Deploying this branch is the user's decision. Until then the eight rows are live.
+1. **Deploy.** Deploying `platform-v2` (stage 1 of `DEPLOY_PLAN_V2.md`) is the user's decision. Until then the eight rows are live.
 2. **The contact and the takedown page** (section 6).
 3. **The review is not finished for the rest of the 2,000.** The research expects about 1,500 of the 2,000 to pass the full conservative gate. The other two groups:
    - 444 deployed rows are no longer listed on FMA. Their 2017 grant still stands, and the policy for them is a decision still to take.
    - About 4% of the listed rows are expected to show a changed licence.
 
    The full live-page pass (about 1,556 page requests at a 2-second spacing), Wayback checks for the delisted rows, and the cover and remix review are the next step. Each finding becomes an entry here, with a rebuild.
+
+   **The adopted decision goes further.** The rights decision adopted later the same day (`rights/RIGHTS_DECISION_2026-10-06.md` section 7 and `rights/DECISION.json` in the project workspace) takes 764 of the 2,000 off now and keeps 1,236 serving. The 764 are:
+   - the six removals here;
+   - 121 pre-2013 holds, fma:1382 among them;
+   - 433 delisted rows;
+   - 27 rows whose Internet Archive record is more restrictive;
+   - fma:125279;
+   - 15 disabled WFMU rows;
+   - 5 contest and song-title holds;
+   - 156 manual or authority checks.
+
+   It asks for a request-time suppression list rather than a rebuild per row, and for the site changes of its section 7.2 before the next deploy. This list carries 8 of the 764. The suppression list and the site changes are not built.
 4. **The 122 deployed pre-2013 rows labelled "CC BY 4.0"** need the mandatory per-row live and Wayback check (research section 7, step 7). fma:1382 came from that stratum. fma:125279 did not, so the live check is needed across the whole release too.
 5. **The legacy 108 fallback** still contains fma:1382 (section 4).

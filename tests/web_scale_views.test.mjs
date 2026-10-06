@@ -33,6 +33,7 @@ test('5k synthetic metadata fixture stays bounded per page, includes every ID on
   assert.equal(resultPage([],99).page,0);assert.equal(resultPage([],99).pages,0);
 });
 
+const pool5k=()=>Array.from({length:5000},(_,row)=>({row,score:null}));
 test('sound refinement counts never imply full-catalog filtered retrieval',()=>{
   const pool=candidates.slice(0,16),filtered=pool.slice(3,6),page=resultPage(filtered);
   const summary=resultScope({channel:'sound',catalogCount:5000,candidateCount:16,page});
@@ -40,4 +41,7 @@ test('sound refinement counts never imply full-catalog filtered retrieval',()=>{
   assert.match(summary,/not the full collection/);
   const browse=resultScope({channel:'browse',catalogCount:5000,candidateCount:5000,page:resultPage(candidates)});
   assert.match(browse,/5,000 recordings in the collection/);
+  // Every count in a scope line uses the same locale formatting (no bare 2000 beside 2,000).
+  assert.match(resultScope({channel:'browse',catalogCount:5000,candidateCount:5000,page:resultPage(pool5k(),400)}),/^Showing 4,801–4,812 of 5,000 recordings · 5,000 recordings in the collection\./);
+  assert.match(resultScope({channel:'lookup',catalogCount:5000,candidateCount:1234,page:resultPage(pool5k().slice(0,1234),100)}),/^Showing 1,201–1,212 of 1,234 name matches · 1,234 title \/ artist matches across 5,000 recordings\./);
 });

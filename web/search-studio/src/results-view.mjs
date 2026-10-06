@@ -29,10 +29,10 @@ export function resultPage(candidates, requestedPage = 0) {
 }
 
 export function resultScope({channel, catalogCount, candidateCount, page}) {
-  const range = page.total ? `${page.start + 1}–${page.end} of ${page.total}` : '0';
+  const range = page.total ? `${(page.start + 1).toLocaleString()}–${page.end.toLocaleString()} of ${page.total.toLocaleString()}` : '0';
   const shown = `Showing ${range}`;
   if (channel === 'sound' || channel === 'neighbors') {
-    return `${shown} from ${candidateCount} retrieved sound candidates · searched ${catalogCount.toLocaleString()} recordings. Refinements apply to these candidates, not the full collection.`;
+    return `${shown} from ${candidateCount.toLocaleString()} retrieved sound candidates · searched ${catalogCount.toLocaleString()} recordings. Refinements apply to these candidates, not the full collection.`;
   }
   return `${shown} ${channel === 'browse' ? 'recordings' : 'name matches'} · ${candidateCount.toLocaleString()} ${channel === 'browse' ? 'recordings in the collection' : `title / artist matches across ${catalogCount.toLocaleString()} recordings`}. Refinements use recorded metadata.`;
 }

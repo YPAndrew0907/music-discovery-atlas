@@ -260,7 +260,7 @@ test('BFCache audio restoration completes during a new query without replacing s
   const restore=h.events.pageshow({persisted:true});await until(()=>h.audioRequests.length===2);
   await h.submit('new query during audio restoration');const searching=h.el('#status').textContent;
   h.audioRequests[1].resolve();await restore;
-  assert.match(h.el('#audio-availability').textContent,new RegExp('1 of '+catalog.tracks.length));assert.equal(h.el('#status').textContent,searching);
+  assert.equal(h.el('#audio-availability').textContent,`1 of ${catalog.tracks.length.toLocaleString()} recordings have verified previews.`);assert.equal(h.el('#status').textContent,searching);
   h.resolveSearch(0);await flush();assert.equal(h.el('#engine-label').textContent,'Live · server');
   h.events.pagehide({persisted:true});const obsolete=h.events.pageshow({persisted:true});await until(()=>h.audioRequests.length===3);
   h.events.pagehide({persisted:true});h.audioRequests[2].resolve();await obsolete;
@@ -283,7 +283,8 @@ test('collection browse and source-genre/name refinements cover the full real ca
   const h=await harness();h.el('#browse-collection').onclick();
   assert.match(h.el('#query-label').textContent,/title or artist/);assert.match(h.el('#query').placeholder,/title or artist/);
   assert.equal(vm.runInContext('candidateRows.length',h.context),catalog.tracks.length);
-  assert.match(h.el('#result-scope').textContent,/2,000 recordings in the collection/);
+  assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
+  assert.equal(h.el('#page-indicator').textContent,'1–12 / 2,000');assert.equal(h.el('#page-position').textContent,'Page 1 of 167');
   const genre=catalog.tracks[1200].genre;h.el('#genre-filter').value=genre;h.el('#genre-filter').handlers.change();
   const expected=catalog.tracks.filter(t=>t.genre===genre).length;
   assert.equal(vm.runInContext('viewPage.total',h.context),expected);assert.ok(vm.runInContext('rows.length',h.context)<=12);

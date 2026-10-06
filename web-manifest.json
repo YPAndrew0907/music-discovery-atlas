@@ -189,8 +189,8 @@
     },
     {
       "path": "search-studio/src/app.mjs",
-      "bytes": 41417,
-      "sha256": "1c29d782865dc1d1c109ea7f10a5fed770534e4668243fed011cdbdf52777763"
+      "bytes": 41521,
+      "sha256": "5bb94a4c3337e0c028db48aeb4c965e93a1a3ed6c83714287c95684198f2c1d7"
     },
     {
       "path": "search-studio/src/audio-delivery.mjs",
@@ -224,8 +224,8 @@
     },
     {
       "path": "search-studio/src/results-view.mjs",
-      "bytes": 2373,
-      "sha256": "228db21b352f0936d90c8503d80042bea9eb58f3cdc3953b3f1907cbadcec85f"
+      "bytes": 2443,
+      "sha256": "c35aa647e7c06e6b3ecdb0ae858943a2ef685745df07ac53b51f7f5ef64ee756"
     },
     {
       "path": "search-studio/src/search-motion.mjs",

@@ -159,18 +159,19 @@ class ApprovedHydrationPlanTests(unittest.TestCase):
         # This checked-in candidate is selected only for local/source acceptance.
         from corpus_release import ReleaseLimits, validate_release
         release = validate_release(ROOT / 'corpus-releases/fma2000',
-            expected_manifest_sha256=hydration.RELEASE_SHA, limits=ReleaseLimits(max_tracks=2000))
+            expected_manifest_sha256=hydration.RELEASE_SHA, limits=ReleaseLimits(max_tracks=hydration.RELEASE_COUNT))
         cls.selected = SimpleNamespace(release=release, directory=ROOT / 'corpus-releases/fma2000')
         cls.plan = json.loads((ROOT / 'audio-hydration.json').read_bytes())
         cls.entries = hydration.load_plan(ROOT, package, cls.selected)
 
-    def test_actual_plan_has_exact2000_order_source_pins_and_original_mp3_hashes(self):
-        self.assertEqual(len(self.entries), 2000)
-        self.assertEqual(sum(entry.range_bytes for entry in self.entries), 1_951_856_486)
-        self.assertEqual(sum(entry.audio_bytes for entry in self.entries), 2_034_768_876)
+    def test_actual_plan_has_the_reviewed_order_source_pins_and_original_mp3_hashes(self):
+        # 1,992 = the original 2,000 without the 8 rows of corpus-releases/quarantine.json.
+        self.assertEqual((len(self.entries), hydration.RELEASE_COUNT), (1992, 1992))
+        self.assertEqual(sum(entry.range_bytes for entry in self.entries), 1_945_985_122)
+        self.assertEqual(sum(entry.audio_bytes for entry in self.entries), 2_028_759_233)
         self.assertEqual(tuple(entry.id for entry in self.entries), self.selected.release.ordered_ids)
         self.assertNotIn('fma:30702', [entry.id for entry in self.entries])
-        self.assertEqual(len({entry.audio_sha for entry in self.entries}), 2000)
+        self.assertEqual(len({entry.audio_sha for entry in self.entries}), 1992)
 
     def test_changed_policy_order_source_or_member_is_rejected(self):
         mutations = [lambda p: p['rangePolicy'].update(fullArchiveFallbackAllowed=True),

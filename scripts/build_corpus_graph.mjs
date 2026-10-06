@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import {HNSW,exactSearch} from '../web/search-studio/src/hnsw.mjs';
 const [directory,graphId,examplesSource,countText]=process.argv.slice(2);
 const count=Number(countText);
-if(![500,1000,2000,5777].includes(count))throw new Error('Only explicitly reviewed500/1000/2000/5777 builds are supported');
+if(![500,1000,1992,2000,5777].includes(count))throw new Error('Only explicitly reviewed500/1000/1992/2000/5777 builds are supported');
 if(!directory||!graphId||!examplesSource)throw new Error('Expected release directory, graph identity and existing public examples');
 const hash=data=>createHash('sha256').update(data).digest('hex');
 const bytes=await readFile(directory+'/vectors.f32');

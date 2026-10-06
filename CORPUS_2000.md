@@ -1,3 +1,21 @@
+# fma2000 after the rights quarantine of 2026-10-06 (current)
+
+`corpus-releases/fma2000/` now holds 1,992 recordings: the reviewed 2,000 described below without the eight rows of `corpus-releases/quarantine.json`. Six are removed (fma:93518, 93519, 93520, 93521 and 98077, whose audio is a different, NonCommercial recording; fma:154569, whose bytes are those of a BY-NC-ND row) and two are held (fma:1382 and 125279, whose FMA pages now show CC BY-NC). [docs/RIGHTS_QUARANTINE.md](docs/RIGHTS_QUARANTINE.md) has the reasons, the evidence and the procedure.
+
+The release was rebuilt with the repository's builders from the reviewed release. Every remaining row, evidence file, artist record, embedding receipt and vector is byte-identical. The HNSW graph, the six recorded example searches and the t-SNE map are recomputed (trustworthiness 0.9698).
+
+- 1,992 recordings: 1,369 CC BY 4.0, 444 CC BY 3.0 and 179 CC0; 550 source artist IDs; 14 genres
+- 2,028,759,233 audio bytes; 6,997,754 bytes of pinned rights evidence
+- Release manifest SHA-256: `32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42`
+- Catalog ID: `fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531`
+- Graph ID: `experimental-clap-audio-graph:a894cb5f38ffed73548969aacb821b348a02312cbc0e1087141e73946849f45a`
+- Vectors SHA-256: `5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba`
+- Ordered IDs file SHA-256: `edeb1206bcd5096eb2ad81a3748980b621b44ca117134c4bd4cc83bbd58cc7b4`
+- Canonical ordered-ID SHA-256: `e7dac8948f1a787835a556e2376fcae976af2c4a728e60d73b45fed24ecd8a01`
+- Superseded release: `af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283`, the 2,000 rows below, kept in Git history (for example at `374fed9`)
+
+The rest of this file describes the original 2,000-row release.
+
 # Separate 2,000-track local candidate
 
 The accepted 1,000-track catalog, rights and vector matrix are exact unchanged prefixes. The prior 500 and 1,000 source trees and the original 500 audio archive remain unchanged. This candidate has not been published or deployed.

@@ -1,22 +1,16 @@
 {
   "schemaVersion": 1,
-  "count": 2000,
-  "preservedParentCount": 1000,
-  "preservedLegacyCount": 107,
-  "newCount": 1000,
+  "count": 1992,
+  "preservedParentCount": 994,
+  "preservedLegacyCount": 106,
+  "newCount": 998,
   "excludedLegacyIds": [
     "fma:30702"
   ],
-  "inputEmbeddingProvenanceSha256": "09ca5a276c667f4072affc434d73cd1b2e50d5a6756785331b19379c1639a9ab",
+  "inputEmbeddingProvenanceSha256": "d978d8dedd9b3d3214aad87a68a6efa992411ea7e9037b7145c3b05a73f170e6",
   "sourceAudioModel": "3fcff2c8824e7bcb83a983f2a49edab3b60cbcf4872ac70efee517355173bd1f",
   "modelRevision": "c28f2883575e590e04d3146ff0713c2448d691ba",
   "tracks": [
-    {
-      "id": "fma:1382",
-      "source": "unchanged frozen1000 vector",
-      "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
-      "vectorSha256": "d1aa952d9108ad98b4da33dd81950d3592ac5918b1ea3f98787dc0f1c00e2b45"
-    },
     {
       "id": "fma:1383",
       "source": "unchanged frozen1000 vector",
@@ -1038,12 +1032,6 @@
       "vectorSha256": "e37a2514a1eac1784eefe7cebe5a91e2e604ce2a33c701cd2c9285a5be5edaab"
     },
     {
-      "id": "fma:93518",
-      "source": "unchanged frozen1000 vector",
-      "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
-      "vectorSha256": "2f3d9988abf790085357d5ae9bfc9f7016aaa4e7881179a0ada679b797c5ba5f"
-    },
-    {
       "id": "fma:97286",
       "source": "unchanged frozen1000 vector",
       "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
@@ -1734,12 +1722,6 @@
       "vectorSha256": "ad61ffe99cb722b1a2bfe8c70cb5cf69ccd7d72b9cfa89f8193ecebf1c353341"
     },
     {
-      "id": "fma:98077",
-      "source": "unchanged frozen1000 vector",
-      "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
-      "vectorSha256": "590e01be6163a7cf9c2334cd288ed94e0c4785d40e184a9542af7ddad30e5cdf"
-    },
-    {
       "id": "fma:142083",
       "source": "unchanged frozen1000 vector",
       "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
@@ -1882,12 +1864,6 @@
       "source": "unchanged frozen1000 vector",
       "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
       "vectorSha256": "2319aade99a57a6f10b9d3962a9b18de96d7297b150344ed9cb62e8972adf326"
-    },
-    {
-      "id": "fma:93519",
-      "source": "unchanged frozen1000 vector",
-      "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
-      "vectorSha256": "52785b3e63ceb5edbc70067170c37f53b41e488fcdd961201109a270b4c413c2"
     },
     {
       "id": "fma:115591",
@@ -2412,12 +2388,6 @@
       "vectorSha256": "a476c8cf7b165b4a7a0577720f081c1535596f562eb188274a792a37850a6754"
     },
     {
-      "id": "fma:93520",
-      "source": "unchanged frozen1000 vector",
-      "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
-      "vectorSha256": "88ab3ea9e0443319a061cc3a8fa227aba204c5e04e3ba56cc0318a86d3e97f38"
-    },
-    {
       "id": "fma:107427",
       "source": "unchanged frozen1000 vector",
       "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
@@ -2788,12 +2758,6 @@
       "source": "unchanged frozen1000 vector",
       "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
       "vectorSha256": "0ea196dcb6417696c01fdf24f6b5ba92b3acc811c2fd6eb3185d879de45f0e03"
-    },
-    {
-      "id": "fma:93521",
-      "source": "unchanged frozen1000 vector",
-      "parentVectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
-      "vectorSha256": "a93465909f469b44409c8feb2d181de19a64cd5aaf1b2b209d24cf8926c6118c"
     },
     {
       "id": "fma:107429",
@@ -36091,60 +36055,6 @@
     },
     {
       "schemaVersion": 1,
-      "id": "fma:154569",
-      "audioSha256": "29b5504b0c7999465177edaa11894435495fce9fad8f8b0b68eb0ed98c296009",
-      "audioBytes": 1201181,
-      "decodedSamples": 1438876,
-      "decodedPcmSha256": "76e428dc67baec4d6cec5799f7c265c48a88858fb2d453fb80a8ec52f224c00d",
-      "audioModelSha256": "3fcff2c8824e7bcb83a983f2a49edab3b60cbcf4872ac70efee517355173bd1f",
-      "preprocessorConfigSha256": "9739f58296aa6f9ac18008fd0150fb2649bc554985fbde86d0a4041c882ac753",
-      "sampleRateHz": 48000,
-      "channels": 1,
-      "pcm": "float32-le",
-      "windows": [
-        {
-          "startSeconds": 0,
-          "decodedSamples": 480000,
-          "seconds": 0.086677,
-          "vectorSha256": "773df4eb752db39984530d4fd54ba62b95c96a46d09ba84138ae965ca63b8594"
-        },
-        {
-          "startSeconds": 10,
-          "decodedSamples": 480000,
-          "seconds": 0.090234,
-          "vectorSha256": "86aebde09d4fb682b517d66e9bb63771966375962d025e5a8ed18d5021538849"
-        },
-        {
-          "startSeconds": 20,
-          "decodedSamples": 478876,
-          "seconds": 0.078653,
-          "vectorSha256": "057239d58a2918b528c26c2fce48b2ff30597a56add2be823b32ca81579d2eae"
-        }
-      ],
-      "aggregation": "L2 each projected clip; arithmetic mean; L2 track",
-      "dimensions": 512,
-      "vectorSha256": "703915b841401ab5b0932735b73c286d4095b9b3e5dd9e780ac49074718a8c08",
-      "executionProfile": {
-        "onnxruntime": "1.23.2",
-        "provider": "CPUExecutionProvider",
-        "graphOptimizationLevel": "all",
-        "executionMode": "sequential",
-        "intraOpThreads": 2,
-        "interOpThreads": 1,
-        "transformers": "4.57.1",
-        "numpy": "2.3.5",
-        "torch": "2.9.0+cpu",
-        "python": "3.12.14",
-        "ffmpeg": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers",
-        "implementationSha256": "9acbaa388f30c58073c9d9b5f4491f6e0591655c221775f46f2a2a7c2f1a9319"
-      },
-      "elapsedSeconds": 0.458281,
-      "maxRssMiB": 437.2,
-      "createdAt": "2026-10-04T20:20:55Z",
-      "candidateRunnerSha256": "4f49383e547667ec65c1193bbedab74e8c4508fdcbd06ba60835aa962e49f6e6"
-    },
-    {
-      "schemaVersion": 1,
       "id": "fma:103728",
       "audioSha256": "579b22a4bf33a7fffbe3bb9da4e76b61806cac3bfe77df9130bdd6569b4ff273",
       "audioBytes": 1201133,
@@ -38571,60 +38481,6 @@
       "elapsedSeconds": 0.345904,
       "maxRssMiB": 438.1,
       "createdAt": "2026-10-04T20:22:26Z",
-      "candidateRunnerSha256": "4f49383e547667ec65c1193bbedab74e8c4508fdcbd06ba60835aa962e49f6e6"
-    },
-    {
-      "schemaVersion": 1,
-      "id": "fma:125279",
-      "audioSha256": "2b3caa661ac9e15680c6bd1131f7c985af3e205be84df92156ad471bc517a585",
-      "audioBytes": 1201171,
-      "decodedSamples": 1438876,
-      "decodedPcmSha256": "eaf56c51864d7fbb71f6916f176a3fc7a1801993b18d7e658341939a1aaf2d17",
-      "audioModelSha256": "3fcff2c8824e7bcb83a983f2a49edab3b60cbcf4872ac70efee517355173bd1f",
-      "preprocessorConfigSha256": "9739f58296aa6f9ac18008fd0150fb2649bc554985fbde86d0a4041c882ac753",
-      "sampleRateHz": 48000,
-      "channels": 1,
-      "pcm": "float32-le",
-      "windows": [
-        {
-          "startSeconds": 0,
-          "decodedSamples": 480000,
-          "seconds": 0.118568,
-          "vectorSha256": "c1ce8d331d8853accbeeeca9d1f767d865ad2d6a28fa772b8c9c58ffe0866b75"
-        },
-        {
-          "startSeconds": 10,
-          "decodedSamples": 480000,
-          "seconds": 0.082784,
-          "vectorSha256": "dc8069fb52fac89675944d0df22b72069557886d9d607f25e2d00c7b8e53e877"
-        },
-        {
-          "startSeconds": 20,
-          "decodedSamples": 478876,
-          "seconds": 0.068092,
-          "vectorSha256": "ebf42121dbe09192318dc32fe441e734e2b7a7fec74e09b62f42c19e79fbce4d"
-        }
-      ],
-      "aggregation": "L2 each projected clip; arithmetic mean; L2 track",
-      "dimensions": 512,
-      "vectorSha256": "5742dda0384774826502b5a54d4a47290e164881cd90a3928812275c13a56239",
-      "executionProfile": {
-        "onnxruntime": "1.23.2",
-        "provider": "CPUExecutionProvider",
-        "graphOptimizationLevel": "all",
-        "executionMode": "sequential",
-        "intraOpThreads": 2,
-        "interOpThreads": 1,
-        "transformers": "4.57.1",
-        "numpy": "2.3.5",
-        "torch": "2.9.0+cpu",
-        "python": "3.12.14",
-        "ffmpeg": "ffmpeg version 7.1.5-0+deb13u1 Copyright (c) 2000-2026 the FFmpeg developers",
-        "implementationSha256": "9acbaa388f30c58073c9d9b5f4491f6e0591655c221775f46f2a2a7c2f1a9319"
-      },
-      "elapsedSeconds": 0.379659,
-      "maxRssMiB": 438.1,
-      "createdAt": "2026-10-04T20:22:27Z",
       "candidateRunnerSha256": "4f49383e547667ec65c1193bbedab74e8c4508fdcbd06ba60835aa962e49f6e6"
     },
     {
@@ -60011,5 +59867,15 @@
       "createdAt": "2026-10-04T20:34:45Z",
       "candidateRunnerSha256": "4f49383e547667ec65c1193bbedab74e8c4508fdcbd06ba60835aa962e49f6e6"
     }
+  ],
+  "quarantinedIds": [
+    "fma:1382",
+    "fma:93518",
+    "fma:98077",
+    "fma:93519",
+    "fma:93520",
+    "fma:93521",
+    "fma:154569",
+    "fma:125279"
   ]
 }

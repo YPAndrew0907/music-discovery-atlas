@@ -13,7 +13,7 @@ from unittest import mock
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from v2_fixtures import ROOT, V1_DIR, V1_SHA, converted_fma2000  # noqa: E402
+from v2_fixtures import ROOT, V1_COUNT, V1_DIR, V1_EVIDENCE_BYTES, V1_SHA, converted_fma2000  # noqa: E402
 from active_corpus import selected_corpus  # noqa: E402
 from corpus_release import ReleaseError, ReleaseLimits, sha256, validate_release, validate_rights  # noqa: E402
 from hnsw_trace import HNSW, cosine_distance  # noqa: E402
@@ -33,7 +33,7 @@ class V2Fixture(unittest.TestCase):
     def setUpClass(cls):
         cls.dir, cls.sha = converted_fma2000()
         cls.release = load_release_v2(cls.dir, expected_manifest_sha256=cls.sha)
-        cls.v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=2000))
+        cls.v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=V1_COUNT))
         cls.v1_index = json.loads(cls.v1.assets['index'])
         cls.reference = HNSW(cls.v1_index, cls.v1.assets['vectors'])
         cls.graph = GraphV2(cls.release)
@@ -48,7 +48,7 @@ class V2Fixture(unittest.TestCase):
 class ConversionTests(V2Fixture):
     def test_logical_identities_are_kept_and_artifact_digests_describe_v2_files(self):
         r, v1 = self.release, self.v1
-        self.assertEqual((r.catalog_id, r.graph_id, r.count, r.dimensions), (v1.catalog_id, v1.graph_id, 2000, 512))
+        self.assertEqual((r.catalog_id, r.graph_id, r.count, r.dimensions), (v1.catalog_id, v1.graph_id, V1_COUNT, 512))
         self.assertEqual(r.vectors_sha256, sha256(v1.assets['vectors']))
         self.assertEqual(r.ordered_ids, v1.ordered_ids)
         # catalogSha256 and indexSha256 now name the files the server actually verified.
@@ -67,10 +67,10 @@ class ConversionTests(V2Fixture):
         self.assertEqual((json.dumps(catalog, indent=2, ensure_ascii=False) + '\n').encode(), self.v1.assets['catalog'])
         self.assertEqual(rights, json.loads(self.v1.assets['rights']))
         self.assertEqual(artists, json.loads((V1_DIR / 'artist-records.json').read_bytes()))
-        for row in (0, 1, 999, 1999):
+        for row in (0, 1, 999, V1_COUNT - 1):
             pin = rights['tracks'][row]['evidence']['asset']
             self.assertEqual(self.release.evidence_for_row(row), (V1_DIR / pin['path']).read_bytes())
-        self.assertEqual(validate_rows(self.release), {'rows': 2000, 'evidenceFiles': 2000, 'evidenceBytes': 7_019_915})
+        self.assertEqual(validate_rows(self.release), {'rows': V1_COUNT, 'evidenceFiles': V1_COUNT, 'evidenceBytes': V1_EVIDENCE_BYTES})
 
     def test_csr_graph_and_layout_decode_to_the_v1_index_and_positions(self):
         from convert_release_v1_to_v2 import decode_links
@@ -92,9 +92,9 @@ class ConversionTests(V2Fixture):
     def test_converter_refuses_an_unreviewed_source_or_an_existing_output(self):
         from convert_release_v1_to_v2 import convert
         with self.assertRaisesRegex(ReleaseError, 'Unreviewed release manifest digest'):
-            convert(V1_DIR, '0' * 64, self.temp() / 'x', v1_limits=ReleaseLimits(max_tracks=2000))
+            convert(V1_DIR, '0' * 64, self.temp() / 'x', v1_limits=ReleaseLimits(max_tracks=V1_COUNT))
         with self.assertRaisesRegex(ReleaseError, 'overwrite'):
-            convert(V1_DIR, V1_SHA, self.dir, v1_limits=ReleaseLimits(max_tracks=2000))
+            convert(V1_DIR, V1_SHA, self.dir, v1_limits=ReleaseLimits(max_tracks=V1_COUNT))
 
 
 class TamperTests(V2Fixture):
@@ -117,7 +117,7 @@ class TamperTests(V2Fixture):
         with self.assertRaisesRegex(ReleaseError, 'Unreviewed v2 release manifest digest'):
             load_release_v2(self.dir, expected_manifest_sha256='f' * 64)
         with self.assertRaisesRegex(ReleaseError, 'exceeds the configured v2 limit'):
-            load_release_v2(self.dir, expected_manifest_sha256=self.sha, limits=LimitsV2(max_tracks=1999))
+            load_release_v2(self.dir, expected_manifest_sha256=self.sha, limits=LimitsV2(max_tracks=V1_COUNT - 1))
         with self.assertRaisesRegex(ReleaseError, 'Invalid v2 asset pin: catalog'):
             load_release_v2(self.dir, expected_manifest_sha256=self.sha, limits=LimitsV2(catalog_bytes=1_000_000))
         with self.assertRaisesRegex(ReleaseError, 'Invalid v2 release limit'):
@@ -181,8 +181,8 @@ class RowRuleEquivalenceTests(V2Fixture):
 
     def test_tampered_rows_get_the_same_verdict_from_v1_and_v2(self):
         catalog, rights = json.loads(self.v1.assets['catalog']), json.loads(self.v1.assets['rights'])
-        limits = ReleaseLimits(max_tracks=2000)
-        self.assertEqual(validate_rights(rights, catalog, sha256(self.v1.assets['catalog']), V1_DIR, limits)[0], 2000)
+        limits = ReleaseLimits(max_tracks=V1_COUNT)
+        self.assertEqual(validate_rights(rights, catalog, sha256(self.v1.assets['catalog']), V1_DIR, limits)[0], V1_COUNT)
         for name, (mutate, message) in self.MUTATIONS.items():
             with self.subTest(mutation=name):
                 track, right = json.loads(json.dumps(catalog['tracks'][7])), json.loads(json.dumps(rights['tracks'][7]))
@@ -224,7 +224,7 @@ class SelectionTests(V2Fixture):
                   'directory': 'corpus-releases/fma2000-v2', 'manifestSha256': self.sha}
         root, package = self.root_with(config)
         selected = selected_release_v2(root, package)
-        self.assertEqual((selected.release.count, selected.release.manifest_sha256), (2000, self.sha))
+        self.assertEqual((selected.release.count, selected.release.manifest_sha256), (V1_COUNT, self.sha))
         self.assertIs(selected_release_v2(root, package).release, selected.release)  # verified once per process
         with self.assertRaisesRegex(ReleaseError, 'Invalid active corpus selection'):
             selected_corpus(root, package)
@@ -252,7 +252,7 @@ class SearchParityTests(V2Fixture):
     def queries(self, rows=60, random=20, seed=7):
         rng = np.random.default_rng(seed)
         out = [(np.asarray(item['queryVector'], dtype=np.float32), None) for item in self.examples]
-        for row in rng.choice(2000, size=rows, replace=False).tolist():
+        for row in rng.choice(V1_COUNT, size=rows, replace=False).tolist():
             out.append((np.array(self.release.vectors[row]), row))
         for _ in range(random):
             vector = rng.standard_normal(512)
@@ -264,8 +264,8 @@ class SearchParityTests(V2Fixture):
             for k in (1, 8, 16, 20):
                 self.assertEqual(self.graph.exact_search(query, k=k, exclude_id=exclude),
                                  self.reference.exact_search(query, k=k, exclude_id=exclude))
-        self.assertEqual(self.graph.exact_search(self.examples[0]['queryVector'], k=2000),
-                         self.reference.exact_search(self.examples[0]['queryVector'], k=2000))
+        self.assertEqual(self.graph.exact_search(self.examples[0]['queryVector'], k=V1_COUNT),
+                         self.reference.exact_search(self.examples[0]['queryVector'], k=V1_COUNT))
 
     def test_full_rescore_fallback_is_also_identical(self):
         graph = GraphV2(self.release)
@@ -277,7 +277,7 @@ class SearchParityTests(V2Fixture):
 
     def test_sequential_numpy_accumulation_matches_the_python_loop_bit_for_bit(self):
         query = np.asarray(self.examples[2]['queryVector'], dtype=np.float32)
-        rows = list(range(2000))
+        rows = list(range(V1_COUNT))
         expected = [cosine_distance(query, self.reference.vectors[row]) for row in rows]
         self.assertEqual(exact_rescore(self.release.vectors, query, rows), expected)
 

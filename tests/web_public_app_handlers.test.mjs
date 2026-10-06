@@ -275,7 +275,7 @@ test('sound candidates page 12 then 4 without fetching deeper results or changin
   const h=await harness();
   const first=Array.from(vm.runInContext('rows.map(r=>r.row)',h.context));
   assert.equal(first.length,12);assert.match(h.el('#result-scope-detail').textContent,/12 of 16 from 16 retrieved sound candidates/);
-  assert.equal(h.el('#result-scope').textContent,'1–12 of 16 · searched 2,000');
+  assert.equal(h.el('#result-scope').textContent,'1–12 of 16 · searched 1,992');
   h.el('#next-page').onclick();
   const next=Array.from(vm.runInContext('rows.map(r=>r.row)',h.context));
   assert.equal(next.length,4);assert.equal(new Set([...first,...next]).size,16);
@@ -291,9 +291,9 @@ test('collection browse and source-genre/name refinements cover the full real ca
   assert.match(h.el('#query-label').textContent,/Describe the music/);assert.equal(h.el('#engine-label').textContent,'Catalog browse');
   assert.equal(h.el('#results-heading').textContent,'Collection');assert.match(h.el('#results-source').textContent,/^Collection browse · local metadata$/);
   assert.equal(vm.runInContext('candidateRows.length',h.context),catalog.tracks.length);
-  assert.match(h.el('#result-scope-detail').textContent,/^Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
-  assert.equal(h.el('#result-scope').textContent,'1–12 of 2,000 recordings');
-  assert.equal(h.el('#page-indicator').textContent,'1–12 / 2,000');assert.equal(h.el('#page-position').textContent,'Page 1 of 167');
+  assert.match(h.el('#result-scope-detail').textContent,/^Showing 1–12 of 1,992 recordings · 1,992 recordings in the collection/);
+  assert.equal(h.el('#result-scope').textContent,'1–12 of 1,992 recordings');
+  assert.equal(h.el('#page-indicator').textContent,'1–12 / 1,992');assert.equal(h.el('#page-position').textContent,'Page 1 of 166');
   const genre=catalog.tracks[1200].genre;h.el('#genre-filter').value=genre;h.el('#genre-filter').handlers.change();
   const expected=catalog.tracks.filter(t=>t.genre===genre).length;
   assert.equal(vm.runInContext('viewPage.total',h.context),expected);assert.ok(vm.runInContext('rows.length',h.context)<=12);
@@ -308,7 +308,7 @@ test('collection browse and source-genre/name refinements cover the full real ca
 test('empty refined sound results can be cleared without issuing a new query or misreporting scope',async()=>{
   const h=await harness();h.el('#refine-text').value='No such recorded name 000000';h.el('#refine-text').handlers.input();
   assert.equal(h.el('#results-empty').hidden,false);assert.equal(h.el('#focus-track').disabled,true);
-  assert.match(h.el('#result-scope-detail').textContent,/Showing 0 from 16/);assert.equal(h.el('#result-scope').textContent,'0 of 16 · searched 2,000');
+  assert.match(h.el('#result-scope-detail').textContent,/Showing 0 from 16/);assert.equal(h.el('#result-scope').textContent,'0 of 16 · searched 1,992');
   assert.match(h.el('#empty-detail').textContent,/retrieved sound candidates/);
   h.el('#empty-clear').onclick();assert.equal(h.el('#results-empty').hidden,true);assert.equal(h.searches.length,0);
   h.el('#refine-text').value='No such recorded name 000000';h.el('#refine-text').handlers.input();
@@ -414,7 +414,7 @@ test('a retained refinement that hides new results is stated on the status line,
   const h=await harness();h.el('#refine-text').value='no such recorded name 000000';h.el('#refine-text').handlers.input();
   await h.submit('new sound search under a stale refinement');
   assert.equal(h.searches.length,1);assert.equal(vm.runInContext('rows.length',h.context),0);assert.equal(h.el('#results-empty').hidden,false);
-  assert.match(h.el('#result-scope-detail').textContent,/^Showing 0 from 16 retrieved sound candidates/);assert.equal(h.el('#result-scope').textContent,'0 of 16 · searched 2,000');
+  assert.match(h.el('#result-scope-detail').textContent,/^Showing 0 from 16 retrieved sound candidates/);assert.equal(h.el('#result-scope').textContent,'0 of 16 · searched 1,992');
   assert.match(h.el('#status').textContent,/Results ready\..*Refinements hide 16 of 16; clear them to see every result\.$/);
   h.el('#refine-text').value='';h.el('#refine-text').handlers.input();
   await h.submit('a second search with no refinement');
@@ -458,7 +458,7 @@ test('an over-long server reply is rejected before any label or row changes, and
   assert.equal(h.el('#results-source').textContent,before.source);assert.equal(vm.runInContext('candidateRows.length',h.context),before.candidates);
 });
 
-test('pagination scales: First/Last, a page jump and compact top controls reach any of the 167 browse pages',async()=>{
+test('pagination scales: First/Last, a page jump and compact top controls reach any of the 166 browse pages',async()=>{
   const h=await harness();h.el('#browse-collection').onclick();
   const pages=Math.ceil(catalog.tracks.length/12);
   assert.equal(h.el('#page-position').textContent,`Page 1 of ${pages}`);assert.equal(h.el('#page-count').textContent,String(pages));assert.equal(h.el('#page-number').value,'1');assert.equal(h.el('#page-number').max,pages);
@@ -490,10 +490,10 @@ test('startup defaults per composition: the Atlas map is open on every viewport 
 
 test('the List composition keeps the full scope sentence and the original heading on screen',async()=>{
   const h=await harness({direction:'list'});
-  assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 16 from 16 retrieved sound candidates · searched 2,000 recordings\. Refinements apply to these candidates, not the full collection\.$/);
+  assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 16 from 16 retrieved sound candidates · searched 1,992 recordings\. Refinements apply to these candidates, not the full collection\.$/);
   assert.equal(h.el('#result-scope').textContent,h.el('#result-scope-detail').textContent);assert.equal(h.el('#results-heading').textContent,'Sound matches');
-  h.el('#browse-collection').onclick();assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
-  const atlas=await harness();assert.equal(atlas.el('#results-heading').textContent,'Matches');assert.equal(atlas.el('#result-scope').textContent,'1–12 of 16 · searched 2,000');
+  h.el('#browse-collection').onclick();assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 1,992 recordings · 1,992 recordings in the collection/);
+  const atlas=await harness();assert.equal(atlas.el('#results-heading').textContent,'Matches');assert.equal(atlas.el('#result-scope').textContent,'1–12 of 16 · searched 1,992');
 });
 
 test('the refinement summary counts active refinements and the preview filter appears only when it can act',async()=>{
@@ -505,7 +505,7 @@ test('the refinement summary counts active refinements and the preview filter ap
   h.el('#refine-text').value='a';h.el('#refine-text').handlers.input();assert.equal(h.el('#refinement-active').textContent,' · 2 active');
   h.el('#clear-refinements').onclick();assert.equal(h.el('#refinement-active').textContent,'');
   h.api.enableAudio=true;await h.events.pageshow({persisted:true});
-  assert.equal(h.el('#preview-only-label').hidden,false,'1 of 2,000 verified previews: the filter is offered');
+  assert.equal(h.el('#preview-only-label').hidden,false,'1 of 1,992 verified previews: the filter is offered');
   h.el('#preview-only').checked=true;h.el('#preview-only').handlers.change();assert.equal(h.el('#refinement-active').textContent,' · 1 active');
   h.events.pagehide({persisted:true});h.api.enableAudio=false;await h.events.pageshow({persisted:true});
   assert.equal(h.el('#preview-only-label').hidden,true);assert.equal(h.el('#preview-only').checked,false,'a filter that can no longer act is cleared');
@@ -517,12 +517,12 @@ test('the About dialog derives its collection facts from the loaded data and lab
   const artists=JSON.parse(await v1Data('artist-records.json'));
   const artistCount=new Set(artists.rows.map(r=>r.artistId)).size,genreCount=sourceGenres(catalog.tracks.map((_,row)=>({row})),catalog.tracks).length;
   assert.equal(h.el('#collection-summary').textContent,`${catalog.tracks.length.toLocaleString()} FMA excerpts · ${artistCount.toLocaleString()} source artist IDs · ${genreCount.toLocaleString()} source genres`);
-  assert.equal(artistCount,551);assert.equal(genreCount,14);
+  assert.equal(artistCount,550);assert.equal(genreCount,14);
   const row=vm.runInContext('rows[1].row',h.context);vm.runInContext(`choose(${row},{explicit:true})`,h.context);
   const t=catalog.tracks[row];assert.equal(h.el('#selected-summary').textContent,`Selected: ${t.title} · ${t.artist} · ${t.genre||'no source genre'}`);assert.equal(h.el('#selected-summary').hidden,false);
-  assert.match(h.el('#collection-summary').textContent,/^2,000 FMA excerpts/);
+  assert.match(h.el('#collection-summary').textContent,/^1,992 FMA excerpts/);
   const html=(await bytes('search-studio/index.html')).toString();
-  assert.match(html,/<span data-catalog-count>2,000<\/span> public FMA recording records/);assert.doesNotMatch(html,/id="selection-summary"/);
+  assert.match(html,/<span data-catalog-count>1,992<\/span> public FMA recording records/);assert.doesNotMatch(html,/id="selection-summary"/);
   assert.match(html,/<details class="refinement"><summary>/);assert.match(html,/<\/nav>\s*<p id="audio-availability" class="fine">[^<]*<\/p><\/div>/);
   const about=html.slice(html.indexOf('<dialog id="about-dialog">'),html.indexOf('</dialog>',html.indexOf('<dialog id="about-dialog">')));
   assert.match(about,/<p class="list-foot">Sound similarity is not a relevance probability\. Source genres are catalog labels; vocals, language and mood are not verified filters\.<\/p>/);

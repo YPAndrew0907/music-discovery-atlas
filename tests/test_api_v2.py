@@ -13,7 +13,7 @@ import unittest
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from v2_fixtures import ROOT, V1_DIR, V1_SHA, FixtureEncoder, converted_fma2000, v2_web_root  # noqa: E402
+from v2_fixtures import ROOT, V1_COUNT, V1_DIR, V1_SHA, FixtureEncoder, converted_fma2000, v2_web_root  # noqa: E402
 from api import Settings, create_app, load_graph  # noqa: E402
 from collection_v2 import AudioDeliveryV2  # noqa: E402
 from corpus_release import ReleaseError, ReleaseLimits, object_sha, sha256, validate_release  # noqa: E402
@@ -33,7 +33,7 @@ class V1Encoder:
     """The v1 Engine's selected-release state for fma2000, without the ONNX model."""
 
     def __init__(self, vectors_by_text):
-        verified = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=2000))
+        verified = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=V1_COUNT))
         manifest = json.loads(verified.assets['graphManifest'])
         profile = manifest['allowedQueryProfiles'][0]
         self.query_profile, self.engine = profile['identity'], profile['id']
@@ -68,7 +68,7 @@ class ApiV2Tests(unittest.TestCase):
         examples = json.loads((V1_DIR / 'examples.json').read_bytes())['examples']
         rng = np.random.default_rng(2026)
         cls.texts = {item['text']: np.asarray(item['queryVector'], dtype=np.float32) for item in examples}
-        for row in rng.choice(2000, size=14, replace=False).tolist():
+        for row in rng.choice(V1_COUNT, size=14, replace=False).tolist():
             cls.texts[f'like row {row}'] = np.array(cls.release.vectors[row])
         cls.v1_encoder = V1Encoder(cls.texts)
         cls.v2_encoder = FixtureEncoder(cls.release, cls.dir, cls.texts)
@@ -140,16 +140,17 @@ class ApiV2Tests(unittest.TestCase):
     def test_browse_pages_cover_the_catalog_in_order(self):
         client = self.client(self.v2_encoder, gateway=True)
         seen = []
-        for offset in range(0, 2000, 48):
+        for offset in range(0, V1_COUNT, 48):
             page = client.get(f'/collection/tracks?offset={offset}&limit=48').json()
-            self.assertEqual((page['channel'], page['total'], page['baseTotal']), ('browse', 2000, 2000))
+            self.assertEqual((page['channel'], page['total'], page['baseTotal']), ('browse', V1_COUNT, V1_COUNT))
             seen.extend(t['id'] for t in page['rows'])
         self.assertEqual(seen, [t['id'] for t in self.catalog['tracks']])
-        last = client.get('/collection/tracks?offset=1992&limit=12').json()
-        self.assertEqual(len(last['rows']), 8)  # page 167 of 167
-        rows = client.get('/collection/tracks?rows=1999,0,7,0').json()['rows']
-        self.assertEqual([t['row'] for t in rows], [1999, 0, 7])
-        for bad in ['limit=49', 'offset=-1', 'rows=2000', 'rows=1&offset=0', 'q=' + 'x' * 513, 'unknown=1', 'preview=yes',
+        last_page = (V1_COUNT - 1) // 12 * 12
+        last = client.get(f'/collection/tracks?offset={last_page}&limit=12').json()
+        self.assertEqual(len(last['rows']), V1_COUNT - last_page)  # the last page: at 1,992 rows, 12 rows on page 166 of 166
+        rows = client.get(f'/collection/tracks?rows={V1_COUNT - 1},0,7,0').json()['rows']
+        self.assertEqual([t['row'] for t in rows], [V1_COUNT - 1, 0, 7])
+        for bad in ['limit=49', 'offset=-1', f'rows={V1_COUNT}', 'rows=1&offset=0', 'q=' + 'x' * 513, 'unknown=1', 'preview=yes',
                     'rows=' + ','.join(['1'] * 65)]:
             with self.subTest(bad=bad[:30]):
                 self.assertEqual(client.get('/collection/tracks?' + bad).status_code, 400)
@@ -190,9 +191,9 @@ console.log(JSON.stringify(out));"""
 
     def test_neighbors_match_the_v1_page_computation(self):
         client = self.client(self.v2_encoder, gateway=True)
-        v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=2000))
+        v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=V1_COUNT))
         reference = HNSW(json.loads(v1.assets['index']), v1.assets['vectors'])
-        for row in (0, 5, 777, 1999):
+        for row in (0, 5, 777, V1_COUNT - 1):
             packet = client.get(f'/collection/neighbors?row={row}').json()
             query = np.array(self.release.vectors[row])
             exact = reference.exact_search(query, k=16, exclude_id=row)
@@ -206,11 +207,11 @@ console.log(JSON.stringify(out));"""
         manifest = json.loads((self.web / 'search-studio/data/manifest.json').read_bytes())
         studio = (self.web / 'search-studio/src/studio-release.mjs').read_text()
         self.assertIn(sha256((self.web / 'search-studio/data/manifest.json').read_bytes()), studio)
-        self.assertEqual((manifest['format'], manifest['releaseSha256'], manifest['count']), (2, self.sha, 2000))
+        self.assertEqual((manifest['format'], manifest['releaseSha256'], manifest['count']), (2, self.sha, V1_COUNT))
         for name in ('catalog.json', 'vectors.f32', 'index.json', 'ids.json', 'artist-records.json'):
             self.assertFalse((self.web / 'search-studio/data' / name).exists(), name)
         layout = json.loads((self.web / 'search-studio/data/layout.json').read_bytes())
-        self.assertEqual((layout['sampleCount'], layout['rows']), (2000, list(range(2000))))
+        self.assertEqual((layout['sampleCount'], layout['rows']), (V1_COUNT, list(range(V1_COUNT))))
         self.assertNotIn('weights', layout)
         index = json.loads((V1_DIR / 'index.json').read_bytes())
         pairs = {}
@@ -221,7 +222,7 @@ console.log(JSON.stringify(out));"""
                     pairs[key] = max(pairs.get(key, level), level)
         self.assertEqual(layout['edges'], [v for (a, b), level in pairs.items() for v in (a, b, level)])
         examples = json.loads((self.web / 'search-studio/data/examples.json').read_bytes())
-        v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=2000))
+        v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=V1_COUNT))
         reference = HNSW(json.loads(v1.assets['index']), v1.assets['vectors'])
         for item, source in zip(examples['examples'], json.loads((V1_DIR / 'examples.json').read_bytes())['examples']):
             query = np.asarray(source['queryVector'], dtype=np.float32)
@@ -355,8 +356,8 @@ console.log(JSON.stringify(out));"""
         client = self.client(self.v2_encoder, gateway=True)
         summary = client.get('/audio-delivery.json').json()
         self.assertEqual((summary['enabled'], summary['mode'], summary['total'], summary['releaseSha256']),
-                         (False, 'disabled', 2000, self.sha))
-        self.assertEqual(client.get('/audio/001382.mp3').status_code, 404)
+                         (False, 'disabled', V1_COUNT, self.sha))
+        self.assertEqual(client.get('/audio/' + Path(self.catalog['tracks'][0]['audio']).name).status_code, 404)
         # Same gateway, with a lazily verified local pack (synthetic bytes, synthetic pins).
         release, directory, pins = self.fake_pack()
         gateway = client.app

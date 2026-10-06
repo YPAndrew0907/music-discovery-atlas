@@ -1,10 +1,9 @@
 {
   "schemaVersion": 1,
-  "id": "fma2000:954e908848258f08d2b0c2054e74e6901a14be02e3e53a45d63826c0ef0ae3be",
+  "id": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
   "dimensions": 512,
   "sourceIdentity": {
     "orderedIds": [
-      "fma:1382",
       "fma:1383",
       "fma:3727",
       "fma:3832",
@@ -175,7 +174,6 @@
       "fma:89814",
       "fma:114265",
       "fma:68551",
-      "fma:93518",
       "fma:97286",
       "fma:121312",
       "fma:68573",
@@ -291,7 +289,6 @@
       "fma:123965",
       "fma:75783",
       "fma:141562",
-      "fma:98077",
       "fma:142083",
       "fma:112315",
       "fma:142668",
@@ -316,7 +313,6 @@
       "fma:89815",
       "fma:112197",
       "fma:135364",
-      "fma:93519",
       "fma:115591",
       "fma:138061",
       "fma:107426",
@@ -404,7 +400,6 @@
       "fma:64332",
       "fma:72069",
       "fma:89816",
-      "fma:93520",
       "fma:107427",
       "fma:107617",
       "fma:113972",
@@ -467,7 +462,6 @@
       "fma:64333",
       "fma:72070",
       "fma:89817",
-      "fma:93521",
       "fma:107429",
       "fma:111819",
       "fma:113973",
@@ -1561,7 +1555,6 @@
       "fma:61675",
       "fma:112866",
       "fma:153185",
-      "fma:154569",
       "fma:103728",
       "fma:112983",
       "fma:107267",
@@ -1607,7 +1600,6 @@
       "fma:141568",
       "fma:75027",
       "fma:140669",
-      "fma:125279",
       "fma:88933",
       "fma:144952",
       "fma:154725",
@@ -2005,39 +1997,15 @@
       "fma:107579",
       "fma:112984"
     ],
-    "vectorsSha256": "12c1dfc0c23f27c14d0530799a284df92bb3a740ef4a22749aab53d00af2ae8d",
+    "vectorsSha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba",
     "selectedInputSha256": "219e819e7165c64776446949c42f210242d17ecfc5f12f751d011a7c09c01a4d",
     "legacyCatalogSha256": "e7cfd8347b77929c5c593afdaec9e390509acaed725cacadc448fc6bcae1c013",
     "parent1000CatalogSha256": "bf83076c816c37e1b4be4d5ff1e5a394360dc14e2ca71d7d6df74c749f3723f7",
     "parent1000VectorsSha256": "a010e04960804f652012763a84827e2e7d8d4380ba869febdc2b3d6b6efb7f6b",
     "parent1000ReleaseSha256": "f278752268eb78ceeb74b66c7ea86ba80406c5850dd16d0e78f9a1720f1c31f5",
-    "embeddingProvenanceSha256": "09ca5a276c667f4072affc434d73cd1b2e50d5a6756785331b19379c1639a9ab"
+    "embeddingProvenanceSha256": "d978d8dedd9b3d3214aad87a68a6efa992411ea7e9037b7145c3b05a73f170e6"
   },
   "tracks": [
-    {
-      "id": "fma:1382",
-      "title": "Lady Love",
-      "artist": "Parsley Flakes",
-      "album": "Parsley Flakes mp3s",
-      "genre": "Rock",
-      "sourceGenres": [
-        "Electro-Punk",
-        "Punk",
-        "Rock"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Parsley_Flakes/Parsley_Flakes_mp3s/Lady_Love",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "attribution": "\"Lady Love\" by Parsley Flakes. Source: http://freemusicarchive.org/music/Parsley_Flakes/Parsley_Flakes_mp3s/Lady_Love. CC-BY-4.0: http://creativecommons.org/licenses/by/4.0/. FMA rc1 30-second excerpt; CLAP features computed from fixed local windows.",
-      "suppliedNotices": {},
-      "audio": "audio/001382.mp3",
-      "audioBytes": 720629,
-      "audioSha256": "f9a3cfa7a4fddad7c5f74b3856cb650a0879156a64a32633dd770a8b7aa4ff2f",
-      "excerptSeconds": 30,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 excerpt bytes. FMA excerpted the original recording to approximately 30 seconds; source offset is unknown. Audio features are a new CLAP computation from 0/10/20-second windows."
-    },
     {
       "id": "fma:1383",
       "title": "Remember, Forget",
@@ -6647,38 +6615,6 @@
       "metadataDescription": ""
     },
     {
-      "id": "fma:93518",
-      "title": "Mantilla",
-      "artist": "Moon Veil",
-      "album": "Snake Charm",
-      "genre": "Electronic",
-      "sourceGenres": [
-        "Dubstep",
-        "Electronic"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Mantilla",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "attribution": "\"Mantilla\" by Moon Veil. Source: http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Mantilla. CC-BY-3.0: https://creativecommons.org/licenses/by/3.0/. FMA rc1 approximately 30-second excerpt. See supplied notices for additional credits.",
-      "suppliedNotices": {},
-      "audio": "audio/093518.mp3",
-      "audioBytes": 420871,
-      "audioSha256": "66e06274f9642d3895c8ae02cda1aa8cb620e3483bdbb04382d32e89fbecbafb",
-      "excerptSeconds": 29.976562,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
-      "sourceTags": [
-        "ambient",
-        "chillstep",
-        "synth wave",
-        "electronica"
-      ],
-      "sourceLanguageCode": null,
-      "sourceInstrumental": "0",
-      "metadataDescription": ""
-    },
-    {
       "id": "fma:97286",
       "title": "We Wanna Rock",
       "artist": "Чокнутый Пропеллер",
@@ -10174,36 +10110,6 @@
       "metadataDescription": ""
     },
     {
-      "id": "fma:98077",
-      "title": "Глазами Детей",
-      "artist": "Чокнутый Пропеллер",
-      "album": "Глазами Детей",
-      "genre": "Rock",
-      "sourceGenres": [
-        "Punk",
-        "Rock",
-        "Hardcore"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Mad_Screw/__1688/Choknuty_Propeller_-_Glazami_Detei",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "attribution": "\"Глазами Детей\" by Чокнутый Пропеллер. Source: http://freemusicarchive.org/music/Mad_Screw/__1688/Choknuty_Propeller_-_Glazami_Detei. CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/. FMA rc1 approximately 30-second excerpt. See supplied notices for additional credits.",
-      "suppliedNotices": {
-        "albumInformation": "<div>Третий и заключительный сингл из готовящегося полноформатного альбома от банды Чокнутый Пропеллер. </div>\n<div> </div>\n<div> Жесткий, но лиричный трек, о котором сама группа пишет следующее: </div>\n<div> \"Песня повествует о жестокости взрослого мира, переполненного предрассудками, страхами и ложью. \"Другой\" мир показан взглядом маленьких детей, указывая на то, что нужно смотреть на вещи проще и улавливать в каждой мелочи хорошее\". </div>\n<div> </div>\n<div> Artem Dr.Mozg - guitar, vocal </div>\n<div> Dmitry Listick - guitar </div>\n<div> Costa Rodi - bass, vox </div>\n<div> Paul Bydanov - drums, vox </div>\n<div> </div>\n<div> Recorded at Kukkovka Hell Studio </div>\n<div> The sound producer - Dmitry \"4ester\" Makarov </div>\n<div> Cover - Costa \"Rodi\" Rodionov</div>"
-      },
-      "audio": "audio/098077.mp3",
-      "audioBytes": 1202446,
-      "audioSha256": "28fbb49608246372150be9952cdc9dcea925fd6cad8796ae20168d2abe0d0d98",
-      "excerptSeconds": 30.002688,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
-      "sourceTags": [],
-      "sourceLanguageCode": null,
-      "sourceInstrumental": "0",
-      "metadataDescription": ""
-    },
-    {
       "id": "fma:142083",
       "title": "Still Living",
       "artist": "SK",
@@ -10986,38 +10892,6 @@
       "verifiedLanguage": null,
       "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
       "sourceTags": [],
-      "sourceLanguageCode": null,
-      "sourceInstrumental": "0",
-      "metadataDescription": ""
-    },
-    {
-      "id": "fma:93519",
-      "title": "Scorpio",
-      "artist": "Moon Veil",
-      "album": "Snake Charm",
-      "genre": "Electronic",
-      "sourceGenres": [
-        "Dubstep",
-        "Electronic"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Scorpio",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "attribution": "\"Scorpio\" by Moon Veil. Source: http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Scorpio. CC-BY-3.0: https://creativecommons.org/licenses/by/3.0/. FMA rc1 approximately 30-second excerpt. See supplied notices for additional credits.",
-      "suppliedNotices": {},
-      "audio": "audio/093519.mp3",
-      "audioBytes": 421237,
-      "audioSha256": "dbb25c8b7da38003649f0c7f9f123d22ef146e49cb7d29bc938df4bed5b3dd10",
-      "excerptSeconds": 30.002688,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
-      "sourceTags": [
-        "ambient",
-        "chillstep",
-        "synth wave",
-        "electronica"
-      ],
       "sourceLanguageCode": null,
       "sourceInstrumental": "0",
       "metadataDescription": ""
@@ -13692,38 +13566,6 @@
       "metadataDescription": ""
     },
     {
-      "id": "fma:93520",
-      "title": "Slow Moving",
-      "artist": "Moon Veil",
-      "album": "Snake Charm",
-      "genre": "Electronic",
-      "sourceGenres": [
-        "Dubstep",
-        "Electronic"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Slow_Moving",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "attribution": "\"Slow Moving\" by Moon Veil. Source: http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Slow_Moving. CC-BY-3.0: https://creativecommons.org/licenses/by/3.0/. FMA rc1 approximately 30-second excerpt. See supplied notices for additional credits.",
-      "suppliedNotices": {},
-      "audio": "audio/093520.mp3",
-      "audioBytes": 420871,
-      "audioSha256": "3fa1800a228edc879e030eb69afccaeae4b13198773d9fa100566d31d865ceb3",
-      "excerptSeconds": 29.976562,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
-      "sourceTags": [
-        "ambient",
-        "chillstep",
-        "synth wave",
-        "electronica"
-      ],
-      "sourceLanguageCode": null,
-      "sourceInstrumental": "0",
-      "metadataDescription": ""
-    },
-    {
       "id": "fma:107427",
       "title": "Brutish",
       "artist": "UncleBibby",
@@ -15647,38 +15489,6 @@
       "verifiedLanguage": null,
       "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
       "sourceTags": [],
-      "sourceLanguageCode": null,
-      "sourceInstrumental": "0",
-      "metadataDescription": ""
-    },
-    {
-      "id": "fma:93521",
-      "title": "Ivory",
-      "artist": "Moon Veil",
-      "album": "Snake Charm",
-      "genre": "Electronic",
-      "sourceGenres": [
-        "Dubstep",
-        "Electronic"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Ivory",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "attribution": "\"Ivory\" by Moon Veil. Source: http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Ivory. CC-BY-3.0: https://creativecommons.org/licenses/by/3.0/. FMA rc1 approximately 30-second excerpt. See supplied notices for additional credits.",
-      "suppliedNotices": {},
-      "audio": "audio/093521.mp3",
-      "audioBytes": 421237,
-      "audioSha256": "001a7d794b6f5cec6ab5919e22cc5ae29e15a0d2208cecad3a579200199326dd",
-      "excerptSeconds": 30.002688,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
-      "sourceTags": [
-        "ambient",
-        "chillstep",
-        "synth wave",
-        "electronica"
-      ],
       "sourceLanguageCode": null,
       "sourceInstrumental": "0",
       "metadataDescription": ""
@@ -50910,34 +50720,6 @@
       "metadataDescription": ""
     },
     {
-      "id": "fma:154569",
-      "title": "Shiver",
-      "artist": "Mike B. Fort",
-      "album": "Shiver",
-      "genre": "Electronic",
-      "sourceGenres": [
-        "Pop",
-        "Dubstep",
-        "Electronic"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Mike_BFort/Shiver/Shiver_1687",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "attribution": "\"Shiver\" by Mike B. Fort. Source: http://freemusicarchive.org/music/Mike_BFort/Shiver/Shiver_1687. CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/. FMA rc1 approximately 30-second excerpt. See supplied notices for additional credits.",
-      "suppliedNotices": {},
-      "audio": "audio/154569.mp3",
-      "audioBytes": 1201181,
-      "audioSha256": "29b5504b0c7999465177edaa11894435495fce9fad8f8b0b68eb0ed98c296009",
-      "excerptSeconds": 29.976562,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
-      "sourceTags": [],
-      "sourceLanguageCode": null,
-      "sourceInstrumental": "0",
-      "metadataDescription": ""
-    },
-    {
       "id": "fma:103728",
       "title": "Python",
       "artist": "Rolemusic",
@@ -52388,35 +52170,6 @@
       ],
       "sourceLanguageCode": null,
       "sourceInstrumental": "1",
-      "metadataDescription": ""
-    },
-    {
-      "id": "fma:125279",
-      "title": "Candy Island",
-      "artist": "Tyler Twombly",
-      "album": "Chill Beats EP",
-      "genre": "Electronic",
-      "sourceGenres": [
-        "Hip-Hop Beats",
-        "Hip-Hop",
-        "Instrumental",
-        "Electronic"
-      ],
-      "sourceUrl": "http://freemusicarchive.org/music/Tyler_Twombly/Chill_Beats_EP/Tyler_Twombly_-_Chill_Beats_-EP-_-_04_Candy_Island",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "attribution": "\"Candy Island\" by Tyler Twombly. Source: http://freemusicarchive.org/music/Tyler_Twombly/Chill_Beats_EP/Tyler_Twombly_-_Chill_Beats_-EP-_-_04_Candy_Island. CC-BY-4.0: https://creativecommons.org/licenses/by/4.0/. FMA rc1 approximately 30-second excerpt. See supplied notices for additional credits.",
-      "suppliedNotices": {},
-      "audio": "audio/125279.mp3",
-      "audioBytes": 1201171,
-      "audioSha256": "2b3caa661ac9e15680c6bd1131f7c985af3e205be84df92156ad471bc517a585",
-      "excerptSeconds": 29.976562,
-      "verifiedVocals": null,
-      "verifiedLanguage": null,
-      "modifications": "Unchanged FMA rc1 approximately 30-second MP3 excerpt bytes. FMA excerpted the original recording; the offset within the original recording is unknown. Metadata selected and reformatted.",
-      "sourceTags": [],
-      "sourceLanguageCode": null,
-      "sourceInstrumental": "0",
       "metadataDescription": ""
     },
     {
@@ -64960,7 +64713,7 @@
       "metadataDescription": ""
     }
   ],
-  "coverage": "2000 screened FMA excerpts:the complete frozen1000 selection plus1000 additional recordings. Conflicted legacy row30702 remains excluded. This is a local candidate and a biased open-music sample, not mainstream coverage.",
+  "coverage": "1992 screened FMA excerpts: the frozen 1000 selection plus 1000 additional recordings, without the 8 recordings on the rights quarantine list of 2026-10-06 (corpus-releases/quarantine.json). Conflicted legacy row 30702 remains excluded. This is a biased open-music sample, not mainstream coverage.",
   "metadataAttribution": "FMA metadata: Michaël Defferrard, Kirell Benzi, Pierre Vandergheynst, Xavier Bresson. FMA: A Dataset For Music Analysis (ISMIR 2017), CC BY 4.0. https://github.com/mdeff/fma",
   "sourceAudioPreprocessing": {
     "decodePolicy": "Decode full excerpt once, cap30seconds, then slice decoded samples at fixed starts",

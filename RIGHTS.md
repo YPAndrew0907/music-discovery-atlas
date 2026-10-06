@@ -1,3 +1,7 @@
+# Rights quarantine (2026-10-06)
+
+The rights research of 2026-10-06 found eight rows in the 2,000-track release that must not be served: six to remove and two to hold. The release is rebuilt without them (1,992 tracks). The list is `corpus-releases/quarantine.json`, and every corpus build applies it. [docs/RIGHTS_QUARANTINE.md](docs/RIGHTS_QUARANTINE.md) has the reasons, the evidence pointers, the rebuild procedure and a proposed takedown page; the contact for that page is still to be added.
+
 # Separate 1,000-track local candidate
 
 The current local candidate is documented in [CORPUS_1000.md](CORPUS_1000.md), with its full ledger and exact identities under corpus-releases/fma1000/. It is not pushed or deployed. The following 500 and legacy notes are retained as parent-release history.

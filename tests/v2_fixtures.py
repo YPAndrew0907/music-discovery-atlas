@@ -16,7 +16,10 @@ sys.path.insert(0, str(ROOT / 'server'))
 sys.path.insert(0, str(ROOT / 'scripts'))
 
 V1_DIR = ROOT / 'corpus-releases/fma2000'
-V1_SHA = 'af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283'
+V1_SHA = '32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42'
+# fma2000 after the rights quarantine of 2026-10-06 (corpus-releases/quarantine.json): 2,000 rows less 8.
+V1_COUNT = 1992
+V1_EVIDENCE_BYTES = 6_997_754
 CODE = ['server/release_v2.py', 'server/search_v2.py', 'server/corpus_release.py', 'server/hnsw_trace.py',
         'scripts/convert_release_v1_to_v2.py', 'scripts/build_web_v2.py']
 

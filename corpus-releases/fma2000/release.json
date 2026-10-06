@@ -1,40 +1,40 @@
 {
   "schemaVersion": 1,
   "kind": "music-corpus-release",
-  "catalogId": "fma2000:954e908848258f08d2b0c2054e74e6901a14be02e3e53a45d63826c0ef0ae3be",
-  "count": 2000,
+  "catalogId": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
+  "count": 1992,
   "dimensions": 512,
   "pairId": "experimental-fma-q8:3d5a3ebe3ac4bd09fa96f05fdefc2df1ae841d2562dea913abb8a5990b377566",
   "assets": {
     "catalog": {
       "path": "catalog.json",
-      "bytes": 4533193,
-      "sha256": "86cc72f6f0b5ebad47e059544c1587907e2b5d7b9b385efd77d09580f180ee07"
+      "bytes": 4520886,
+      "sha256": "357e1db3de4e83e82f0daf03c10d0f392369e45346b4d8084a692ebd334a67db"
     },
     "ids": {
       "path": "ids.json",
-      "bytes": 31288,
-      "sha256": "43a0444151ed99df4c7663c770c0f9439603c8ebb262dac7e55b50479e7f95d0"
+      "bytes": 31167,
+      "sha256": "edeb1206bcd5096eb2ad81a3748980b621b44ca117134c4bd4cc83bbd58cc7b4"
     },
     "vectors": {
       "path": "vectors.f32",
-      "bytes": 4096000,
-      "sha256": "12c1dfc0c23f27c14d0530799a284df92bb3a740ef4a22749aab53d00af2ae8d"
+      "bytes": 4079616,
+      "sha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba"
     },
     "index": {
       "path": "index.json",
-      "bytes": 122320,
-      "sha256": "998b8201462bd548f9af5a632d82bea313ca7f315e1ebc231d3ca278c258314e"
+      "bytes": 122147,
+      "sha256": "5bec8ddc4c9532e83b3c0045d6ee02b59fb4306c6918009780a4f2aa491d6e54"
     },
     "graphManifest": {
       "path": "manifest.json",
-      "bytes": 41099,
-      "sha256": "6772cf8ec693d8261fd9380f5311728c1bfcb71db7b55f4a59a2f46b3b8b0bdb"
+      "bytes": 40962,
+      "sha256": "6a452e56fa96ab932ff552e62d8e81dcc8368dcfc19c244436e7804e66c413a6"
     },
     "rights": {
       "path": "rights.json",
-      "bytes": 3128413,
-      "sha256": "68df6c49c1d0bbef49c24a213517a44a4649a007d58d328221d482103a16cd2c"
+      "bytes": 3116077,
+      "sha256": "a7f8a51038a3412eabd467a2beb84708696d3ab02b41a27d40b20deba3e70e5a"
     }
   }
 }

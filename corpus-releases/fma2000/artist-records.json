@@ -1,15 +1,11 @@
 {
   "schemaVersion": 1,
-  "catalogId": "fma2000:954e908848258f08d2b0c2054e74e6901a14be02e3e53a45d63826c0ef0ae3be",
+  "catalogId": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
   "sourceSha256": "219e819e7165c64776446949c42f210242d17ecfc5f12f751d011a7c09c01a4d",
   "meaning": "Stable artist IDs from official FMA raw metadata; not name-only inference",
   "metadataLicense": "CC-BY-4.0",
   "attribution": "FMA metadata: Michaël Defferrard, Kirell Benzi, Pierre Vandergheynst, Xavier Bresson. FMA: A Dataset For Music Analysis (ISMIR 2017), CC BY 4.0. https://github.com/mdeff/fma",
   "rows": [
-    {
-      "trackId": "fma:1382",
-      "artistId": "fma-artist:233"
-    },
     {
       "trackId": "fma:1383",
       "artistId": "fma-artist:233"
@@ -691,10 +687,6 @@
       "artistId": "fma-artist:14132"
     },
     {
-      "trackId": "fma:93518",
-      "artistId": "fma-artist:17332"
-    },
-    {
       "trackId": "fma:97286",
       "artistId": "fma-artist:17448"
     },
@@ -1155,10 +1147,6 @@
       "artistId": "fma-artist:22568"
     },
     {
-      "trackId": "fma:98077",
-      "artistId": "fma-artist:17448"
-    },
-    {
       "trackId": "fma:142083",
       "artistId": "fma-artist:19803"
     },
@@ -1253,10 +1241,6 @@
     {
       "trackId": "fma:135364",
       "artistId": "fma-artist:21958"
-    },
-    {
-      "trackId": "fma:93519",
-      "artistId": "fma-artist:17332"
     },
     {
       "trackId": "fma:115591",
@@ -1607,10 +1591,6 @@
       "artistId": "fma-artist:16893"
     },
     {
-      "trackId": "fma:93520",
-      "artistId": "fma-artist:17332"
-    },
-    {
       "trackId": "fma:107427",
       "artistId": "fma-artist:18761"
     },
@@ -1857,10 +1837,6 @@
     {
       "trackId": "fma:89817",
       "artistId": "fma-artist:16893"
-    },
-    {
-      "trackId": "fma:93521",
-      "artistId": "fma-artist:17332"
     },
     {
       "trackId": "fma:107429",
@@ -6235,10 +6211,6 @@
       "artistId": "fma-artist:24185"
     },
     {
-      "trackId": "fma:154569",
-      "artistId": "fma-artist:21394"
-    },
-    {
       "trackId": "fma:103728",
       "artistId": "fma-artist:10397"
     },
@@ -6417,10 +6389,6 @@
     {
       "trackId": "fma:140669",
       "artistId": "fma-artist:22467"
-    },
-    {
-      "trackId": "fma:125279",
-      "artistId": "fma-artist:20862"
     },
     {
       "trackId": "fma:88933",

@@ -11,7 +11,7 @@ const studio=()=>readFile(new URL('../web/search-studio/src/studio-release.mjs',
 
 test('the v1 page fixture is the exact v1 page data in a v1 tree and its pins hold in either tree',async()=>{
   const manifest=JSON.parse(await v1Data('manifest.json'));
-  assert.equal(manifest.format,undefined);assert.equal(manifest.count,2000);
+  assert.equal(manifest.format,undefined);assert.equal(manifest.count,1992);
   for(const pin of Object.values(manifest.files)){
     const bytes=await v1Data(pin.path);assert.equal(bytes.length,pin.bytes,pin.path);assert.equal(hash(bytes),pin.sha256,pin.path);
     assert.deepEqual(await release(pin.path),bytes,'corpus-releases/fma2000 holds the same '+pin.path);

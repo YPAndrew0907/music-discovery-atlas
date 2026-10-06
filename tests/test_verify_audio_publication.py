@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from v2_fixtures import ROOT, converted_fma2000  # noqa: E402
+from v2_fixtures import ROOT, V1_COUNT, converted_fma2000  # noqa: E402
 sys.path.insert(0, str(ROOT / 'scripts'))
 import verify_audio_publication as verifier  # noqa: E402
 from collection_v2 import AudioDeliveryV2  # noqa: E402
@@ -120,16 +120,16 @@ class VerifierTests(unittest.TestCase):
     def test_every_object_and_rights_row_is_checked_before_the_manifest_is_written(self):
         record, report = self.run_verifier(range_every=50)
         self.assertIsNotNone(record, report['failures'][:3])
-        self.assertEqual((report['listed'], report['passed'], report['failed'], report['rangeChecks']), (2000, 2000, 0, 41))
+        self.assertEqual((report['listed'], report['passed'], report['failed'], report['rangeChecks']), (V1_COUNT, V1_COUNT, 0, 41))
         self.assertTrue(all('Authorization' not in h and 'Cookie' not in h for _, h in self.origin.calls))
         self.assertEqual(sum('Range' in h for _, h in self.origin.calls), 41)
         output = verifier.publish(record, self.published, self.temp() / 'audio-delivery.remote.json')
         written = json.loads(output.read_text())
         self.assertEqual((written['mode'], written['origin'], written['pathPrefix'], written['publicDeliveryVerified']),
                          ('remote', ORIGIN, PREFIX, True))
-        self.assertEqual(written['verification']['filesFetched'], 2000)
+        self.assertEqual(written['verification']['filesFetched'], V1_COUNT)
         delivery = AudioDeliveryV2(output, self.published, enabled=True)
-        self.assertEqual((delivery.manifest['mode'], delivery.manifest['available'], delivery.paths), ('remote', 2000, {}))
+        self.assertEqual((delivery.manifest['mode'], delivery.manifest['available'], delivery.paths), ('remote', V1_COUNT, {}))
         with self.assertRaisesRegex(ReleaseError, 'exists'):
             verifier.publish(record, self.published, output)
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "experiment": "local-reviewed-fma2000-discovery-graph",
-  "graphId": "experimental-clap-audio-graph:a8f8c69981ace53cae41eea125a92d03deda519dd598d4af752ecc98f2560f82",
+  "graphId": "experimental-clap-audio-graph:a894cb5f38ffed73548969aacb821b348a02312cbc0e1087141e73946849f45a",
   "graphIdentity": {
     "schemaVersion": 1,
     "audio": {
@@ -45,9 +45,9 @@
       "executionProfileSha256": "91d66ce0d78d4505d78ec229f212f66a022e10d1f4958db7aea246b2ffd0b11b"
     },
     "dimensions": 512,
-    "count": 2000,
-    "vectorsSha256": "12c1dfc0c23f27c14d0530799a284df92bb3a740ef4a22749aab53d00af2ae8d",
-    "orderedIdsSha256": "d449dd08c0e6592558c35cac7ba4e33c365324003c1019a1f0e09bd4e844a66f",
+    "count": 1992,
+    "vectorsSha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba",
+    "orderedIdsSha256": "e7dac8948f1a787835a556e2376fcae976af2c4a728e60d73b45fed24ecd8a01",
     "metric": "cosine",
     "algorithm": "hnsw-static-cosine-v1",
     "hnswSourceSha256": "da9d421f511df4dfbe5d21c4c4b748821d0b5f14b9e37a5f09c1b32c7ba0031d",
@@ -57,13 +57,12 @@
       "seed": 43
     }
   },
-  "catalogId": "fma2000:954e908848258f08d2b0c2054e74e6901a14be02e3e53a45d63826c0ef0ae3be",
-  "count": 2000,
+  "catalogId": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
+  "count": 1992,
   "dimensions": 512,
-  "vectorsSha256": "12c1dfc0c23f27c14d0530799a284df92bb3a740ef4a22749aab53d00af2ae8d",
-  "orderedIdsSha256": "d449dd08c0e6592558c35cac7ba4e33c365324003c1019a1f0e09bd4e844a66f",
+  "vectorsSha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba",
+  "orderedIdsSha256": "e7dac8948f1a787835a556e2376fcae976af2c4a728e60d73b45fed24ecd8a01",
   "orderedIds": [
-    "fma:1382",
     "fma:1383",
     "fma:3727",
     "fma:3832",
@@ -234,7 +233,6 @@
     "fma:89814",
     "fma:114265",
     "fma:68551",
-    "fma:93518",
     "fma:97286",
     "fma:121312",
     "fma:68573",
@@ -350,7 +348,6 @@
     "fma:123965",
     "fma:75783",
     "fma:141562",
-    "fma:98077",
     "fma:142083",
     "fma:112315",
     "fma:142668",
@@ -375,7 +372,6 @@
     "fma:89815",
     "fma:112197",
     "fma:135364",
-    "fma:93519",
     "fma:115591",
     "fma:138061",
     "fma:107426",
@@ -463,7 +459,6 @@
     "fma:64332",
     "fma:72069",
     "fma:89816",
-    "fma:93520",
     "fma:107427",
     "fma:107617",
     "fma:113972",
@@ -526,7 +521,6 @@
     "fma:64333",
     "fma:72070",
     "fma:89817",
-    "fma:93521",
     "fma:107429",
     "fma:111819",
     "fma:113973",
@@ -1620,7 +1614,6 @@
     "fma:61675",
     "fma:112866",
     "fma:153185",
-    "fma:154569",
     "fma:103728",
     "fma:112983",
     "fma:107267",
@@ -1666,7 +1659,6 @@
     "fma:141568",
     "fma:75027",
     "fma:140669",
-    "fma:125279",
     "fma:88933",
     "fma:144952",
     "fma:154725",
@@ -2064,7 +2056,7 @@
     "fma:107579",
     "fma:112984"
   ],
-  "indexSha256": "998b8201462bd548f9af5a632d82bea313ca7f315e1ebc231d3ca278c258314e",
+  "indexSha256": "5bec8ddc4c9532e83b3c0045d6ee02b59fb4306c6918009780a4f2aa491d6e54",
   "hnswSourceSha256": "da9d421f511df4dfbe5d21c4c4b748821d0b5f14b9e37a5f09c1b32c7ba0031d",
   "graph": {
     "algorithm": "hnsw-static-cosine-v1",
@@ -2227,81 +2219,81 @@
     },
     "metrics": {
       "8": {
-        "neighborRecall": 0.4595,
+        "neighborRecall": 0.4582705823293173,
         "minimumNeighborRecall": 0.0,
-        "trustworthiness": 0.967888427672956
+        "trustworthiness": 0.969797413954885
       }
     },
     "inputDimensions": 512,
-    "note": "New unsupervised projection of all2000 actual audio vectors; no metadata or query labels."
+    "note": "New unsupervised projection of all1992 actual audio vectors; no metadata or query labels."
   },
   "assets": {
     "catalog.json": {
       "path": "catalog.json",
-      "bytes": 4533193,
-      "sha256": "86cc72f6f0b5ebad47e059544c1587907e2b5d7b9b385efd77d09580f180ee07"
+      "bytes": 4520886,
+      "sha256": "357e1db3de4e83e82f0daf03c10d0f392369e45346b4d8084a692ebd334a67db"
     },
     "vectors.f32": {
       "path": "vectors.f32",
-      "bytes": 4096000,
-      "sha256": "12c1dfc0c23f27c14d0530799a284df92bb3a740ef4a22749aab53d00af2ae8d"
+      "bytes": 4079616,
+      "sha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba"
     },
     "ids.json": {
       "path": "ids.json",
-      "bytes": 31288,
-      "sha256": "43a0444151ed99df4c7663c770c0f9439603c8ebb262dac7e55b50479e7f95d0"
+      "bytes": 31167,
+      "sha256": "edeb1206bcd5096eb2ad81a3748980b621b44ca117134c4bd4cc83bbd58cc7b4"
     },
     "index.json": {
       "path": "index.json",
-      "bytes": 122320,
-      "sha256": "998b8201462bd548f9af5a632d82bea313ca7f315e1ebc231d3ca278c258314e"
+      "bytes": 122147,
+      "sha256": "5bec8ddc4c9532e83b3c0045d6ee02b59fb4306c6918009780a4f2aa491d6e54"
     },
     "layout.json": {
       "path": "layout.json",
-      "bytes": 168360,
-      "sha256": "de16280503f1759d5dd0fb6e2ba08a58022d55a4046e50b0c37c5f154c599d5a"
+      "bytes": 167598,
+      "sha256": "f49d8688047644b95b8547d963efd7c2f64def7f702185f7bb04306ab08d35cb"
     },
     "examples.json": {
       "path": "examples.json",
-      "bytes": 1195200,
-      "sha256": "2e566885c88bf443ba811599f469871b99ed8d0c3ea5eb51e0ac348f5d889c1c"
+      "bytes": 1209863,
+      "sha256": "5e9ab0e42c105059bc1117b157c36fc2bc2de043ab3a051f0e2f2b242939ec0d"
     }
   },
   "files": {
     "catalog": {
       "path": "catalog.json",
-      "bytes": 4533193,
-      "sha256": "86cc72f6f0b5ebad47e059544c1587907e2b5d7b9b385efd77d09580f180ee07"
+      "bytes": 4520886,
+      "sha256": "357e1db3de4e83e82f0daf03c10d0f392369e45346b4d8084a692ebd334a67db"
     },
     "vectors": {
       "path": "vectors.f32",
-      "bytes": 4096000,
-      "sha256": "12c1dfc0c23f27c14d0530799a284df92bb3a740ef4a22749aab53d00af2ae8d"
+      "bytes": 4079616,
+      "sha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba"
     },
     "ids": {
       "path": "ids.json",
-      "bytes": 31288,
-      "sha256": "43a0444151ed99df4c7663c770c0f9439603c8ebb262dac7e55b50479e7f95d0"
+      "bytes": 31167,
+      "sha256": "edeb1206bcd5096eb2ad81a3748980b621b44ca117134c4bd4cc83bbd58cc7b4"
     },
     "index": {
       "path": "index.json",
-      "bytes": 122320,
-      "sha256": "998b8201462bd548f9af5a632d82bea313ca7f315e1ebc231d3ca278c258314e"
+      "bytes": 122147,
+      "sha256": "5bec8ddc4c9532e83b3c0045d6ee02b59fb4306c6918009780a4f2aa491d6e54"
     },
     "layout": {
       "path": "layout.json",
-      "bytes": 168360,
-      "sha256": "de16280503f1759d5dd0fb6e2ba08a58022d55a4046e50b0c37c5f154c599d5a"
+      "bytes": 167598,
+      "sha256": "f49d8688047644b95b8547d963efd7c2f64def7f702185f7bb04306ab08d35cb"
     },
     "examples": {
       "path": "examples.json",
-      "bytes": 1195200,
-      "sha256": "2e566885c88bf443ba811599f469871b99ed8d0c3ea5eb51e0ac348f5d889c1c"
+      "bytes": 1209863,
+      "sha256": "5e9ab0e42c105059bc1117b157c36fc2bc2de043ab3a051f0e2f2b242939ec0d"
     }
   },
-  "scope": "2000 screened FMA recordings with real paired CLAP audio vectors. Six public recorded queries are examples; live descriptions use the disclosed selected engine. Playback requires the separately verified approved archive.",
+  "scope": "1992 screened FMA recordings with real paired CLAP audio vectors. Six public recorded queries are examples; live descriptions use the disclosed selected engine. Playback requires the separately verified approved archive.",
   "limitations": [
-    "This2000-track open-music sample is biased and does not represent mainstream music.",
+    "This1992-track open-music sample is biased and does not represent mainstream music.",
     "Cosine similarity and ANN agreement do not establish listener relevance.",
     "The map loses512-dimensional information and never supplies search distances.",
     "Browser and recorded/native query profiles retain distinct numerical identities."

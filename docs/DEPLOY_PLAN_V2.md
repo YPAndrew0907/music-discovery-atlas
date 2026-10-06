@@ -2,15 +2,17 @@
 
 Status, 2026-10-06: ready for the manager's decision. Nothing has been pushed or deployed, and production (`main` = `35cec9e`, the Atlas page on the v1 fma2000 release) is unchanged. The work is on the local branch `v2-deploy`, which builds on `platform-v2` (see `docs/PLATFORM_V2.md`) and fast-forwards production `main`.
 
-The deploy serves the same 2,000 recordings with the same rankings, scores and search traces. What changes: the page downloads 0.83 MB instead of 10.3 MB and reads the catalog page by page; the server memory-maps the release instead of parsing it; and audio is hashed on first play instead of all 2 GB at every start.
+**Rights fix (branch `rights-fix-2000`, on top of `v2-deploy`).** The rights research of 2026-10-06 found eight rows of the live 2,000 that must not be served. fma2000 is rebuilt without them: 1,992 recordings, release `32015637…` (was `af67c98a…`), v2 conversion `279cd21b…` (was `806b19ed…`). The digests, counts and commands below are the rebuilt release's; `docs/RIGHTS_QUARANTINE.md` has the list, the reasons and the procedure. If the deploy goes ahead, push `rights-fix-2000` instead of `v2-deploy`. It contains every `v2-deploy` commit, and stage 1 then also takes the eight rows off the live site.
+
+The deploy serves the same 1,992 recordings with the same rankings, scores and search traces as the v1 release it converts. What changes: the page downloads 0.83 MB instead of 10.3 MB and reads the catalog page by page; the server memory-maps the release instead of parsing it; and audio is hashed on first play instead of all 2 GB at every start.
 
 ## 1. Decisions to take first
 
 1. **Where the release files come from.** There are two install modes, set by the `source` block of `active-corpus.json`:
-   - **bundled** (the plan below): the release directory is committed under `corpus-releases/fma2000-v2/` and copied into the image like today's v1 releases. That commits 8 files, 24.3 MB: `catalog.sqlite` 9.7 MB, `evidence.sqlite` 9.2 MB, `vectors.f32` 4.1 MB, `examples.json` 1.2 MB and four small files. This is the same order as `corpus-releases/fma2000/`, which is already in Git. This branch commits no release data; the activation commit in step 3.2 does.
+   - **bundled** (the plan below): the release directory is committed under `corpus-releases/fma2000-v2/` and copied into the image like today's v1 releases. That commits 8 files, 24.3 MB: `catalog.sqlite` 9.7 MB, `evidence.sqlite` 9.1 MB, `vectors.f32` 4.1 MB, `examples.json` 1.2 MB and four small files. This is the same order as `corpus-releases/fma2000/`, which is already in Git. This branch commits no release data; the activation commit in step 3.2 does.
    - **object-store**: Git holds only the selection, and the image build fetches each file by its SHA-256 from one pinned HTTPS origin. This needs a bucket and an upload, and none exists. It is the mode for anything much larger than fma2000 (section 7).
 2. **One push or two.** The plan uses two: the code first, with the v1 selection unchanged, then the activation. Each push is its own rollback point. Pushing both at once also works, but a failure would then not show which half caused it.
-3. **The corpus.** fma2000 only. fma5777-v2 exists on the external volume, but its 3,777 added rows rest on an automated rights screen (section 7).
+3. **The corpus.** fma2000 only (1,992 recordings since the rights quarantine). fma5777-v2 exists on the external volume, but its 3,777 added rows rest on an automated rights screen (section 7).
 
 ## 2. What is on the branch
 
@@ -26,14 +28,18 @@ The deploy serves the same 2,000 recordings with the same rankings, scores and s
 | `72231ac` | `scripts/verify_audio_publication.py`: the remote-audio publication verifier |
 | `ce55c4a` | The activation and gateway tests no longer depend on the tree or volume they run in |
 | `0da3f2a` | An end-to-end test of the v2 hydration build chain, with only the network transport stubbed |
-| `b3365d2` and the last commit | This document, and three status lines in `docs/PLATFORM_V2.md` |
+| `b3365d2` and `5c72801` | This document, and three status lines in `docs/PLATFORM_V2.md` |
+| `212471c` (rights-fix-2000) | `corpus-releases/quarantine.json`, the reviewed list of 2026-10-06, and its checks |
+| `374fed9` | The corpus builders honour the list; the input reconstruction, credits, pins and plan steps join the repository |
+| `d7cf8d2` | fma2000 rebuilt without the eight rows (1,992); credits, page data, pins, audio plan and tests follow |
+| later rights-fix commits | Tests that hold in an activated tree, `docs/RIGHTS_QUARANTINE.md`, and the updates in this document |
 
 **v1 behaviour is unchanged.** For a v1, disabled or absent selection, the new Docker step prints `{"installed": false, ...}` and exits 0. The hydration entrypoint runs its v1 code exactly as before; the new dispatch only takes a pinned, parseable `schemaVersion: 2` file. The v1 server path is untouched. Stage 1 below was proved locally with the unmodified production live check (section 5).
 
 **What has never run:**
 
 - **A Docker build.** There is no Docker or Podman on this Mac, so the first real image build of this branch is the stage 1 push.
-- **The v2 hydration over the network.** The 1.95 GB of official ranges have not been fetched through the v2 path. That first happens in the stage 2 build. The transport is the unchanged v1 code that built today's image. Everything around it is tested end to end with the network stubbed: the plan binding, the supervised worker, the parent's re-verification and the publication.
+- **The v2 hydration over the network.** The 1.95 GB of official ranges have not been fetched through the v2 path. The 1,992-entry plan has not been fetched through the v1 path either; its entries are byte-identical to entries of the 2,000-entry plan that built today's image. That first happens in the stage 2 build. The transport is the unchanged v1 code that built today's image. Everything around it is tested end to end with the network stubbed: the plan binding, the supervised worker, the parent's re-verification and the publication.
 - **Either failure fails closed.** Render keeps the previous deploy.
 
 **The image build, in order** (Dockerfile):
@@ -52,7 +58,7 @@ The deploy serves the same 2,000 recordings with the same rankings, scores and s
    - **Plan binding.** The reviewed plan binds to the v2 release only because the release is a conversion of the reviewed v1 release. The v1 catalog, ids and rights bytes are rebuilt from the database and must hash to the digests that `release.json` records. The resulting entries equal the v1 plan's.
    - **Download.** The same 1.95 GB of official FMA byte ranges are fetched with the same transport, budget and deadline.
    - **Outputs.** The output names are unchanged:
-     - `audio-preview/`, the 2,000 MP3s;
+     - `audio-preview/`, the 1,992 MP3s;
      - `audio-release-credits/`, byte-identical to the v1 credits;
      - `audio-delivery.verified.json`, now in the v2 local format.
    - **Checks before publication.** Every MP3 is re-hashed and every credit re-checked. The server's own `AudioDeliveryV2` must accept the manifest before the single publication step.
@@ -75,22 +81,22 @@ The anonymous-preview variables also stay as they are.
 
 ## 3. Steps
 
-### 3.1 Stage 1: the code, with the v1 selection
+### 3.1 Stage 1: the code and the rights fix, with the v1 selection
 
 ```sh
 B=/Users/yipengandrewwang/SOP_2027/music_app_2026-10-05
-cd $B/repo/.worktrees/v2-deploy                                   # the branch's worktree
+cd $B/repo/.worktrees/rights-fix-2000                             # the branch's worktree
 git fetch origin
-git merge-base --is-ancestor origin/main v2-deploy && echo fast-forward   # must print fast-forward
+git merge-base --is-ancestor origin/main rights-fix-2000 && echo fast-forward   # must print fast-forward
 git status --short                                                # must be empty
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 149 OK
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 158 OK
 node --test tests/web_*.test.mjs                                  # expect 82 pass
-git push origin v2-deploy:main
+git push origin rights-fix-2000:main
 ```
 
 **If a UI branch merges first.** `v2-scale-ui` is being worked on in parallel. If it, or any other branch, is merged into `v2-deploy` before stage 1, run both suites and both browser fixtures again. This branch changed the start of six Node test files, `tests/v2_web_fixture.mjs` and `tests/test_api_v2.py`. Any new test of the v1 page must read its data through `tests/v1_page_data.mjs`, or it fails once v2 is active.
 
-**What Render does.** It builds the image with the v1 selection, so the new installer step is a no-op. Expect the usual build-to-live time: the last two deploys were live 230 s and 244 s after their push. Those times include the 1.95 GB hydration, which runs after `COPY web/` and so repeats on every deploy.
+**What Render does.** It builds the image with the v1 selection, so the new installer step is a no-op. The v1 selection is now the rebuilt 1,992-track release, and the hydration fetches only its 1,992 planned ranges; the quarantined recordings are never fetched. Expect the usual build-to-live time: the last two deploys were live 230 s and 244 s after their push. Those times include the 1.95 GB hydration, which runs after `COPY web/` and so repeats on every deploy.
 
 **Check after the deploy:**
 
@@ -99,13 +105,17 @@ cd /Users/yipengandrewwang/SOP_2027/music_app_2026-10-05/validation/atlas
 NODE_PATH=../../tooling/node_modules node live_check_atlas.mjs        # expect LIVE_ATLAS 17/17
 curl -s https://music-discovery-atlas.onrender.com/v1/manifest | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['bindingStatus'], m.get('releaseFormat'))"
 # expect: verified-corpus-release None
+curl -s https://music-discovery-atlas.onrender.com/v1/manifest | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['catalogCount'], m['corpusReleaseSha256'])"
+# expect: 1992 32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42
+for id in 001382 093518 093519 093520 093521 098077 125279 154569; do curl -s -o /dev/null -w "$id %{http_code}\n" https://music-discovery-atlas.onrender.com/audio/$id.mp3; done
+# expect: 404 for each quarantined recording
 ```
 
 ### 3.2 Stage 2: activate fma2000-v2 (bundled)
 
 Work in a fresh worktree on `main` after stage 1. The main checkout stays on its own branch, which other work uses.
 
-The release is regenerated from Git with the server runtime. The conversion is byte-deterministic: on 2026-10-06 it reproduced `806b19ed…` and every asset digest of the reviewed release, in 9.8 s and 181 MiB. That digest is what the activation pins, so the source of the bytes does not matter. If `/Volumes/music20k-apfs` is mounted, `--release-dir /Volumes/music20k-apfs/releases-v2/fma2000-v2` gives the same result.
+The release is regenerated from Git with the server runtime. The conversion is byte-deterministic: on 2026-10-06 the rebuilt 1,992-track release converted to `279cd21b…` in 6.3 s and 188 MB, and a second conversion gave byte-identical files. That digest is what the activation pins, so the source of the bytes does not matter. (The fma2000-v2 on the external volume is the superseded 2,000-row conversion `806b19ed…`; do not use it.)
 
 ```sh
 B=/Users/yipengandrewwang/SOP_2027/music_app_2026-10-05
@@ -113,15 +123,15 @@ cd $B/repo && git fetch origin
 git worktree add .worktrees/activate-fma2000-v2 -b activate-fma2000-v2 origin/main   # main = the stage 1 head
 cd .worktrees/activate-fma2000-v2
 $B/venv-3.12.14/bin/python scripts/convert_release_v1_to_v2.py --source-dir corpus-releases/fma2000 \
-  --expected-manifest-sha256 af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283 \
+  --expected-manifest-sha256 32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42 \
   --output-dir $B/validation/v2-deploy/regen/fma2000-v2 > /dev/null   # the output directory must not exist yet
-shasum -a 256 $B/validation/v2-deploy/regen/fma2000-v2/release.json  # expect 806b19ed…
+shasum -a 256 $B/validation/v2-deploy/regen/fma2000-v2/release.json  # expect 279cd21b…
 $B/venv-3.12.14/bin/python scripts/activate_release_v2.py \
   --release-dir $B/validation/v2-deploy/regen/fma2000-v2 \
-  --expected-manifest-sha256 806b19ed9a6b2f5766f3c0a7316db20466dbff1537b3eb24792c11518266e16c \
+  --expected-manifest-sha256 279cd21b116f084001162c8e10177511e7ffda89064189328e31d73c5fea68b7 \
   --name fma2000-v2
 $B/venv-3.12.14/bin/python scripts/activate_release_v2.py --check   # expect "ok": true
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 149 OK
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 158 OK
 node --test tests/web_*.test.mjs                                      # expect 82 pass
 NODE_PATH=$B/tooling/node_modules node tests/browser_search_ui.mjs       # v1 page fixture: passes
 NODE_PATH=$B/tooling/node_modules node tests/browser_collection_v2.mjs   # v2 page fixture: passes
@@ -151,7 +161,7 @@ The selection the activation writes:
   "enabled": true,
   "format": "music-corpus-release-v2",
   "directory": "corpus-releases/fma2000-v2",
-  "manifestSha256": "806b19ed9a6b2f5766f3c0a7316db20466dbff1537b3eb24792c11518266e16c",
+  "manifestSha256": "279cd21b116f084001162c8e10177511e7ffda89064189328e31d73c5fea68b7",
   "source": {"kind": "bundled"}
 }
 ```
@@ -181,10 +191,10 @@ node tests/live_check_v2.mjs                     # expect LIVE_CHECK_V2 26/26
 - **v2 checks (9):**
   - `/healthz`;
   - `/v1/manifest` with `releaseFormat` 2, `verified-corpus-release-v2` and the expected release digest;
-  - the delivery summary: local, 2,000 of 2,000 available;
+  - the delivery summary: local, 1,992 of 1,992 available;
   - server-side collection pages and neighbors;
   - an exact audio range;
-  - the excluded `fma:30702` and the whole-catalog files return 404;
+  - the excluded `fma:30702`, every recording on the quarantine list and the whole-catalog files return 404;
   - on each viewport, the page downloads only the three pinned v2 data files.
 - **Search budget.** The run uses 2 live searches and 1 neighbor read.
 
@@ -205,9 +215,11 @@ Then read the service's memory and the deploy's start-to-healthy time from the R
   - The revert restores the v1 selection, page data, manifests and allowlists, and removes the release directory.
   - Render rebuilds the v1 image, including the 1.95 GB hydration (about 4 minutes). The v2 deploy keeps serving until the new one is healthy.
 - **Stage 1:**
-  - Run `git revert --no-edit 35cec9e..<stage 1 head> && git push origin main`. This reverts every commit of `platform-v2` and `v2-deploy`; none of them changes data.
+  - Stage 1 now carries the rights fix. Reverting all of it (`git revert --no-edit 35cec9e..<stage 1 head>`) would put the eight quarantined recordings back on the live site, so do not do that.
+  - If the v2 code itself must go, use the dashboard rollback below as the stop-gap. Then deploy a reviewed backport of the rights fix onto `35cec9e`: the quarantine list, `corpus-releases/fma2000`, the page data, pins, credits and audio plan, and the hydration pins. The v1 code there needs no change to serve it.
+  - The commits of `platform-v2` and `v2-deploy` change no data; the `rights-fix-2000` commits do.
 - **A failed build** changes nothing live. Render keeps the most recent successful deploy, and the installer, the hydrator and the server's start-up checks all fail closed.
-- **For an emergency only,** the Render dashboard's rollback to the previous deploy is immediate. Follow it with the revert, so that `main` matches what runs.
+- **For an emergency only,** the Render dashboard's rollback to the previous deploy is immediate. Follow it with the revert, so that `main` matches what runs. After stage 1, the previous deploy is the 2,000-track one, so a dashboard rollback past stage 1 brings the quarantined recordings back until the backport above is live.
 
 ## 4. Object-store mode (for the record; not used for fma2000)
 
@@ -304,6 +316,46 @@ venv-3.12.14/bin/python scripts/verify_audio_publication.py --release-dir <relea
 
 The disk cache was warm (the release and audio had just been written), and this Mac is much faster per core than Render's shared CPU.
 
+### 5.1 Re-run on the rebuilt release (rights-fix-2000, 2026-10-06)
+
+**How it was run.** The same proof, with `validation/rights-fix-2000/build_root.sh`: a copy of `build_root.sh` with the release, digest and root as parameters, because the original names the offline volume and the superseded `806b19ed…`.
+
+- **Roots.** Built from `rights-fix-2000` at `d7cf8d2`. The later commits change tests and documents, plus the corpus-releases README and its package pin; the server's `verify_package()` passes on fresh v1 and activated exports of the final head.
+- **Audio.** Published from the verified local cache (`audio2000`) by the image build's own hydration functions.
+- **Servers.** Started with `start_server.sh` (copied so its runs land in `validation/rights-fix-2000/runs/`), anonymous mode, behind the TLS terminator.
+- **Machine.** Heavily loaded: load average 94 to 950 during these runs.
+
+| Check | Result |
+|---|---|
+| Stage 1 root (v1 selection = release `32015637…`): installer, `--verify-plan`, v1 hydration from the cache | installer no-op; plan verified, 1,992 entries, 1,945,985,122 range bytes; 1,992 files published |
+| Stage 1 server: `/v1/manifest` | `catalogCount` 1992, `verified-corpus-release`, `32015637…` |
+| Stage 1 server: the eight quarantined previews and fma:30702 | 404 each; a kept row (`/audio/001383.mp3`) answers 206 |
+| Stage 1: `live_check_atlas.mjs` (local copy) | **17/17** |
+| v2 root: activation (`279cd21b…`), `--check`, installer, interpreter, model, `--verify-plan`, v2 hydration from the cache | all pass; 36 changes; bundled release verified in 0.17 s; 1,992 files hashed and accepted by the server's parser |
+| v2: `tests/live_check_v2.mjs` (the post-deploy command; it now also requests every quarantined preview) | **26/26** |
+| v2: `live_check_atlas.mjs` (local copy) | **17/17** |
+| v2: `platform_v2/tools/browser_v2_check.mjs` (EXPECT_COUNT 1992: 166 pages, a full last page, lookup, refinement, neighbors, playback, animation) | **28/28** |
+| Suites at the branch head, v1 tree | Python 158 OK, Node 82 pass, both browser fixtures pass |
+| Suites in a tree activated at the branch head (`279cd21b…`, page manifest `ca2b0495…`) | Python 158 OK, Node 82 pass, both browser fixtures pass, `--check` ok |
+| Reproducibility (`validation/rights-fix-2000/repro.sh`): the scripted removal re-run in a fresh export | every release, page, credits and plan file byte-identical; pins `--check` finds nothing to change |
+
+**Measurements**, single runs on the loaded machine:
+
+| | Stage 1 (v1, 1,992) | v2 (1,992) |
+|---|---|---|
+| Spawn to `/healthz` 200 (s) | 6.6 | 2.1 |
+| CPU at readiness (s) | 4.1 | 1.7 |
+| RSS at readiness (MiB) | 409.5 | 340.6 |
+| Peak RSS (MiB) | 415.0 | 349.6 |
+| Load average at readiness | 94 | 234 |
+
+**Two earlier failures in an activated tree, both resolved.**
+
+- `tests/test_corpus_rebuild_tools.py` did not import there; it is fixed in `7693d67`.
+- At a load average near 900, `test_timeout_keeps_slot_until_fixture_really_exits` (a 20 ms request deadline) answered 504, and `browser_collection_v2.mjs` timed out waiting for the page. Both passed on the re-run above.
+
+The latency probe (`p95.py`) was not re-run: at these load averages its timings would say nothing about Render.
+
 ## 6. Acceptance on Render (1 CPU, 2 GB)
 
 The local figures above are evidence, not acceptance. Record these after stage 2:
@@ -311,7 +363,7 @@ The local figures above are evidence, not acceptance. Record these after stage 2
 | Measure | How | Accept if |
 |---|---|---|
 | Live check | `tests/live_check_v2.mjs` | 26/26 |
-| Hosted playback | in the live check: a desktop and a mobile preview advance past 1.2 s, `/audio/` answers 206, exact range on `/audio/001382.mp3` | all pass |
+| Hosted playback | in the live check: a desktop and a mobile preview advance past 1.2 s, `/audio/` answers 206, exact range on the first row's file (`/audio/001383.mp3`) | all pass |
 | Memory | Render metrics, the service's memory after the live check and the latency probe | under 700 MiB (local peak 351 MiB; the v1 baseline measured 370 MiB locally) |
 | Cold start | Render deploy log: container start to healthy; then the dashboard's restart of the instance | healthy within Render's health-check window; record the seconds (local 1.5–5.7 s; v1 hashed 2 GB of audio at start) |
 | Search latency | `p95.py` with 10 searches | server compute p95 under 150 ms; record round trip |
@@ -325,7 +377,7 @@ If memory, start or latency miss, roll back stage 2 (section 3.4) and keep the m
    - **What exists:** remote mode, the content-addressed key scheme, the publication verifier and its tests. There is no bucket, custom domain, account or budget.
    - **The recommendation:** Cloudflare R2 behind a custom domain (`corpus200k/SOURCES_AND_PLAN.md` 6.7). It needs the user's account and payment decision.
    - **Why:** the build-time pack stops working at about 20K recordings (21 GB against the 16 GB build disk).
-2. **Rights for fma5777.** Its 3,777 added rows rest on an automated screen, not a human review. fma5777-v2 is converted and measured, and the code would admit it. Activating it is the user's decision after review. The pinned hydration plan covers only the fma2000 release, so fma5777-v2 would run with previews unavailable until a remote pack is verified.
+2. **Rights for fma5777.** Its 3,777 added rows rest on an automated screen, not a human review. The research names further fma5777 rows to remove or hold (`docs/RIGHTS_QUARANTINE.md` section 4); they go on the quarantine list before any activation. fma5777-v2 is converted and measured, and the code would admit it. Activating it is the user's decision after review. The pinned hydration plan covers only the fma2000 release, so fma5777-v2 would run with previews unavailable until a remote pack is verified.
 3. **Hosting the release itself at scale.**
    - At 200K the release is about 1.2–2 GB, so it must use object-store mode. That needs the same bucket decision as the audio.
    - A 200K graph also needs a reviewed connectivity-repair step in the builder (`PLATFORM_V2.md` 9.4).
@@ -353,3 +405,12 @@ If memory, start or latency miss, roll back stage 2 (section 3.4) and keep the m
   - `live-atlas-original/` and `live-atlas-stage1/` (17/17 each);
   - `browser-v2-check/` (28/28).
 - **Tools:** `validation/v2-deploy/build_root.sh`, `hydrate_from_cache.py`, `start_server.sh`, `stop_server.sh`, `p95.py` and `live_check_atlas_local.mjs`.
+- **Rights-fix re-run (5.1):** `validation/rights-fix-2000/`:
+  - `rebuild.sh` and `receipts/rebuild/` (the rebuild, the identity check against the reviewed release);
+  - `repro.sh` and `receipts/repro/`;
+  - `receipts/v2/convert.json`;
+  - `build_root.sh`, `hydrate_v1_from_cache.py` and `receipts/build-root-v1/`, `receipts/build-root-v2/`;
+  - `runs/stage1-v1/`, `runs/proof-v2-1/`;
+  - `live/` (live checks and screenshots);
+  - `logs/` (every suite run);
+  - `receipts/quarantined-audio-local-check.json`.

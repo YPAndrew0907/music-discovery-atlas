@@ -36,3 +36,11 @@ export function resultScope({channel, catalogCount, candidateCount, page}) {
   }
   return `${shown} ${channel === 'browse' ? 'recordings' : 'name matches'} · ${candidateCount.toLocaleString()} ${channel === 'browse' ? 'recordings in the collection' : `title / artist matches across ${catalogCount.toLocaleString()} recordings`}. Refinements use recorded metadata.`;
 }
+
+// The visible one-line form of resultScope(). The full sentence above stays the accessible
+// description of the list; the refinement summary keeps "these N candidates" visible.
+export function compactResultScope({channel, catalogCount, candidateCount, page}) {
+  const range = page.total ? `${(page.start + 1).toLocaleString()}–${page.end.toLocaleString()} of ${page.total.toLocaleString()}` : candidateCount ? `0 of ${candidateCount.toLocaleString()}` : '0';
+  if (channel === 'sound' || channel === 'neighbors') return `${range} · searched ${catalogCount.toLocaleString()}`;
+  return `${range} ${channel === 'browse' ? 'recordings' : 'name matches'}`;
+}

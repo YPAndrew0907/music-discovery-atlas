@@ -1,4 +1,4 @@
-import {sourceGenres,refineCandidates,resultPage,resultScope} from '../web/search-studio/src/results-view.mjs';
+import {sourceGenres,refineCandidates,resultPage,resultScope,compactResultScope} from '../web/search-studio/src/results-view.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -44,7 +44,7 @@ function responseFor(body,example=0){
     trace:graph.search(q,{k:16,ef:32,trace:true,spaceId:manifest.graphId}).trace,
     timingMs:{serverCompute:1},tokenization:{truncated:false}};
 }
-async function harness({deferManifest=false,enabled=true,badManifest=false,failConfig=false,deferSearch=false}={}){
+async function harness({deferManifest=false,enabled=true,badManifest=false,failConfig=false,deferSearch=false,direction=null,phone=false}={}){
   const elements=new Map(),events={},clicks={},calls=[],searches=[],manifests=[],encodes=[],audioRequests=[];
   const api={enabled,badManifest,failConfig,deferManifest,deferSearch,failSearch:false,searchStatus:503,searchError:'fixture failure',searchRetryAfter:null,searchTransportError:false};
   function el(key){
@@ -103,11 +103,12 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
     ServerSearch:class extends ServerSearch{constructor(options){super({...options,fetcher});}},
     loadDeploymentConfig:options=>loadDeploymentConfig({...options,fetcher}),
     loadAudioDelivery:options=>loadAudioDelivery({...options,fetcher}),previewForTrack,UNAVAILABLE_PREVIEW,SERVER_CONFIG,
-    sourceGenres,refineCandidates,resultPage,resultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,publicCharacterLimit,
+    sourceGenres,refineCandidates,resultPage,resultScope,compactResultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,publicCharacterLimit,
     fetch:fetcher,crypto:webcrypto,TextDecoder,TextEncoder,Float32Array,Uint8Array,URL,Blob,DOMException,performance,
     getComputedStyle:()=>({getPropertyValue:()=> '#000'}),
     document:{body:{dataset:{}},activeElement:null,querySelector:el,querySelectorAll:selector=>selector==='[data-needs-catalog]'?[el('#search'),el('#enable-local')]:[],addEventListener(name,fn){clicks[name]=fn;}},
-    location:{href:origin+'/search-studio/',origin},window:{addEventListener(name,fn){events[name]=fn;}}});
+    ...(phone?{matchMedia:query=>({matches:query==='(max-width: 760px)',addEventListener(){}})}:{}),
+    location:{href:origin+'/search-studio/'+(direction?'?direction='+direction:''),origin},window:{addEventListener(name,fn){events[name]=fn;}}});
   vm.runInContext(source,context);
   const ready=vm.runInContext('init()',context);
   if(deferManifest)await until(()=>manifests.length===1);else await ready;
@@ -273,7 +274,8 @@ test('BFCache audio restoration completes during a new query without replacing s
 test('sound candidates page 12 then 4 without fetching deeper results or changing source ranks',async()=>{
   const h=await harness();
   const first=Array.from(vm.runInContext('rows.map(r=>r.row)',h.context));
-  assert.equal(first.length,12);assert.match(h.el('#result-scope').textContent,/12 of 16 from 16 retrieved sound candidates/);
+  assert.equal(first.length,12);assert.match(h.el('#result-scope-detail').textContent,/12 of 16 from 16 retrieved sound candidates/);
+  assert.equal(h.el('#result-scope').textContent,'1–12 of 16 · searched 2,000');
   h.el('#next-page').onclick();
   const next=Array.from(vm.runInContext('rows.map(r=>r.row)',h.context));
   assert.equal(next.length,4);assert.equal(new Set([...first,...next]).size,16);
@@ -289,7 +291,8 @@ test('collection browse and source-genre/name refinements cover the full real ca
   assert.match(h.el('#query-label').textContent,/Describe the music/);assert.equal(h.el('#engine-label').textContent,'Catalog browse');
   assert.equal(h.el('#results-heading').textContent,'Collection');assert.match(h.el('#results-source').textContent,/^Collection browse · local metadata$/);
   assert.equal(vm.runInContext('candidateRows.length',h.context),catalog.tracks.length);
-  assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
+  assert.match(h.el('#result-scope-detail').textContent,/^Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
+  assert.equal(h.el('#result-scope').textContent,'1–12 of 2,000 recordings');
   assert.equal(h.el('#page-indicator').textContent,'1–12 / 2,000');assert.equal(h.el('#page-position').textContent,'Page 1 of 167');
   const genre=catalog.tracks[1200].genre;h.el('#genre-filter').value=genre;h.el('#genre-filter').handlers.change();
   const expected=catalog.tracks.filter(t=>t.genre===genre).length;
@@ -305,7 +308,7 @@ test('collection browse and source-genre/name refinements cover the full real ca
 test('empty refined sound results can be cleared without issuing a new query or misreporting scope',async()=>{
   const h=await harness();h.el('#refine-text').value='No such recorded name 000000';h.el('#refine-text').handlers.input();
   assert.equal(h.el('#results-empty').hidden,false);assert.equal(h.el('#focus-track').disabled,true);
-  assert.match(h.el('#result-scope').textContent,/Showing 0 from 16/);
+  assert.match(h.el('#result-scope-detail').textContent,/Showing 0 from 16/);assert.equal(h.el('#result-scope').textContent,'0 of 16 · searched 2,000');
   assert.match(h.el('#empty-detail').textContent,/retrieved sound candidates/);
   h.el('#empty-clear').onclick();assert.equal(h.el('#results-empty').hidden,true);assert.equal(h.searches.length,0);
   h.el('#refine-text').value='No such recorded name 000000';h.el('#refine-text').handlers.input();
@@ -411,7 +414,7 @@ test('a retained refinement that hides new results is stated on the status line,
   const h=await harness();h.el('#refine-text').value='no such recorded name 000000';h.el('#refine-text').handlers.input();
   await h.submit('new sound search under a stale refinement');
   assert.equal(h.searches.length,1);assert.equal(vm.runInContext('rows.length',h.context),0);assert.equal(h.el('#results-empty').hidden,false);
-  assert.match(h.el('#result-scope').textContent,/^Showing 0 from 16 retrieved sound candidates/);
+  assert.match(h.el('#result-scope-detail').textContent,/^Showing 0 from 16 retrieved sound candidates/);assert.equal(h.el('#result-scope').textContent,'0 of 16 · searched 2,000');
   assert.match(h.el('#status').textContent,/Results ready\..*Refinements hide 16 of 16; clear them to see every result\.$/);
   h.el('#refine-text').value='';h.el('#refine-text').handlers.input();
   await h.submit('a second search with no refinement');
@@ -475,9 +478,27 @@ test('pagination scales: First/Last, a page jump and compact top controls reach 
   if(vm.runInContext('viewPage.pages',h.context)<=1){assert.equal(h.el('#page-number').disabled,true);assert.equal(h.el('#page-go').disabled,true);}
 });
 
-test('the refinement summary counts active refinements, the panel opens by default off phones, and the preview filter appears only when it can act',async()=>{
+test('startup defaults per composition: the Atlas map is open on every viewport (phones animate searches) with refinements collapsed; the List keeps its phone rule',async()=>{
+  for(const [direction,phone,map,refinement] of [[null,false,true,false],[null,true,true,false],['atlas',true,true,false],['field',true,true,false],['list',false,true,true],['list',true,false,false]]){
+    const h=await harness({direction,phone}),name=`${direction??'default'}${phone?' phone':''}`;
+    assert.equal(h.context.document.body.dataset.direction,direction??'atlas',name);
+    assert.equal(h.el('#map-panel').open,map,name+': map panel');assert.equal(h.el('.refinement').open,refinement,name+': refinement panel');
+    assert.equal(h.map.searches[0].options.animate,false,name+': bootstrap never animates');
+    await h.clickExample('dev-02');assert.equal(h.map.searches.at(-1).options.animate,map,name+': a recorded example animates exactly when the map is open');
+  }
+});
+
+test('the List composition keeps the full scope sentence and the original heading on screen',async()=>{
+  const h=await harness({direction:'list'});
+  assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 16 from 16 retrieved sound candidates · searched 2,000 recordings\. Refinements apply to these candidates, not the full collection\.$/);
+  assert.equal(h.el('#result-scope').textContent,h.el('#result-scope-detail').textContent);assert.equal(h.el('#results-heading').textContent,'Sound matches');
+  h.el('#browse-collection').onclick();assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
+  const atlas=await harness();assert.equal(atlas.el('#results-heading').textContent,'Matches');assert.equal(atlas.el('#result-scope').textContent,'1–12 of 16 · searched 2,000');
+});
+
+test('the refinement summary counts active refinements and the preview filter appears only when it can act',async()=>{
   const h=await harness();
-  assert.equal(h.el('.refinement').open,true,'no phone media query in this harness');assert.equal(h.el('#map-panel').open,true);
+  assert.equal(h.el('.refinement').open,false,'the Atlas starts with refinements collapsed');assert.equal(h.el('#map-panel').open,true);
   assert.equal(h.el('#refinement-active').textContent,'');assert.equal(h.el('#preview-only-label').hidden,true,'no previews: the filter cannot change anything');
   h.el('#genre-filter').value=catalog.tracks[vm.runInContext('rows[0].row',h.context)].genre;h.el('#genre-filter').handlers.change();
   assert.equal(h.el('#refinement-active').textContent,' · 1 active');
@@ -502,7 +523,17 @@ test('the About dialog derives its collection facts from the loaded data and lab
   assert.match(h.el('#collection-summary').textContent,/^2,000 FMA excerpts/);
   const html=(await bytes('search-studio/index.html')).toString();
   assert.match(html,/<span data-catalog-count>2,000<\/span> public FMA recording records/);assert.doesNotMatch(html,/id="selection-summary"/);
-  assert.match(html,/<details class="refinement"><summary>/);assert.match(html,/<p id="audio-availability" class="fine">[^<]*<\/p>\s*<p class="list-foot">/);
+  assert.match(html,/<details class="refinement"><summary>/);assert.match(html,/<\/nav>\s*<p id="audio-availability" class="fine">[^<]*<\/p><\/div>/);
+  const about=html.slice(html.indexOf('<dialog id="about-dialog">'),html.indexOf('</dialog>',html.indexOf('<dialog id="about-dialog">')));
+  assert.match(about,/<p class="list-foot">Sound similarity is not a relevance probability\. Source genres are catalog labels; vocals, language and mood are not verified filters\.<\/p>/);
+  assert.match(about,/positions do not determine results/);assert.match(about,/zooming in reveals more points and stored index connections/);
+  assert.equal([...html.matchAll(/class="list-foot"/g)].length,1);assert.doesNotMatch(html,/map-explainer/);
+  // Compositions: every parsed direction has its link (the parse marks it aria-current), and the full scope sentence describes the list.
+  for(const direction of ['atlas','list','field'])assert.match(about,new RegExp(`<a href="\\?direction=${direction}">`));
+  assert.match(html,/<ol id="results" aria-describedby="result-scope-detail"><\/ol>/);assert.match(html,/<p id="result-scope-detail" class="sr-only"><\/p>/);
+  assert.match(html,/<h1>What does it sound like\?<\/h1>/);assert.match(html,/<form id="query-form" novalidate><select id="query-kind" aria-label="Search by">/);
+  // The display policy is a refinement option; results stay before the map in the DOM (skip link and keyboard order).
+  assert.match(html,/<div class="refinement-controls">[\s\S]*<div class="result-policy">[\s\S]*<\/details>/);assert.ok(html.indexOf('id="results-region"')<html.indexOf('id="map-panel"'));
   assert.match(html,/<div class="results-meta"><span id="engine-label">/);assert.doesNotMatch(html,/<div class="query-kind"><span id="engine-label">/);
   // Both forms opt out of native validation so the page's own clamp (page jump) and limit message (description) are what users see.
   assert.match(html,/<form id="query-form" novalidate>/);assert.match(html,/<form id="page-jump" class="page-jump" novalidate>/);

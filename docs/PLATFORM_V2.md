@@ -2,6 +2,8 @@
 
 Status, 2026-10-06: implemented on the local branch `platform-v2` and measured on this Mac. Not pushed or deployed. The live site and the repository default are unchanged: `active-corpus.json` still selects the v1 fma2000 release, and the Dockerfile and hydration are untouched.
 
+The branch `v2-deploy` builds on this one and makes v2 deployable: the release installer, the v2 build hydration, the activation step, the audio publication verifier and the post-deploy live check. `docs/DEPLOY_PLAN_V2.md` has the steps, the local proof and the acceptance numbers. Where this document says something is unchanged or not written, it describes `platform-v2` alone.
+
 This document makes the v2 sketch in `corpus200k/SOURCES_AND_PLAN.md` (section 6.4) concrete for this codebase. It records what was built, what was measured and what a deployment would still need.
 
 ## 1. Why v2
@@ -311,7 +313,7 @@ The run found three things:
   - **Animation:** the server-search animation runs through all its phases at 60 fps, with a 16.7 ms p95 frame.
   - Screenshots are in `platform_v2/browser/`.
 
-## 8. Build and hydration for an object-store pack (proposed, not applied)
+## 8. Build and hydration for an object-store pack (proposed here; implemented on `v2-deploy`, see `DEPLOY_PLAN_V2.md`)
 
 Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
 
@@ -356,7 +358,7 @@ Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
 ## 9. Open items and decisions
 
 1. **Rights.** Unchanged by this work: the 3,777 fma5777 rows still rest on an automated screen. fma5777-v2 inherits exactly the v1 rows.
-2. **Host for audio.** Remote mode is implemented and tested against fixtures only. No bucket exists, and the publication verifier and the release installer in section 8 are not written.
+2. **Host for audio.** Remote mode is implemented and tested against fixtures only. No bucket exists. The publication verifier and the release installer from section 8 are written and tested on `v2-deploy` (`DEPLOY_PLAN_V2.md`).
 3. **Anonymous CPU budget.**
    - `PreviewBudget` starts counting at process start, so startup CPU uses part of the first hour's 30 CPU-seconds. v2 startup CPU is measured in section 7.
    - Starting the budget at readiness is a one-line change. It would change v1 behaviour, so it is left for review.

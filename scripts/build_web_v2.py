@@ -11,7 +11,9 @@ Instead of catalog.json, vectors.f32, index.json and ids.json, web/search-studio
 * examples.json: the six recorded queries as complete search packets (exact ranking, trace,
   display rows and positions) computed by the v2 server code, so no vectors are needed.
 
-The rest of the catalog is read page by page from /collection/ on the same server.
+The rest of the catalog is read page by page from /collection/ on the same server, and so are the
+track credits: notices/track-attribution.html becomes a small page that links to /collection/credits
+(and forwards old #fma-N links there) instead of every credit in one file.
 """
 import argparse
 import json
@@ -22,6 +24,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'server'))
+from collection_v2 import credits_index_page  # noqa: E402
 from corpus_release import require, sha256  # noqa: E402
 from release_v2 import load_release_v2, LimitsV2  # noqa: E402
 from search_v2 import GraphV2, label_rows, trace_rows  # noqa: E402
@@ -150,9 +153,13 @@ def build(release_dir, manifest_sha, web_root, *, sample_cap=8192, audio_mode='l
         if (data / name).exists():
             (data / name).unlink()
             removed.append(name)
+    credits = credits_index_page(release.count)
+    (Path(web_root) / 'notices').mkdir(parents=True, exist_ok=True)
+    (Path(web_root) / 'notices/track-attribution.html').write_bytes(credits)
     return {'manifestSha256': manifest_sha, 'files': {**files, 'manifest': {'path': 'manifest.json', 'bytes': len(payload),
             'sha256': manifest_sha}}, 'sampleCount': len(rows), 'edges': len(layout['edges']) // 3,
-            'removedV1DataFiles': removed, 'webDataBytes': sum(f['bytes'] for f in files.values()) + len(payload)}
+            'removedV1DataFiles': removed, 'webDataBytes': sum(f['bytes'] for f in files.values()) + len(payload),
+            'credits': {'path': 'notices/track-attribution.html', 'bytes': len(credits), 'pagedAt': '/collection/credits'}}
 
 
 def main():

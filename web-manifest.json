@@ -189,8 +189,8 @@
     },
     {
       "path": "search-studio/src/app.mjs",
-      "bytes": 55193,
-      "sha256": "d5fa5d66ce9067a0041ffbaec3019a33e6388b8387d3073a1dae2e8417de99d0"
+      "bytes": 55483,
+      "sha256": "433581e98cd6e9485fd4596f696c65821649717dae7c31c0e0e77816522cfb3c"
     },
     {
       "path": "search-studio/src/audio-delivery.mjs",

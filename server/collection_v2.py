@@ -13,11 +13,16 @@ rows are "Preview unavailable") with two v2 modes:
   (device, inode, size, mtime) identity changes. Nothing re-hashes the pack at startup.
 * remote: content-addressed objects on one pinned HTTPS origin, verified at publish time by
   the operator's verifier. The server never fetches or serves them.
+
+Track credits are served the same way: /collection/credits renders the static credit page's
+articles fifty at a time as plain HTML (no script needed), so a v2 package does not ship a
+credits file that grows with the catalog (10 MB at 5,777 rows).
 """
 import asyncio
 import base64
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+import html
 import json
 import os
 from pathlib import Path
@@ -26,7 +31,7 @@ import threading
 import time
 from urllib.parse import parse_qsl, urlsplit
 
-from corpus_release import ReleaseError, require, strict_json, valid_sha
+from corpus_release import TRACK_ID, ReleaseError, require, strict_json, valid_sha
 from release_v2 import page_query
 
 LOCAL_ROUTE = re.compile(r'/audio/([0-9]{6})\.mp3\Z')
@@ -158,6 +163,96 @@ class AudioDeliveryV2:
         return path
 
 
+# ---- track credits ---------------------------------------------------------------------------
+CREDITS_PAGE_SIZE = 50
+CREDITS_STYLE = ('body{max-width:75ch;margin:2rem auto;padding:0 1rem;font:16px/1.6 system-ui}'
+                 'article{border-top:1px solid #bbb;padding:1rem 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}')
+PAGED_CREDITS_STYLE = (CREDITS_STYLE + 'nav{margin:1rem 0;padding:.75rem 0;border-top:1px solid #bbb}'
+                       'nav p{margin:0 0 .5rem}nav ul{list-style:none;margin:0 0 .5rem;padding:0;display:flex;flex-wrap:wrap;gap:.25rem 1.25rem}'
+                       'nav .unavailable{color:#666}nav form{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}'
+                       'nav input{width:7ch;font:inherit;padding:.15rem .3rem}nav button{font:inherit;padding:.15rem .6rem}'
+                       '.skip{position:absolute;left:-999px}.skip:focus{position:static}')
+
+
+def credits_head(count, title_suffix='', style=CREDITS_STYLE):
+    """The static credit page's head, heading and introduction (corpus20k/build_web.py, generalised from
+    prepare-local2000.py --phase credits), for a catalog of `count` recordings."""
+    total = f'{count:,}'
+    return ['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+            f'<title>Music Discovery Atlas: {total} track credits{title_suffix}</title><style>{style}</style>',
+            f'<h1>Track credits and licenses</h1><p>{total} screened FMA recordings. Source metadata and license notices are '
+            'reproduced for attribution. This collection does not imply endorsement. Conflicted legacy recording 30702 is excluded.</p>']
+
+
+def credit_article(track):
+    """One recording's credit, byte for byte as the static credit page writes it."""
+    escape = lambda value: html.escape(str(value), quote=True)  # noqa: E731
+    parts = ['<article id="' + escape(track['id'].replace(':', '-')) + '"><h2>' + escape(track['title']) + '</h2><p>'
+             + escape(track['artist']) + '</p>']
+    for label, value in (('Source', track['sourceUrl']), ('License', track['licenseUrl'])):
+        require(isinstance(value, str) and value.startswith(('https://', 'http://')), 'Unexpected credit URL scheme')
+        parts.append('<p>' + label + ': <a href="' + escape(value) + '">' + escape(value) + '</a></p>')
+    for label, value in (('Attribution', track['attribution']), ('Modifications', track['modifications']),
+                         ('Supplied notices', track['suppliedNotices'])):
+        rendered = json.dumps(value, ensure_ascii=False, indent=2) if isinstance(value, (dict, list)) else str(value)
+        parts.append('<h3>' + label + '</h3><pre>' + escape(rendered) + '</pre>')
+    parts.append('</article>')
+    return '\n'.join(parts)
+
+
+def credits_pages(count, size=CREDITS_PAGE_SIZE):
+    return max(1, -(-count // size))
+
+
+def credits_page(release, page, *, size=CREDITS_PAGE_SIZE):
+    """Page `page` (1-based, clamped) of the track credits: the static page's heading and introduction, the
+    credit articles of `size` consecutive catalog rows, and plain-link navigation with a page-jump form."""
+    pages = credits_pages(release.count, size)
+    page = min(max(1, page), pages)
+    start, stop = (page - 1) * size, min(page * size, release.count)
+    records = release.connection().execute('SELECT row, track_json FROM records WHERE row >= ? AND row < ? ORDER BY row',
+                                           (start, stop)).fetchall()
+    require([row for row, _ in records] == list(range(start, stop)), 'Credit rows are incomplete')
+    articles = [credit_article(json.loads(track)) for _, track in records]
+    position = f'Page {page:,} of {pages:,} · recordings {start + 1:,}–{stop:,} of {release.count:,}'
+
+    def nav(label, suffix):
+        links = []
+        for text, target, rel in (('First page', 1, ''), ('Previous page', page - 1, ' rel="prev"'),
+                                  ('Next page', page + 1, ' rel="next"'), ('Last page', pages, '')):
+            usable = 1 <= target <= pages and target != page
+            links.append(f'<li><a href="?page={target}"{rel}>{text}</a></li>' if usable else
+                         f'<li><span class="unavailable">{text}</span></li>')
+        return (f'<nav aria-label="{label}"><p>{position}</p><ul>{"".join(links)}</ul>'
+                f'<form method="get" action="/collection/credits"><label for="credit-page-{suffix}">Go to page</label>'
+                f'<input id="credit-page-{suffix}" name="page" type="number" min="1" max="{pages}" value="{page}" inputmode="numeric" required>'
+                '<button type="submit">Go</button></form></nav>')
+    head = credits_head(release.count, f', page {page:,} of {pages:,}', PAGED_CREDITS_STYLE)
+    body = [head[0], head[1], '<a class="skip" href="#credits">Skip to the credits</a>', head[2],
+            '<p><a href="/search-studio/">Back to the music map</a></p>', nav('Credit pages', 'top'),
+            f'<main id="credits" tabindex="-1" aria-label="Credits, {position}">', *articles, '</main>',
+            nav('Credit pages, end of list', 'end')]
+    return ('\n'.join(body) + '\n').encode(), page
+
+
+def credits_index_page(count):
+    """The small static page a v2 web package carries at /notices/track-attribution.html instead of every
+    credit: the same heading and introduction, a link to the paged credits, and a forward for old
+    #fma-N links to the page that holds that recording."""
+    lines = credits_head(count)
+    lines.append('<p>The credits for every recording are listed fifty at a time: '
+                 '<a href="/collection/credits">read the track credits and licenses</a>.</p>')
+    lines.append('<script>const m=/^#fma-([0-9]{1,6})$/.exec(location.hash);'
+                 "if(m)location.replace('/collection/credits?id=fma%3A'+m[1]+'#fma-'+m[1]);</script>")
+    return ('\n'.join(lines) + '\n').encode()
+
+
+def credits_error(message):
+    return ('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<title>Track credits</title><style>{CREDITS_STYLE}</style><h1>Track credits</h1><p>{html.escape(message)}</p>'
+            '<p><a href="/collection/credits">First page of the track credits</a> · <a href="/search-studio/">Back to the music map</a></p>\n')
+
+
 class Budget:
     """A per-process sliding-minute allowance for CPU-bound collection reads."""
 
@@ -177,12 +272,13 @@ class Budget:
 class CollectionRoutes:
     """GET /collection/tracks and /collection/neighbors over a verified ReleaseV2."""
 
-    def __init__(self, release, graph, *, audio, headers, neighbors_per_minute=60, pending=8,
+    def __init__(self, release, graph, *, audio, headers, neighbors_per_minute=60, credits_per_minute=300, pending=8,
                  trace_limit=2048, page_limit=48, rows_limit=64):
         # trace_limit 2048 is the v1 page's local default; ef 32 traces hold about 50 events.
         self.release, self.graph, self.audio, self.headers = release, graph, audio, headers
         self._bits = base64.b64decode(audio.manifest['availableRows']) if audio.manifest.get('enabled') else b''
         self.neighbors_budget = Budget(neighbors_per_minute)
+        self.credits_budget = Budget(credits_per_minute)
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix='music-collection')
         self.pending, self.max_pending, self.lock = 0, pending, threading.Lock()
         self.trace_limit, self.page_limit, self.rows_limit = trace_limit, page_limit, rows_limit
@@ -253,26 +349,50 @@ class CollectionRoutes:
                 'layout': self.release.positions(trace_rows(traced['trace'], exact) | {row}),
                 'timingMs': {'exactSearch': (exact_at - started) * 1000, 'graphTrace': (finished - exact_at) * 1000}}
 
+    def credits(self, values):
+        """An HTML page of track credits, or a redirect from a recording ID to the page that holds it."""
+        from starlette.responses import HTMLResponse, RedirectResponse
+        require(len(values) <= 1, 'Use either page or id')
+        headers = {**self.headers, 'Cache-Control': 'no-cache'}
+        if 'id' in values:
+            ident = values['id']
+            require(TRACK_ID.fullmatch(ident) is not None, 'Invalid recording ID')
+            row = self.release.row_of.get(ident)
+            if row is None:
+                return HTMLResponse(credits_error('No recording with this ID is in the collection.'), status_code=404,
+                                    headers=headers)
+            page = row // CREDITS_PAGE_SIZE + 1
+            return RedirectResponse(f'/collection/credits?page={page}#' + ident.replace(':', '-'), status_code=303,
+                                    headers=headers)
+        body, _ = credits_page(self.release, self.number(values, 'page', 1, 0, 10_000_000))
+        return HTMLResponse(body, headers=headers)
+
     async def __call__(self, scope, receive, send):
-        from starlette.responses import JSONResponse
+        from starlette.responses import HTMLResponse, JSONResponse, Response
         path = scope['path']
-        routes = {'/collection/tracks': (self.tracks, {'rows', 'offset', 'limit', 'q', 'text', 'genre', 'preview', 'facets'}),
-                  '/collection/neighbors': (self.neighbors, {'row'})}
+        routes = {'/collection/tracks': (self.tracks, {'rows', 'offset', 'limit', 'q', 'text', 'genre', 'preview', 'facets'}, None,
+                                         'Collection'),
+                  '/collection/neighbors': (self.neighbors, {'row'}, self.neighbors_budget, 'Neighbor exploration'),
+                  '/collection/credits': (self.credits, {'page', 'id'}, self.credits_budget, 'Credit page')}
         headers = {**self.headers, 'Cache-Control': 'no-store'}
+
+        def failure(message, status, extra=None):
+            if path == '/collection/credits':  # a page people read: its errors are pages too
+                return HTMLResponse(credits_error(message), status_code=status, headers={**headers, **(extra or {})})
+            return JSONResponse({'error': message}, status_code=status, headers={**headers, **(extra or {})})
         if path not in routes:
-            await JSONResponse({'error': 'Not found'}, status_code=404, headers=headers)(scope, receive, send)
+            await failure('Not found', 404)(scope, receive, send)
             return
-        handler, allowed = routes[path]
+        handler, allowed, budget, name = routes[path]
         try:
             values = self.params(scope.get('query_string', b''), allowed)
         except ReleaseError as error:
-            await JSONResponse({'error': str(error)}, status_code=400, headers=headers)(scope, receive, send)
+            await failure(str(error), 400)(scope, receive, send)
             return
-        if handler == self.neighbors:
-            retry = self.neighbors_budget.admit()
+        if budget is not None:
+            retry = budget.admit()
             if retry:
-                await JSONResponse({'error': 'Neighbor exploration budget exhausted'}, status_code=429,
-                                   headers={**headers, 'Retry-After': str(retry)})(scope, receive, send)
+                await failure(name + ' budget exhausted', 429, {'Retry-After': str(retry)})(scope, receive, send)
                 return
         with self.lock:
             if self.pending >= self.max_pending:
@@ -280,20 +400,19 @@ class CollectionRoutes:
             else:
                 full, self.pending = False, self.pending + 1
         if full:
-            await JSONResponse({'error': 'Collection queue full'}, status_code=429,
-                               headers={**headers, 'Retry-After': '1'})(scope, receive, send)
+            await failure('Collection queue full', 429, {'Retry-After': '1'})(scope, receive, send)
             return
         try:
             body = await asyncio.get_running_loop().run_in_executor(self.executor, handler, values)
-            status = 200
+            response = body if isinstance(body, Response) else JSONResponse(body, status_code=200, headers=headers)
         except ReleaseError as error:
-            body, status = {'error': str(error)}, 400
+            response = failure(str(error), 400)
         except Exception:
-            body, status = {'error': 'Collection read failed'}, 500
+            response = failure('Collection read failed', 500)
         finally:
             with self.lock:
                 self.pending -= 1
-        await JSONResponse(body, status_code=status, headers=headers)(scope, receive, send)
+        await response(scope, receive, send)
 
     def close(self):
         self.executor.shutdown(wait=False, cancel_futures=True)

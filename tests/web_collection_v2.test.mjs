@@ -208,6 +208,9 @@ test('title/artist lookup and audio neighbors run on the server with v1 semantic
   assert.equal(h.searches.length,1);const want=exactSearch(vectors,new Float32Array(v1Examples.examples[2].queryVector),16);
   assert.deepEqual(h.map().searches.at(-1).rows.map(r=>r.row),want.slice(0,12).map(e=>e.id));
   assert.match(h.el('#results').innerHTML,new RegExp(catalog.tracks[want[0].id].title.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/&/g,'&amp;')));
+  // Credits are read page by page from the server; the link names the recording, the server finds its page.
+  assert.ok(h.el('#results').innerHTML.includes(`href="/collection/credits?id=${encodeURIComponent(catalog.tracks[want[0].id].id)}"`));
+  assert.ok(!h.el('#results').innerHTML.includes('track-attribution.html'));
 });
 
 test('a partial preview pack is reported and filterable through the server',async()=>{

@@ -231,6 +231,49 @@ console.log(JSON.stringify(out));"""
         sizes = self.web_receipt['webDataBytes']
         self.assertLess(sizes, 2_000_000)
 
+    def test_credits_are_read_page_by_page_with_the_static_page_content(self):
+        import re
+        client = self.client(self.v2_encoder, gateway=True)
+        static = (ROOT / 'web/notices/track-attribution.html').read_text()
+        expected = re.findall(r'<article id=.*?</article>', static, flags=re.S)
+        intro = re.search(r'<h1>.*?</p>', static, flags=re.S).group(0)
+        self.assertEqual(len(expected), 2000)
+        articles = []
+        for page in range(1, 41):
+            reply = client.get(f'/collection/credits?page={page}')
+            self.assertEqual(reply.status_code, 200)
+            self.assertTrue(reply.headers['content-type'].startswith('text/html'))
+            self.assertIn(intro, reply.text)
+            self.assertIn(f'Page {page} of 40 · recordings {(page - 1) * 50 + 1:,}–{page * 50:,} of 2,000', reply.text)
+            articles += re.findall(r'<article id=.*?</article>', reply.text, flags=re.S)
+        self.assertEqual(articles, expected)  # every credit, in catalog order, byte for byte
+        first = client.get('/collection/credits').text
+        for part in ('<a href="?page=2" rel="next">Next page</a>', '<span class="unavailable">Previous page</span>',
+                     '<nav aria-label="Credit pages">', '<label for="credit-page-top">Go to page</label>', '<main id="credits"',
+                     '<a class="skip" href="#credits">', '<html lang="en">', '<a href="/search-studio/">'):
+            self.assertIn(part, first)
+        self.assertIn('Page 40 of 40', client.get('/collection/credits?page=999').text)  # a page jump clamps
+        self.assertIn('Page 1 of 40', client.get('/collection/credits?page=0').text)
+        moved = client.get('/collection/credits?id=fma:1382', follow_redirects=False)
+        self.assertEqual((moved.status_code, moved.headers['location']), (303, '/collection/credits?page=1#fma-1382'))
+        row = 1234
+        ident = self.catalog['tracks'][row]['id']
+        moved = client.get('/collection/credits', params={'id': ident}, follow_redirects=False)
+        self.assertEqual(moved.headers['location'], f'/collection/credits?page={row // 50 + 1}#' + ident.replace(':', '-'))
+        self.assertIn('<article id="' + ident.replace(':', '-') + '">', client.get(moved.headers['location']).text)
+        for bad, status in (('id=fma:999999999', 404), ('id=../x', 400), ('page=x', 400), ('page=1&id=fma:1382', 400),
+                            ('other=1', 400)):
+            with self.subTest(bad=bad):
+                reply = client.get('/collection/credits?' + bad)
+                self.assertEqual(reply.status_code, status)
+                self.assertTrue(reply.headers['content-type'].startswith('text/html'))
+        # The v2 package carries a small page that links to the paged credits instead of every credit.
+        small = (self.web / 'notices/track-attribution.html').read_bytes()
+        self.assertLess(len(small), 4096)
+        self.assertIn(b'href="/collection/credits"', small)
+        self.assertIn(intro.encode(), small)
+        self.assertEqual(self.web_receipt['credits']['pagedAt'], '/collection/credits')
+
     def test_gateway_refuses_a_web_package_built_for_another_release(self):
         broken = Path(self.temp.name) / 'broken'
         shutil.copytree(self.web, broken)

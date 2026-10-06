@@ -81,7 +81,9 @@ class PublicWebTests(unittest.TestCase):
 
     def test_static_integrity_manifest_rejects_extra_and_symlink_paths(self):
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
+            # confined_file() returns resolved paths; resolve the fixture root too so the
+            # comparison holds where the temp directory is itself behind a symlink (macOS /var).
+            root = Path(temp).resolve()
             (root / 'ok.txt').write_text('fixture')
             (root / 'link.txt').symlink_to(root / 'ok.txt')
             self.assertEqual(confined_file(root, 'ok.txt'), root / 'ok.txt')
@@ -93,7 +95,7 @@ class PublicWebTests(unittest.TestCase):
 class OptionalAudioTests(unittest.TestCase):
     def test_future_pack_requires_explicit_config_and_matching_bytes(self):
         with tempfile.TemporaryDirectory() as temp:
-            root = Path(temp)
+            root = Path(temp).resolve()
             directory = root / 'audio'
             directory.mkdir()
             content = b'ID3 synthetic test fixture, not playable music'

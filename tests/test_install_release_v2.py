@@ -14,7 +14,7 @@ import unittest
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from v2_fixtures import ROOT, converted_fma2000  # noqa: E402
+from v2_fixtures import ROOT, V1_COUNT, V1_EVIDENCE_BYTES, converted_fma2000  # noqa: E402
 sys.path.insert(0, str(ROOT / 'scripts'))
 import install_release_v2 as installer  # noqa: E402
 from corpus_release import ReleaseError, sha256  # noqa: E402
@@ -176,8 +176,8 @@ class InstallerTests(unittest.TestCase):
         root = self.root()
         parsed = installer.read_selection(root)
         summary = installer.verify_directory(installer.checked_directory(parsed), parsed)
-        self.assertEqual((summary['count'], summary['assets'], summary['releaseSha256']), (2000, 7, self.sha))
-        self.assertEqual(summary['rowValidation'], {'rows': 2000, 'evidenceFiles': 2000, 'evidenceBytes': 7_019_915})
+        self.assertEqual((summary['count'], summary['assets'], summary['releaseSha256']), (V1_COUNT, 7, self.sha))
+        self.assertEqual(summary['rowValidation'], {'rows': V1_COUNT, 'evidenceFiles': V1_COUNT, 'evidenceBytes': V1_EVIDENCE_BYTES})
         self.assertEqual(sorted(os.listdir(root / 'corpus-releases' / NAME)), sorted(self.blobs))
 
     def test_bundled_tampering_inventory_and_symlinks_fail_closed(self):
@@ -214,7 +214,7 @@ class InstallerTests(unittest.TestCase):
     def test_object_store_install_fetches_by_digest_verifies_and_publishes_once(self):
         root, store = self.object_root(), self.store()
         result = self.install(root, store)
-        self.assertEqual((result['action'], result['count'], result['rowValidation']['rows']), ('fetched', 2000, 2000))
+        self.assertEqual((result['action'], result['count'], result['rowValidation']['rows']), ('fetched', V1_COUNT, V1_COUNT))
         final = root / 'corpus-releases' / NAME
         self.assertEqual({name: (final / name).read_bytes() for name in os.listdir(final)}, self.blobs)
         self.assertFalse((root / 'corpus-releases' / ('.v2-install-' + NAME)).exists())

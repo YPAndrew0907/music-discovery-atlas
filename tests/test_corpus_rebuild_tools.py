@@ -20,8 +20,8 @@ from corpus_release import ReleaseError, ReleaseLimits, sha256, validate_release
 ACTIVE = json.loads((ROOT / 'active-corpus.json').read_bytes())
 NAME = ACTIVE['directory'].removeprefix('corpus-releases/')
 RELEASE_DIR, RELEASE_SHA, COUNT = ROOT / ACTIVE['directory'], ACTIVE['manifestSha256'], ACTIVE['maxTracks']
-# The committed release was built before the quarantine list existed, so it is reproduced with an empty list.
-COMMITTED_QUARANTINE = rights_quarantine.EMPTY
+# The committed release, credits page, pins and plan were built with the repository's quarantine list.
+COMMITTED_QUARANTINE = rights_quarantine.load()
 
 
 def encode(value):

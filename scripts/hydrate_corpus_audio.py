@@ -1,4 +1,8 @@
-"""Bounded build-time hydration of the exact approved 2,000 MP3s from official ranges.
+"""Bounded build-time hydration of the exact approved fma2000 MP3s from official ranges.
+
+The reviewed release holds 1,992 recordings: the original 2,000 without the 8 on the rights
+quarantine list of 2026-10-06 (corpus-releases/quarantine.json, docs/RIGHTS_QUARANTINE.md). Its plan
+keeps each remaining entry of the original plan unchanged (scripts/derive_hydration_plan.py).
 
 No full-archive fallback, audio transformation, model work, or runtime downloads.
 The complete verified delivery marker is committed last; failed builds retain
@@ -26,8 +30,9 @@ from active_corpus import selected_corpus
 from corpus_release import ReleaseError, integer, object_sha, require, sha256, strict_json, verify_spec
 
 PLAN_NAME = 'audio-hydration.json'
-PLAN_SHA = 'cc00b6d1447eb290fe2fb4883580d8ed9b06e451723a5ec79738ca189948a79b'
-RELEASE_SHA = 'af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283'
+PLAN_SHA = 'edc829227393039b3ef46bfbfa12381b3e5cae84e7442208aec22c4bc9a557b4'
+RELEASE_SHA = '32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42'
+RELEASE_COUNT = 1992
 MAX_TRANSFER = 2_400_000_000
 MAX_SECONDS = 3600
 WORKERS = 6
@@ -125,8 +130,8 @@ def validate_plan(plan, selected):
 
 
 def load_plan(root, package, selected):
-    require(selected is not None and selected.release.count == 2000
-            and selected.release.manifest_sha256 == RELEASE_SHA, 'Hydration is scoped to the reviewed 2000 release')
+    require(selected is not None and selected.release.count == RELEASE_COUNT
+            and selected.release.manifest_sha256 == RELEASE_SHA, 'Hydration is scoped to the reviewed fma2000 release')
     pins = [row for row in package.get('files', []) if row.get('path') == PLAN_NAME]
     require(len(pins) == 1 and pins[0].get('sha256') == PLAN_SHA, 'Hydration plan lacks its reviewed package pin')
     data = verify_spec(root, pins[0], 1_500_000, PLAN_NAME)

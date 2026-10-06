@@ -52,8 +52,8 @@ def plan_applies(release):
     """Why a v2 release has no hydration plan, or None when the pinned plan names its source."""
     if release.manifest['source'].get('manifestSha256') != v1.RELEASE_SHA:
         return 'The selected v2 release is not a conversion of the reviewed fma2000 release; no audio is hydrated'
-    if release.count != 2000:
-        return 'The selected v2 release does not hold the reviewed 2,000 recordings; no audio is hydrated'
+    if release.count != v1.RELEASE_COUNT:
+        return f'The selected v2 release does not hold the reviewed {v1.RELEASE_COUNT:,} recordings; no audio is hydrated'
     return None
 
 

@@ -1,33 +1,10 @@
 {
   "schemaVersion": 1,
   "kind": "music-corpus-rights",
-  "catalogId": "fma2000:954e908848258f08d2b0c2054e74e6901a14be02e3e53a45d63826c0ef0ae3be",
-  "catalogSha256": "86cc72f6f0b5ebad47e059544c1587907e2b5d7b9b385efd77d09580f180ee07",
+  "catalogId": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
+  "catalogSha256": "357e1db3de4e83e82f0daf03c10d0f392369e45346b4d8084a692ebd334a67db",
   "scope": "searchable-audio-embeddings",
   "tracks": [
-    {
-      "id": "fma:1382",
-      "sourceUrl": "http://freemusicarchive.org/music/Parsley_Flakes/Parsley_Flakes_mp3s/Lady_Love",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "audioBytes": 720629,
-      "audioSha256": "f9a3cfa7a4fddad7c5f74b3856cb650a0879156a64a32633dd770a8b7aa4ff2f",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T18:28:00Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/4.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-1382.json",
-          "bytes": 2564,
-          "sha256": "992e80d45ce1f93dd6cc2a73f2e706573d323e3fce913f7fd18b5583bd8b3ac4"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=1382; related album information in tracks.csv"
-      }
-    },
     {
       "id": "fma:1383",
       "sourceUrl": "http://freemusicarchive.org/music/Parsley_Flakes/Parsley_Flakes_mp3s/Remember_Forget",
@@ -3939,29 +3916,6 @@
       }
     },
     {
-      "id": "fma:93518",
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Mantilla",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "audioBytes": 420871,
-      "audioSha256": "66e06274f9642d3895c8ae02cda1aa8cb620e3483bdbb04382d32e89fbecbafb",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T18:28:00Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/3.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-93518.json",
-          "bytes": 2578,
-          "sha256": "bf0d03bbfe9a7858bf2836a6432c22ae733b64434ccd0c024b4b0831ac47415f"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=93518; related album information in tracks.csv"
-      }
-    },
-    {
       "id": "fma:97286",
       "sourceUrl": "http://freemusicarchive.org/music/Mad_Screw/We_Wanna_Rock/Choknuty_Propeller_-_We_Wanna_Rock",
       "license": "CC-BY-4.0",
@@ -6607,29 +6561,6 @@
       }
     },
     {
-      "id": "fma:98077",
-      "sourceUrl": "http://freemusicarchive.org/music/Mad_Screw/__1688/Choknuty_Propeller_-_Glazami_Detei",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "audioBytes": 1202446,
-      "audioSha256": "28fbb49608246372150be9952cdc9dcea925fd6cad8796ae20168d2abe0d0d98",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T18:28:00Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/4.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-98077.json",
-          "bytes": 3774,
-          "sha256": "d70cdfcb431cda0b32ed460e5fbe0d3a500c91bb18d4320d4adbe23408379917"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=98077; related album information in tracks.csv"
-      }
-    },
-    {
       "id": "fma:142083",
       "sourceUrl": "http://freemusicarchive.org/music/SK/none_given_1671/SK_-_01_-_Still_Living",
       "license": "CC-BY-4.0",
@@ -7179,29 +7110,6 @@
         },
         "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
         "locator": "fma_metadata/raw_tracks.csv track_id=135364; related album information in tracks.csv"
-      }
-    },
-    {
-      "id": "fma:93519",
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Scorpio",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "audioBytes": 421237,
-      "audioSha256": "dbb25c8b7da38003649f0c7f9f123d22ef146e49cb7d29bc938df4bed5b3dd10",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T18:28:00Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/3.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-93519.json",
-          "bytes": 2575,
-          "sha256": "a607056fc5423ff80c63e1fce37e331b7a75c4896b65e8243a93a7e0cb524d32"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=93519; related album information in tracks.csv"
       }
     },
     {
@@ -9206,29 +9114,6 @@
       }
     },
     {
-      "id": "fma:93520",
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Slow_Moving",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "audioBytes": 420871,
-      "audioSha256": "3fa1800a228edc879e030eb69afccaeae4b13198773d9fa100566d31d865ceb3",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T18:28:00Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/3.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-93520.json",
-          "bytes": 2587,
-          "sha256": "9ac330362af2ac29cfafca9945deb54ec65a3def4941e22b59e43a61206fba26"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=93520; related album information in tracks.csv"
-      }
-    },
-    {
       "id": "fma:107427",
       "sourceUrl": "http://freemusicarchive.org/music/UncleBibby/Free_Music_Project_Vol_1/Brutish",
       "license": "CC-BY-4.0",
@@ -10652,29 +10537,6 @@
         },
         "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
         "locator": "fma_metadata/raw_tracks.csv track_id=89817; related album information in tracks.csv"
-      }
-    },
-    {
-      "id": "fma:93521",
-      "sourceUrl": "http://freemusicarchive.org/music/Moon_Veil/Snake_Charm/Moon_Veil_-_Ivory",
-      "license": "CC-BY-3.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
-      "audioBytes": 421237,
-      "audioSha256": "001a7d794b6f5cec6ab5919e22cc5ae29e15a0d2208cecad3a579200199326dd",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T18:28:00Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/3.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-93521.json",
-          "bytes": 2570,
-          "sha256": "b84190385109d9841229c80d64207b6b9c5a4158b9dd0e48b439726cd16d6ca7"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=93521; related album information in tracks.csv"
       }
     },
     {
@@ -35817,29 +35679,6 @@
       }
     },
     {
-      "id": "fma:154569",
-      "sourceUrl": "http://freemusicarchive.org/music/Mike_BFort/Shiver/Shiver_1687",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "audioBytes": 1201181,
-      "audioSha256": "29b5504b0c7999465177edaa11894435495fce9fad8f8b0b68eb0ed98c296009",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T20:20:40Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/4.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-154569.json",
-          "bytes": 2701,
-          "sha256": "70ee04ae5ea6d0bbe0020ac592380e4ab9bc1289831b8bc4d4674585a5662288"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=154569; related album information in tracks.csv"
-      }
-    },
-    {
       "id": "fma:103728",
       "sourceUrl": "http://freemusicarchive.org/music/Rolemusic/Pop_Singles_Compilation_2014/03_rolemusic_-_python",
       "license": "CC-BY-4.0",
@@ -36872,29 +36711,6 @@
         },
         "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
         "locator": "fma_metadata/raw_tracks.csv track_id=140669; related album information in tracks.csv"
-      }
-    },
-    {
-      "id": "fma:125279",
-      "sourceUrl": "http://freemusicarchive.org/music/Tyler_Twombly/Chill_Beats_EP/Tyler_Twombly_-_Chill_Beats_-EP-_-_04_Candy_Island",
-      "license": "CC-BY-4.0",
-      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "audioBytes": 1201171,
-      "audioSha256": "2b3caa661ac9e15680c6bd1131f7c985af3e205be84df92156ad471bc517a585",
-      "decision": "approved",
-      "use": "searchable-audio-embeddings",
-      "reviewedBy": "dot licensed-corpus ingestion review",
-      "reviewedAt": "2026-10-04T20:22:06Z",
-      "basis": "Official FMA rc1 raw track row explicitly identifies https://creativecommons.org/licenses/by/4.0/. This license permits reproduction, redistribution and public sharing/performance subject to its attribution and other conditions. Title, creator, source, license, modification disclosure and supplied notices are retained. FMA metadata is separately CC-BY-4.0. No conflicting NC/ND/restricted notice found in supplied track/album fields. This is an evidence-based engineering rights screen, not a guarantee of all underlying rights.",
-      "publicPlaybackDecision": "approved-with-attribution",
-      "evidence": {
-        "asset": {
-          "path": "evidence/fma-125279.json",
-          "bytes": 2812,
-          "sha256": "6c5717f760aa49a4518b1e5ac38351c9fdf5381f4907e96ee1a2476920814a49"
-        },
-        "sourceUrl": "https://os.unil.cloud.switch.ch/fma/fma_metadata.zip",
-        "locator": "fma_metadata/raw_tracks.csv track_id=125279; related album information in tracks.csv"
       }
     },
     {

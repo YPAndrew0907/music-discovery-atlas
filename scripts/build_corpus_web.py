@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Generate local candidate web assets from a validated release; no deployment.
 
-Defaults reproduce the original local2000 build (fma2000, 2000 tracks, original budgets).
+Defaults build the current fma2000 web assets (1,992 tracks after the rights quarantine, original
+budgets). The credits page comes from scripts/build_corpus_credits.py (--credits).
 """
 import argparse
 from copy import deepcopy
@@ -16,7 +17,7 @@ from corpus_release import ReleaseLimits, object_sha, require, sha256, validate_
 from build_corpus_release import encode, spec, write_json
 
 
-def build(release_dir, expected_sha, credits, *, name='fma2000', count=2000, limits=None):
+def build(release_dir, expected_sha, credits, *, name='fma2000', count=1992, limits=None):
     import numpy as np
     import sklearn
     from sklearn.manifold import TSNE, trustworthiness
@@ -103,7 +104,7 @@ def main():
     parser.add_argument('--expected-manifest-sha256', required=True)
     parser.add_argument('--credits', type=Path, required=True)
     parser.add_argument('--name', default='fma2000', help='release directory name under corpus-releases/')
-    parser.add_argument('--count', type=int, default=2000)
+    parser.add_argument('--count', type=int, default=1992)
     parser.add_argument('--core-byte-budget', type=int, default=16_000_000)
     parser.add_argument('--evidence-byte-budget', type=int, default=8_000_000)
     parser.add_argument('--json-byte-budget', type=int, default=8_000_000)

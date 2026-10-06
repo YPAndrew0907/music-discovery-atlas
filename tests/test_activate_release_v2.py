@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from v2_fixtures import ROOT, converted_fma2000  # noqa: E402
+from v2_fixtures import ROOT, V1_COUNT, converted_fma2000  # noqa: E402
 sys.path.insert(0, str(ROOT / 'scripts'))
 import activate_release_v2 as activation  # noqa: E402
 from corpus_release import ReleaseError  # noqa: E402
@@ -66,7 +66,7 @@ class ActivationTests(unittest.TestCase):
         if (ROOT / 'web/search-studio/data/catalog.json').exists():  # this tree serves the v1 page
             self.assertIn('web/search-studio/data/catalog.json (removed)', result['changed'])
         checked = activation.check(root)
-        self.assertEqual((checked['ok'], checked['release']['count']), (True, 2000))
+        self.assertEqual((checked['ok'], checked['release']['count']), (True, V1_COUNT))
         package = json.loads((root / 'package-manifest.json').read_bytes())
         self.assertFalse(any(row['path'].startswith('web/search-studio/data/catalog') for row in package['files']))
         self.assertFalse(any(row['path'].startswith('corpus-releases/fma2000-v2') for row in package['files']))

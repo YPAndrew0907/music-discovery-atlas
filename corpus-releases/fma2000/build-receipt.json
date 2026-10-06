@@ -1,31 +1,31 @@
 {
   "schemaVersion": 1,
-  "releaseId": "corpus-release:af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283",
-  "catalogId": "fma2000:954e908848258f08d2b0c2054e74e6901a14be02e3e53a45d63826c0ef0ae3be",
-  "graphId": "experimental-clap-audio-graph:a8f8c69981ace53cae41eea125a92d03deda519dd598d4af752ecc98f2560f82",
-  "count": 2000,
+  "releaseId": "corpus-release:32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42",
+  "catalogId": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
+  "graphId": "experimental-clap-audio-graph:a894cb5f38ffed73548969aacb821b348a02312cbc0e1087141e73946849f45a",
+  "count": 1992,
   "dimensions": 512,
-  "vectorBytes": 4096000,
-  "coreBytes": 11952313,
-  "uniqueEvidenceFiles": 2000,
-  "evidenceBytes": 7019915,
+  "vectorBytes": 4079616,
+  "coreBytes": 11910855,
+  "uniqueEvidenceFiles": 1992,
+  "evidenceBytes": 6997754,
   "rightsStatus": "recorded reviews and local evidence verified; not an independent legal determination",
   "currentStaticVectorLimitSatisfied": true,
   "runtimeActivated": false,
   "playbackEnabled": false,
   "licenses": {
-    "CC-BY-4.0": 1373,
-    "CC-BY-3.0": 448,
+    "CC-BY-4.0": 1369,
+    "CC-BY-3.0": 444,
     "CC0-1.0": 179
   },
-  "artists": 551,
+  "artists": 550,
   "genres": {
-    "Rock": 229,
+    "Rock": 227,
     "Folk": 95,
     "International": 46,
     "Experimental": 396,
     "Hip-Hop": 165,
-    "Electronic": 671,
+    "Electronic": 665,
     "Old-Time / Historic": 15,
     "Classical": 132,
     "Instrumental": 106,
@@ -35,6 +35,75 @@
     "Easy Listening": 19,
     "Jazz": 3
   },
-  "audioBytes": 2034768876,
-  "releaseManifestSha256": "af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283"
+  "audioBytes": 2028759233,
+  "releaseManifestSha256": "32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42",
+  "rightsQuarantine": {
+    "list": "corpus-releases/quarantine.json",
+    "listSha256": "838fdae499c49172c14c06f2c3da5eb496d13c50648c55b82033b2dcf35b6ab7",
+    "listedEntries": 8,
+    "excluded": [
+      {
+        "id": "fma:1382",
+        "action": "hold",
+        "reason": "The licensor's FMA track page shows CC BY-NC today (checked 2026-10-06), against \"Attribution\" in the 2017 metadata and in a Wayback snapshot of 2017-05-04. Held under the conservative rule that a row whose licensor now states a more restrictive licence is not served. It is also a pre-November-2013 upload labelled CC BY 4.0.",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      },
+      {
+        "id": "fma:93518",
+        "action": "remove",
+        "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      },
+      {
+        "id": "fma:98077",
+        "action": "remove",
+        "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Разожгли костры\" by Павкашавет бантут, whose metadata row (fma:113583) is BY-NC-SA, and its copyright tag reads BY-NC-ND 3.0; the row is a CC BY 4.0 Чокнутый Пропеллер track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      },
+      {
+        "id": "fma:93519",
+        "action": "remove",
+        "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one. Its bytes are also identical (ZIP CRC-32 and size) to fma:25245 and fma:25246 (BY-NC-ND 3.0) and fma:93507 (BY-NC-SA 3.0 US).",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      },
+      {
+        "id": "fma:93520",
+        "action": "remove",
+        "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      },
+      {
+        "id": "fma:93521",
+        "action": "remove",
+        "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      },
+      {
+        "id": "fma:154569",
+        "action": "remove",
+        "reason": "Cross-licence duplicate: the audio bytes are identical (ZIP CRC-32 and size) to fma:154568, filed under CC BY-NC-ND 4.0 (Mike B. Fort), and the file's copyright tag reads BY-NC-ND 4.0 too.",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      },
+      {
+        "id": "fma:125279",
+        "action": "hold",
+        "reason": "The licensor's FMA track page shows CC BY-NC 4.0 today (checked 2026-10-06), against CC BY 4.0 in the 2017 metadata; the 2017 Wayback lookup returned only FMA's maintenance page, so there is no snapshot of the 2017 page. Held under the conservative rule that a row whose licensor now states a more restrictive licence is not served.",
+        "date": "2026-10-06",
+        "reviewer": "rights research 2026-10-06"
+      }
+    ],
+    "inputRows": 2000,
+    "inputSource": {
+      "catalogId": "fma2000:954e908848258f08d2b0c2054e74e6901a14be02e3e53a45d63826c0ef0ae3be",
+      "manifestSha256": "af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283",
+      "tool": "scripts/reconstruct_release_inputs.py"
+    }
+  }
 }

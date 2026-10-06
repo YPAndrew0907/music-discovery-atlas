@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build a separate local candidate release without altering its frozen parent.
 
-Defaults are the original real2000 build's arguments (name fma2000, count 2000, parent fma1000);
-they reproduce it only with an empty quarantine list. A larger candidate passes
---name/--count/--parent-dir plus its own coverage text and budgets.
+Defaults build the current fma2000 release: the original real2000 inputs (name fma2000, parent
+fma1000) without the 8 recordings on the rights quarantine list of 2026-10-06, so count 1992.
+The original 2,000-row build used count 2000 and its own coverage text with an empty list.
+A larger candidate passes --name/--count/--parent-dir plus its own coverage text and budgets.
 
 Every build applies the reviewed rights quarantine list (corpus-releases/quarantine.json, see
 docs/RIGHTS_QUARANTINE.md): listed rows are dropped from the approved inputs, the frozen parent
@@ -42,7 +43,9 @@ def spec(path, name=None):
     return {'path': name or Path(path).name, 'bytes': len(data), 'sha256': sha256(data)}
 
 
-FMA2000_COVERAGE = '2000 screened FMA excerpts:the complete frozen1000 selection plus1000 additional recordings. Conflicted legacy row30702 remains excluded. This is a local candidate and a biased open-music sample, not mainstream coverage.'
+FMA2000_COVERAGE = ('1992 screened FMA excerpts: the frozen 1000 selection plus 1000 additional recordings, without the 8 recordings '
+                    'on the rights quarantine list of 2026-10-06 (corpus-releases/quarantine.json). Conflicted legacy row 30702 '
+                    'remains excluded. This is a biased open-music sample, not mainstream coverage.')
 
 
 def select_rows(ids, tracks, rights_rows, parent_ids, parent_tracks, parent_rights, quarantine, count):
@@ -63,7 +66,7 @@ def select_rows(ids, tracks, rights_rows, parent_ids, parent_tracks, parent_righ
     return ids, tracks, rights_rows, excluded, parent_count
 
 
-def build(ingestion, embeddings, output, *, name='fma2000', count=2000, parent='corpus-releases/fma1000',
+def build(ingestion, embeddings, output, *, name='fma2000', count=1992, parent='corpus-releases/fma1000',
           coverage=FMA2000_COVERAGE, limits=None, quarantine=None):
     release_name, parent = name, ROOT / parent  # `name` is reused as a loop variable below
     quarantine = rights_quarantine.load() if quarantine is None else quarantine
@@ -210,7 +213,7 @@ def main():
     parser.add_argument('--embeddings-dir', type=Path, required=True)
     parser.add_argument('--output-dir', type=Path, required=True)
     parser.add_argument('--name', default='fma2000', help='release directory name under corpus-releases/')
-    parser.add_argument('--count', type=int, default=2000)
+    parser.add_argument('--count', type=int, default=1992, help='rows that remain after the quarantine list')
     parser.add_argument('--parent-dir', default='corpus-releases/fma1000', help='frozen parent release, relative to the repo')
     parser.add_argument('--coverage', default=FMA2000_COVERAGE)
     parser.add_argument('--core-byte-budget', type=int, default=16_000_000)

@@ -42,7 +42,7 @@ try{
     await page.waitForSelector('body[data-ready="true"]');
     await page.waitForFunction(()=>document.querySelector('#open-engine').textContent==='Server ready');
     assert.deepEqual(log.filter(p=>p.startsWith('/search-studio/data/')).sort(),['/search-studio/data/examples.json','/search-studio/data/layout.json','/search-studio/data/manifest.json']);
-    assert.equal(await page.locator('#catalog-count').textContent(),'2,000 recordings');
+    assert.equal(await page.locator('#catalog-count').textContent(),'1,992 recordings');
     const painted=await page.evaluate(()=>{const c=document.querySelector('#map'),d=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=3;i<d.length;i+=4)if(d[i]>0)n++;return n/(d.length/4);});
     assert.ok(painted>0.01,'the density cloud is drawn');
     await page.screenshot({path:`${output}/v2-${name}-initial.png`});

@@ -36,10 +36,10 @@ test('rows, pages, packets and the layout sample are validated before they reach
   const calls=[],c=new Collection({manifest:manifestV2,pageOrigin:origin,fetcher:async url=>{url=new URL(url);calls.push(url);
     if(url.pathname==='/collection/tracks')return new Response(JSON.stringify(collectionTracks(url.searchParams,new Set())));
     return new Response(JSON.stringify({...packet(vectors.slice(7*512,8*512),{exclude:7}),catalogId:v1.catalogId,graphId:v1.graphId,indexSha256:identity.indexSha256,releaseSha256:identity.releaseSha256,row:7}));}});
-  const page=await c.page({channel:'browse',offset:1992,limit:12,facets:true});
-  assert.deepEqual([page.rows.length,page.total,page.baseTotal,page.genres.length],[8,count,count,manifestV2.summary.genres.length]);
-  assert.equal(c.tracks[1999].id,catalog.tracks[1999].id);assert.deepEqual(c.positions[1999],v1Layout.positions[1999]);assert.equal(c.tracks[0],undefined);
-  await c.ensure([0,1,0,1999]);assert.equal(calls.at(-1).searchParams.get('rows'),'0,1');assert.equal(c.tracks[1].title,catalog.tracks[1].title);
+  const last=Math.floor((count-1)/12)*12,page=await c.page({channel:'browse',offset:last,limit:12,facets:true});
+  assert.deepEqual([page.rows.length,page.total,page.baseTotal,page.genres.length],[count-last,count,count,manifestV2.summary.genres.length]);
+  assert.equal(c.tracks[count-1].id,catalog.tracks[count-1].id);assert.deepEqual(c.positions[count-1],v1Layout.positions[count-1]);assert.equal(c.tracks[0],undefined);
+  await c.ensure([0,1,0,count-1]);assert.equal(calls.at(-1).searchParams.get('rows'),'0,1');assert.equal(c.tracks[1].title,catalog.tracks[1].title);
   const found=await c.neighbors(7);assert.equal(found.ranked.length,16);assert.ok(found.ranked.every(r=>c.tracks[r.row]&&c.positions[r.row]));
   assert.ok(calls.every(u=>u.origin===origin&&u.pathname.startsWith('/collection/')));
   c.absorbTrack(display(3));assert.throws(()=>c.absorbTrack({...display(3),id:'fma:999999999'}),/identity changed/);
@@ -75,7 +75,7 @@ test('the map draws the density cloud from the weighted sample and places search
     ResizeObserver:class{observe(){}disconnect(){}},requestAnimationFrame:()=>1,cancelAnimationFrame(){}};
   for(const [k,v] of Object.entries(globals)){saved[k]=Object.getOwnPropertyDescriptor(globalThis,k);Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:v});}
   try{
-    const c=new Collection({manifest:manifestV2,pageOrigin:origin}),sample=[0,10,500,1999],layers=[];
+    const c=new Collection({manifest:manifestV2,pageOrigin:origin}),sample=[0,10,500,count-1],layers=[];
     const points=sample.map(r=>{c.positions[r]=v1Layout.positions[r];return c.positions[r];});
     const createLayer=(w,h)=>{const calls=[];const lctx=new Proxy({},{get:(o,k)=>o[k]??((...a)=>calls.push([k,...a])),set:(o,k,v)=>{if(k==='globalAlpha')calls.push(['alpha',v]);o[k]=v;return true;}});const l={width:w,height:h,calls,getContext:()=>lctx};layers.push(l);return l;};
     const map=new AudioMap(canvas,{positions:c.positions,tracks:c.tracks,connections:[],colors:{},onSelect(){},onHover(){},onTrace(){},createLayer,
@@ -146,25 +146,25 @@ test('v2 bootstrap loads only the pinned manifest, layout sample and example pac
   assert.equal(h.collectionCalls().length,0,'the first view is the pinned recorded example');
   const m=h.map();assert.equal(m.options.tracks.length,count);assert.equal(m.options.density.points.length,count);
   assert.deepEqual(m.options.connections,indexConnections(indexJson.links));assert.equal(m.searches.length,1);
-  assert.equal(m.searches[0].rows.length,12);assert.equal(h.el('#catalog-count').textContent,'2,000 recordings');
+  assert.equal(m.searches[0].rows.length,12);assert.equal(h.el('#catalog-count').textContent,'1,992 recordings');
   assert.equal(h.el('#engine-label').textContent,'Recorded example');assert.equal(h.el('#enable-local').disabled,true);
   assert.equal(h.el('#audio-availability').hidden,true);assert.equal(h.el('#open-engine').textContent,'Server ready');
-  assert.match(h.el('#collection-summary').textContent,/2,000 FMA excerpts · \d+ source artist IDs · 14 source genres · read page by page/);
+  assert.match(h.el('#collection-summary').textContent,/1,992 FMA excerpts · \d+ source artist IDs · 14 source genres · read page by page/);
 });
 
 test('browse, paging, page jump and refinements are server pages with the v1 page arithmetic',async()=>{
   const h=await harness();
   await h.click({});h.el('#browse-collection').onclick();assert.equal(h.el('#results-region').attributes['aria-busy'],'true','a server page is loading');
-  await until(()=>h.el('#page-position').textContent==='Page 1 of 167');assert.equal(h.el('#results-region').attributes['aria-busy'],'false');
+  await until(()=>h.el('#page-position').textContent==='Page 1 of 166');assert.equal(h.el('#results-region').attributes['aria-busy'],'false');
   const browse=h.collectionCalls().at(-1);assert.equal(browse.params.get('offset'),'0');assert.equal(browse.params.get('facets'),'1');
-  assert.match(h.el('#result-scope-detail').textContent,/Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
+  assert.match(h.el('#result-scope-detail').textContent,/Showing 1–12 of 1,992 recordings · 1,992 recordings in the collection/);
   assert.equal(h.map().searches.at(-1).rows.length,0,'a browse page is not drawn as matches');
-  h.el('#next-page').onclick();await until(()=>h.el('#page-position').textContent==='Page 2 of 167');
+  h.el('#next-page').onclick();await until(()=>h.el('#page-position').textContent==='Page 2 of 166');
   assert.equal(h.collectionCalls().at(-1).params.get('offset'),'12');assert.equal(h.collectionCalls().at(-1).params.get('facets'),null);
-  h.el('#last-page').onclick();await until(()=>h.el('#page-position').textContent==='Page 167 of 167');
-  assert.match(h.el('#page-indicator').textContent,/1,993–2,000 \/ 2,000/);
+  h.el('#last-page').onclick();await until(()=>h.el('#page-position').textContent==='Page 166 of 166');
+  assert.match(h.el('#page-indicator').textContent,/1,981–1,992 \/ 1,992/);
   h.el('#page-number').value='999';h.el('#page-jump').handlers.submit({preventDefault(){}});await until(()=>h.collectionCalls().some(c=>c.params.get('offset')==='11976'));
-  await until(()=>h.el('#page-position').textContent==='Page 167 of 167');
+  await until(()=>h.el('#page-position').textContent==='Page 166 of 166');
   h.el('#genre-filter').value='Folk';h.el('#genre-filter').handlers.change();
   const folk=refineCandidates(catalog.tracks.map((_,row)=>({row})),catalog.tracks,{genre:'Folk'});
   await until(()=>h.el('#page-position').textContent===`Page 1 of ${Math.ceil(folk.length/12)}`);
@@ -193,8 +193,8 @@ test('title/artist lookup and audio neighbors run on the server with v1 semantic
 
 test('a partial preview pack is reported and filterable through the server',async()=>{
   const h=await harness({available:[0,1,2,3,4]});
-  assert.equal(h.el('#audio-availability').textContent,'5 of 2,000 recordings have verified previews.');assert.equal(h.el('#preview-only-label').hidden,false);
-  h.el('#browse-collection').onclick();await until(()=>h.el('#page-position').textContent==='Page 1 of 167');
+  assert.equal(h.el('#audio-availability').textContent,'5 of 1,992 recordings have verified previews.');assert.equal(h.el('#preview-only-label').hidden,false);
+  h.el('#browse-collection').onclick();await until(()=>h.el('#page-position').textContent==='Page 1 of 166');
   h.el('#preview-only').checked=true;h.el('#preview-only').handlers.change();await until(()=>h.el('#page-position').textContent==='Page 1 of 1');
   assert.equal(h.collectionCalls().at(-1).params.get('preview'),'1');assert.match(h.el('#page-indicator').textContent,/1–5 \/ 5/);
 });

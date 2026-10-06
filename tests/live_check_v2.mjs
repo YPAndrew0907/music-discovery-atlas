@@ -2,22 +2,26 @@
 // production checks of validation/atlas/live_check_atlas.mjs (h1, Atlas default, map open, live
 // server search with its animation, playback, an /audio/ 206, no page errors on desktop and
 // mobile, ?direction=list) and adds the v2 contract: health, the server manifest's v2 binding,
-// the local delivery summary, the collection routes, an exact audio range, the excluded row, no
-// whole-catalog file, and a page that downloads only the pinned v2 data.
+// the local delivery summary, the collection routes, an exact audio range, the excluded row and the
+// rows of corpus-releases/quarantine.json, no whole-catalog file, and a page that downloads only the
+// pinned v2 data.
 // Optional; never installs anything. Uses 2 live searches and 1 neighbor read, inside the
 // anonymous limits (6 searches a minute, 30 per process-hour).
 //   NODE_PATH=<dir with playwright> node tests/live_check_v2.mjs
 //   MUSIC_UI_ORIGIN        default https://music-discovery-atlas.onrender.com
-//   EXPECT_COUNT           default 2000
-//   EXPECT_RELEASE         the selection's manifestSha256 (default: fma2000-v2, 806b19ed…)
+//   EXPECT_COUNT           default 1992 (fma2000 after the rights quarantine of 2026-10-06)
+//   EXPECT_RELEASE         the selection's manifestSha256 (default: fma2000-v2, 279cd21b…)
 //   OUT_DIR                default /tmp/music-live-check-v2 (live-check-v2.json and screenshots)
 //   MUSIC_UI_INSECURE_TLS  1 only for a local TLS terminator with a self-signed certificate
 import {createRequire} from 'node:module';
-import {mkdir, writeFile} from 'node:fs/promises';
+import {mkdir, readFile, writeFile} from 'node:fs/promises';
 const {chromium, request} = createRequire(import.meta.url)('playwright');
 const ORIGIN = process.env.MUSIC_UI_ORIGIN ?? 'https://music-discovery-atlas.onrender.com';
-const COUNT = Number(process.env.EXPECT_COUNT ?? 2000);
-const RELEASE = process.env.EXPECT_RELEASE ?? '806b19ed9a6b2f5766f3c0a7316db20466dbff1537b3eb24792c11518266e16c';
+const COUNT = Number(process.env.EXPECT_COUNT ?? 1992);
+const RELEASE = process.env.EXPECT_RELEASE ?? '279cd21b116f084001162c8e10177511e7ffda89064189328e31d73c5fea68b7';
+// Preview routes of the recordings the rights quarantine list keeps out of every build.
+const QUARANTINED = JSON.parse(await readFile(new URL('../corpus-releases/quarantine.json', import.meta.url)))
+  .entries.map(entry => '/audio/' + entry.id.slice(4).padStart(6, '0') + '.mp3');
 const OUT = process.env.OUT_DIR ?? '/tmp/music-live-check-v2';
 const insecure = process.env.MUSIC_UI_INSECURE_TLS === '1';
 await mkdir(OUT, {recursive: true});
@@ -59,9 +63,12 @@ try {
     return {pass: r.status() === 206 && h['content-range'] === `bytes 0-65535/${first.audioBytes}` && h['content-type'] === 'audio/mpeg' && (await r.body()).length === 65536,
       value: {route, status: r.status(), contentRange: h['content-range'], contentType: h['content-type']}};
   });
-  await check('api', 'the excluded recording and whole-catalog files are not served', async () => {
+  await check('api', 'the excluded and quarantined recordings and whole-catalog files are not served', async () => {
     const excluded = (await api.get('/audio/030702.mp3')).status(), catalog = (await api.get('/search-studio/data/catalog.json')).status(), vectors = (await api.get('/search-studio/data/vectors.f32')).status();
-    return {pass: excluded === 404 && catalog === 404 && vectors === 404, value: {excluded, catalog, vectors}};
+    const quarantined = {};
+    for (const route of QUARANTINED) quarantined[route] = (await api.get(route)).status();
+    return {pass: excluded === 404 && catalog === 404 && vectors === 404 && QUARANTINED.length > 0 && Object.values(quarantined).every(status => status === 404),
+      value: {excluded, catalog, vectors, quarantined}};
   });
 } finally { await api.dispose(); }
 

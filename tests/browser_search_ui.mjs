@@ -50,11 +50,11 @@ try{
       assert.match(await page.locator('#result-scope').textContent(),/16 retrieved sound candidates/);
       await page.locator('#next-page').click();assert.equal(await page.locator('#results > li').count(),4);
       assert.match(await page.locator('#results .rank').first().textContent(),/13/);
-      await page.locator('#browse-collection').click();assert.match(await page.locator('#result-scope').textContent(),/2,000 recordings in the collection/);
+      await page.locator('#browse-collection').click();assert.match(await page.locator('#result-scope').textContent(),/1,992 recordings in the collection/);
       // The page jump clamps out-of-range input in the page itself (no native validation bubble intercepts the submit).
       await page.locator('#page-number').fill('999');await page.locator('#page-number').press('Enter');
-      assert.equal(await page.locator('#page-position').textContent(),'Page 167 of 167');assert.equal(await page.evaluate(()=>document.activeElement.id),'results-heading');
-      await page.locator('#page-number').fill('0');await page.locator('#page-number').press('Enter');assert.equal(await page.locator('#page-position').textContent(),'Page 1 of 167');
+      assert.equal(await page.locator('#page-position').textContent(),'Page 166 of 166');assert.equal(await page.evaluate(()=>document.activeElement.id),'results-heading');
+      await page.locator('#page-number').fill('0');await page.locator('#page-number').press('Enter');assert.equal(await page.locator('#page-position').textContent(),'Page 1 of 166');
       // The refinement panel starts collapsed on phones (like the map) and open on desktop.
       assert.equal(await page.locator('.refinement').getAttribute('open'),name==='desktop'?'':null);
       await page.locator('.refinement').evaluate(el=>{el.open=true;});
@@ -96,8 +96,8 @@ async function atlasPass(name,viewport){
   if(name==='mobile')assert.ok(fold.firstTop<844,`first row inside the first 390×844 screen (${fold.firstTop})`);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth)<=viewport.width+1,'No horizontal page overflow');
   // Compact, honest scope: the visible line is short; the full sentence is the list's description.
-  assert.equal(await page.locator('#result-scope').textContent(),'1–12 of 16 · searched 2,000');
-  assert.match(await page.locator('#result-scope-detail').textContent(),/^Showing 1–12 of 16 from 16 retrieved sound candidates · searched 2,000 recordings\. Refinements apply to these candidates, not the full collection\.$/);
+  assert.equal(await page.locator('#result-scope').textContent(),'1–12 of 16 · searched 1,992');
+  assert.match(await page.locator('#result-scope-detail').textContent(),/^Showing 1–12 of 16 from 16 retrieved sound candidates · searched 1,992 recordings\. Refinements apply to these candidates, not the full collection\.$/);
   assert.equal(await page.locator('#results').getAttribute('aria-describedby'),'result-scope-detail');assert.match(await page.locator('.refinement > summary').textContent(),/Refine these 16 candidates/);
   // Row actions only on the selected row; selecting another row moves them.
   assert.equal(await page.locator('#results [data-keep]:visible').count(),1);assert.equal(await page.locator('#results li.selected [data-keep]:visible').count(),1);
@@ -105,10 +105,10 @@ async function atlasPass(name,viewport){
   assert.equal(await page.locator('#results [data-keep]:visible').count(),1);await page.locator('#results li.selected [data-keep]').click();assert.match(await page.locator('#shelf-count').textContent(),/^1$/);
   // 12 + 4 paging, First/Last and the jump reach every page; focus returns to the heading.
   await page.locator('#next-page-top').click();assert.equal(await page.locator('#results > li').count(),4);assert.match(await page.locator('#results .rank').first().textContent(),/13/);
-  assert.equal(await page.locator('#result-scope').textContent(),'13–16 of 16 · searched 2,000');assert.equal(await page.evaluate(()=>document.activeElement.id),'results-heading');
-  await page.locator('#browse-collection').click();assert.equal(await page.locator('#result-scope').textContent(),'1–12 of 2,000 recordings');
-  await page.locator('#page-number').fill('999');await page.locator('#page-number').press('Enter');assert.equal(await page.locator('#page-position').textContent(),'Page 167 of 167');
-  await page.locator('#first-page').click();assert.equal(await page.locator('#page-position').textContent(),'Page 1 of 167');await page.locator('#last-page').click();assert.equal(await page.locator('#page-position').textContent(),'Page 167 of 167');
+  assert.equal(await page.locator('#result-scope').textContent(),'13–16 of 16 · searched 1,992');assert.equal(await page.evaluate(()=>document.activeElement.id),'results-heading');
+  await page.locator('#browse-collection').click();assert.equal(await page.locator('#result-scope').textContent(),'1–12 of 1,992 recordings');
+  await page.locator('#page-number').fill('999');await page.locator('#page-number').press('Enter');assert.equal(await page.locator('#page-position').textContent(),'Page 166 of 166');
+  await page.locator('#first-page').click();assert.equal(await page.locator('#page-position').textContent(),'Page 1 of 166');await page.locator('#last-page').click();assert.equal(await page.locator('#page-position').textContent(),'Page 166 of 166');
   // The collapsed refinement bar opens and keeps its honest scope; More artists lives inside it.
   await page.locator('.refinement > summary').click();assert.equal(await page.locator('.refinement').getAttribute('open'),'');assert.ok(await page.locator('.refinement-controls #spread-results').isVisible());
   await page.locator('#refine-text').fill('no such name 000000');await page.locator('#results-empty').waitFor({state:'visible'});

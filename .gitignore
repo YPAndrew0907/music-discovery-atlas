@@ -3899,3 +3899,5 @@ __pycache__/
 !/tests/fixtures/fma2000-v1-web-manifest.json
 !/tests/v1_page_data.mjs
 !/tests/web_v1_page_data.test.mjs
+!/scripts/activate_release_v2.py
+!/tests/test_activate_release_v2.py

@@ -74,6 +74,12 @@ class ActualFMA2000Tests(unittest.TestCase):
         self.assertFalse({entry['audioSha256'] for entry in plan['entries']} & set(quarantine.by_audio))
         for credits in ['notices/track-attribution.html', 'web/notices/track-attribution.html']:
             page = (ROOT / credits).read_text()
+            if credits.startswith('web/') and selection['schemaVersion'] != 1:
+                # An activated v2 tree serves the credits page by page from /collection/credits (a listed recording
+                # has no page there; tests/test_api_v2.py); the web copy is the small page that links to them.
+                self.assertEqual((page.count('<article id="'), page.count('href="/collection/credits"')), (0, 1))
+                self.assertIn('and so are the recordings on the rights quarantine list', page)
+                continue
             self.assertEqual(page.count('<article id="'), COUNT)
             for ident in listed:
                 self.assertNotIn('<article id="' + ident.replace(':', '-') + '">', page)

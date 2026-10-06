@@ -76,11 +76,17 @@ test('required local HTML links and module dependencies resolve in the public we
   async function visit(dir){for(const entry of await readdir(dir,{withFileTypes:true})){const url=new URL(entry.name+(entry.isDirectory()?'/':''),dir);if(entry.isDirectory())await visit(url);else all.push(url);}}
   await visit(root);
   assert.equal(all.some(url=>/\.(mp3|onnx)$/.test(url.pathname)),false);
+  // A v2 package links to read-only routes of the v2 server (its small credits page links to /collection/credits).
+  // They are routes of server/collection_v2.py, not files; a v1 package may link to none of them.
+  const serverRoutes=servesV1?new Set():new Set([...(await readFile(new URL('../server/collection_v2.py',import.meta.url))).toString()
+    .matchAll(/'(\/collection\/[a-z]+)': \(self\./g)].map(m=>m[1]));
+  assert.ok(servesV1||serverRoutes.has('/collection/credits'),'the v2 route table was read');
   for(const file of all.filter(url=>/\.(mjs|html)$/.test(url.pathname)&&!url.pathname.includes('/runtime/'))){
     const text=(await readFile(file)).toString();
     const matches=file.pathname.endsWith('.mjs')?[...text.matchAll(/(?:from\s*|import\s*)['"]([^'"]+)['"]/g)]:[...text.matchAll(/(?:href|src)="([^"#?][^"]*)"/g)];
     for(const [,value] of matches){
       if(!value.startsWith('.')&&!value.startsWith('/'))continue;
+      if(serverRoutes.has(value.split(/[?#]/)[0]))continue;
       const url=new URL(value,file);url.hash='';url.search='';
       const target=value.startsWith('/')?new URL(value.slice(1),root):url;
       if(target.pathname.endsWith('/'))target.pathname+='index.html';

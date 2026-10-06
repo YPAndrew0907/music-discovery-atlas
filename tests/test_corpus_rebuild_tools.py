@@ -98,7 +98,14 @@ class RebuildToolTests(unittest.TestCase):
     def test_credits_page_is_the_committed_page_and_refuses_a_listed_recording(self):
         page = build_corpus_credits.render(self.release, COMMITTED_QUARANTINE)
         self.assertEqual(page, (ROOT / 'notices/track-attribution.html').read_bytes())
-        self.assertEqual(page, (ROOT / 'web/notices/track-attribution.html').read_bytes())
+        served = (ROOT / 'web/notices/track-attribution.html').read_bytes()
+        if SELECTION['schemaVersion'] == 1:
+            self.assertEqual(page, served)
+        else:
+            # An activated v2 tree serves these credits fifty at a time from /collection/credits (tests/test_api_v2.py
+            # compares those pages with this one); scripts/build_web_v2.py replaces the web copy with the small page.
+            from collection_v2 import credits_index_page
+            self.assertEqual(served, credits_index_page(COUNT))
         with self.assertRaisesRegex(ReleaseError, 'holds quarantined recordings'):
             build_corpus_credits.render(self.release, self.first_listed)
 

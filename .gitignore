@@ -3908,3 +3908,8 @@ __pycache__/
 !/corpus-releases/quarantine.json
 !/scripts/rights_quarantine.py
 !/tests/test_rights_quarantine.py
+!/scripts/reconstruct_release_inputs.py
+!/scripts/build_corpus_credits.py
+!/scripts/pin_corpus_release.py
+!/scripts/derive_hydration_plan.py
+!/tests/test_corpus_rebuild_tools.py

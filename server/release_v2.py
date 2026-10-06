@@ -177,45 +177,51 @@ def read_csr(data, header):
     return node_layers, layer_offsets, neighbors
 
 
-def check_csr(node_layers, layer_offsets, neighbors, *, count, degree, entry, max_level, reachability=True):
-    """Vectorised version of corpus_release.validate_index for the CSR encoding."""
+def check_csr(node_layers, layer_offsets, neighbors, *, count, degree, entry, max_level, reachability=True, block=32768):
+    """Vectorised version of corpus_release.validate_index for the CSR encoding. Works in blocks of
+    nodes so its temporaries stay a few megabytes at any catalog size."""
     require(count >= 1 and node_layers.shape == (count + 1,) and int(node_layers[0]) == 0, 'CSR node table mismatch')
-    layers_per_node = np.diff(node_layers.astype(np.int64))
+    layers_per_node = np.diff(node_layers)
     require(bool(np.all(layers_per_node >= 1)) and bool(np.all(layers_per_node <= max_level + 1)), 'Invalid CSR layers')
     total_layers = int(node_layers[-1])
     require(layer_offsets.shape == (total_layers + 1,) and int(layer_offsets[0]) == 0
             and int(layer_offsets[-1]) == len(neighbors), 'CSR layer table mismatch')
-    degrees = np.diff(layer_offsets.astype(np.int64))
-    require(bool(np.all(degrees >= 0)), 'CSR layer offsets decrease')
-    owner_of_layer = np.repeat(np.arange(count, dtype=np.int64), layers_per_node)
-    level_of_layer = np.arange(total_layers, dtype=np.int64) - node_layers[:-1].astype(np.int64)[owner_of_layer]
-    budget = np.where(level_of_layer == 0, 2 * degree, degree)
-    require(bool(np.all(degrees <= budget)), 'CSR degree budget mismatch')
     require(0 <= entry < count and int(layers_per_node[entry]) == max_level + 1, 'CSR entry level mismatch')
     if len(neighbors):
-        targets = neighbors.astype(np.int64)
-        require(int(targets.min()) >= 0 and int(targets.max()) < count, 'Invalid CSR neighbor')
-        layer_of_link = np.repeat(np.arange(total_layers, dtype=np.int64), degrees)
-        owners, levels = owner_of_layer[layer_of_link], level_of_layer[layer_of_link]
-        require(not bool(np.any(targets == owners)), 'CSR self link')
-        require(bool(np.all(layers_per_node[targets] > levels)), 'CSR neighbor lacks the linked level')
+        require(int(neighbors.min()) >= 0 and int(neighbors.max()) < count, 'Invalid CSR neighbor')
+    for first in range(0, count, block):
+        last = min(count, first + block)
+        layer_start, layer_stop = int(node_layers[first]), int(node_layers[last])
+        offsets = layer_offsets[layer_start:layer_stop + 1].astype(np.int64)
+        degrees = np.diff(offsets)
+        require(bool(np.all(degrees >= 0)), 'CSR layer offsets decrease')
+        per_node = layers_per_node[first:last].astype(np.int64)
+        owner_of_layer = np.repeat(np.arange(first, last, dtype=np.int64), per_node)
+        level_of_layer = (np.arange(layer_start, layer_stop, dtype=np.int64)
+                          - np.repeat(node_layers[first:last].astype(np.int64), per_node))
+        require(bool(np.all(degrees <= np.where(level_of_layer == 0, 2 * degree, degree))), 'CSR degree budget mismatch')
+        if not offsets[-1] - offsets[0]:
+            continue
+        targets = neighbors[offsets[0]:offsets[-1]].astype(np.int64)
+        layer_of_link = np.repeat(np.arange(len(degrees), dtype=np.int64), degrees)
+        require(not bool(np.any(targets == owner_of_layer[layer_of_link])), 'CSR self link')
+        require(bool(np.all(layers_per_node[targets] > level_of_layer[layer_of_link])), 'CSR neighbor lacks the linked level')
         keys = layer_of_link * count + targets
         require(len(np.unique(keys)) == len(keys), 'Duplicate CSR neighbor')
     if reachability:
-        base = node_layers[:-1].astype(np.int64)
-        start, stop = layer_offsets[base].astype(np.int64), layer_offsets[base + 1].astype(np.int64)
+        base = node_layers[:-1]
         reached = np.zeros(count, dtype=bool)
         reached[entry] = True
         frontier = np.array([entry], dtype=np.int64)
         while len(frontier):
-            spans = [neighbors[a:b] for a, b in zip(start[frontier], stop[frontier])]
-            found = np.unique(np.concatenate(spans).astype(np.int64)) if spans else np.empty(0, np.int64)
-            frontier = found[~reached[found]]
+            starts, stops = layer_offsets[base[frontier]], layer_offsets[base[frontier] + 1]
+            found = np.unique(np.concatenate([neighbors[a:b] for a, b in zip(starts.tolist(), stops.tolist())]))
+            frontier = found[~reached[found]].astype(np.int64)
             reached[frontier] = True
         require(bool(reached.all()), 'CSR base layer does not reach every track')
 
 
-def check_unit_rows(matrix, chunk=8192):
+def check_unit_rows(matrix, chunk=2048):
     for start in range(0, matrix.shape[0], chunk):
         block = np.asarray(matrix[start:start + chunk], dtype=np.float64)
         require(bool(np.isfinite(block).all()), 'Non-finite audio vector')

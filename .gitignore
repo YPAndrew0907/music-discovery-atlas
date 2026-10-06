@@ -3901,3 +3901,4 @@ __pycache__/
 !/tests/web_v1_page_data.test.mjs
 !/scripts/activate_release_v2.py
 !/tests/test_activate_release_v2.py
+!/tests/live_check_v2.mjs

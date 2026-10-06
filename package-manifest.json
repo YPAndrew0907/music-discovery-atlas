@@ -18123,8 +18123,8 @@
     },
     {
       "path": "server/active_corpus.py",
-      "bytes": 3274,
-      "sha256": "78abd0470b088448c1b7d5cbd732c1da66824fbb02378ea9234528352f20a57c"
+      "bytes": 3517,
+      "sha256": "616a8b802f72d41353beccc82b7a89063a18e0b7b04b54566acfe6d87c9dcd74"
     },
     {
       "path": "server/api.py",
@@ -18133,8 +18133,8 @@
     },
     {
       "path": "server/corpus_release.py",
-      "bytes": 20311,
-      "sha256": "032bcbdfd7680e157f78781c873a499f5ffcc9442e56f1c23ed095d9d91f6c4f"
+      "bytes": 20417,
+      "sha256": "048deed6a6a73b1b8beb889d6cda936d032de1e339fd42241c94d30762fcc0b7"
     },
     {
       "path": "server/encoder.py",
@@ -18163,8 +18163,8 @@
     },
     {
       "path": "server/web_gateway.py",
-      "bytes": 10788,
-      "sha256": "c55cd4ff7e2698f6f553ba9359ddc0254f4444d53772f4984109ace2edb99c97"
+      "bytes": 11636,
+      "sha256": "2ffa95dd70fd38a03b034267a5676c7961d4f855ecf3d639d3a7d78f6daf22a0"
     },
     {
       "path": "web-manifest.json",

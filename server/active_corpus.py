@@ -30,8 +30,10 @@ def selected_corpus(root, package):
     if not config['enabled']:
         require(set(config) == {'schemaVersion', 'enabled'}, 'Disabled selection cannot contain activation settings')
         return None
-    require(set(config) == {'schemaVersion', 'enabled', 'directory', 'manifestSha256',
-            'maxTracks', 'coreByteBudget', 'evidenceByteBudget', 'audioArchive'}, 'Incomplete active corpus selection')
+    required = {'schemaVersion', 'enabled', 'directory', 'manifestSha256',
+                'maxTracks', 'coreByteBudget', 'evidenceByteBudget', 'audioArchive'}
+    # jsonByteBudget is optional; absent keeps the original 8 MB per-JSON-asset budget.
+    require(set(config) in (required, required | {'jsonByteBudget'}), 'Incomplete active corpus selection')
     relative = config['directory']
     require(isinstance(relative, str) and re.fullmatch(r'corpus-releases/[A-Za-z0-9][A-Za-z0-9_-]{0,63}', relative),
             'Invalid corpus release directory')
@@ -40,7 +42,8 @@ def selected_corpus(root, package):
         directory = directory / part
         require(not directory.is_symlink() and directory.is_dir(), 'Corpus directory cannot contain symlinks')
     limits = ReleaseLimits(max_tracks=config['maxTracks'], core_bytes=config['coreByteBudget'],
-                           evidence_bytes=config['evidenceByteBudget'])
+                           evidence_bytes=config['evidenceByteBudget'],
+                           json_bytes=config.get('jsonByteBudget', ReleaseLimits.json_bytes))
     release = validate_release(directory, expected_manifest_sha256=config['manifestSha256'], limits=limits)
     require(release.count >= 32, 'Active corpus must support the existing32-candidate search budget')
     audio = config['audioArchive']

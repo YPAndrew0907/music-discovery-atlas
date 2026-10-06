@@ -13,6 +13,20 @@ SECURITY_HEADERS = {
     'Cache-Control': 'no-cache',
 }
 STATIC_SUFFIXES = {'.html', '.css', '.mjs', '.js', '.json', '.f32', '.wasm', '.txt', '.md'}
+# Default static budgets; a reviewed web-manifest.json may set its own total within STATIC_TOTAL_MAXIMUM.
+STATIC_FILE_LIMIT, STATIC_TOTAL_LIMIT, STATIC_TOTAL_MAXIMUM = 20_000_000, 30_000_000, 64_000_000
+
+
+def static_limits(manifest):
+    limits = manifest.get('limits')
+    if limits is None:
+        return STATIC_FILE_LIMIT, STATIC_TOTAL_LIMIT
+    if (not isinstance(limits, dict) or set(limits) != {'maxFileBytes', 'maxTotalBytes'}
+            or type(limits['maxFileBytes']) is not int or type(limits['maxTotalBytes']) is not int
+            or not 1 <= limits['maxFileBytes'] <= STATIC_FILE_LIMIT
+            or not 1 <= limits['maxTotalBytes'] <= STATIC_TOTAL_MAXIMUM):
+        raise ValueError('Invalid public web budget')
+    return limits['maxFileBytes'], limits['maxTotalBytes']
 
 
 def digest(path):
@@ -117,6 +131,7 @@ class WebGateway:
             raise ValueError('Unknown public web manifest')
         self.assets = {}
         total = 0
+        file_limit, total_limit = static_limits(manifest)
         for row in manifest['files']:
             relative = row['path']
             if relative in self.assets or PurePosixPath(relative).suffix.lower() not in STATIC_SUFFIXES:
@@ -124,10 +139,10 @@ class WebGateway:
             path = confined_file(self.web_root, relative)
             size = path.stat().st_size
             total += size
-            if size != row['bytes'] or size > 20_000_000 or digest(path) != row['sha256']:
+            if size != row['bytes'] or size > file_limit or digest(path) != row['sha256']:
                 raise ValueError('Public web asset integrity failure')
             self.assets[relative] = path
-        if total > 30_000_000 or 'search-studio/index.html' not in self.assets:
+        if total > total_limit or 'search-studio/index.html' not in self.assets:
             raise ValueError('Unexpected public web package')
         self.audio = AudioDelivery(audio_manifest, catalog_path,
                                    enabled=enable_audio, directory=audio_directory, catalog_bytes=catalog_bytes)

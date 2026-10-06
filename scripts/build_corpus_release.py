@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Build a separate real2000 local candidate without altering its frozen1000 parent."""
+"""Build a separate local candidate release without altering its frozen parent.
+
+Defaults reproduce the original real2000 build (name fma2000, count 2000, parent fma1000).
+A larger candidate passes --name/--count/--parent-dir plus its own coverage text and budgets.
+"""
 import argparse
 from collections import Counter
 from copy import deepcopy
@@ -29,16 +33,21 @@ def spec(path, name=None):
     return {'path': name or Path(path).name, 'bytes': len(data), 'sha256': sha256(data)}
 
 
-def build(ingestion, embeddings, output):
-    count = 2000
-    parent = ROOT / 'corpus-releases/fma1000'
+FMA2000_COVERAGE = '2000 screened FMA excerpts:the complete frozen1000 selection plus1000 additional recordings. Conflicted legacy row30702 remains excluded. This is a local candidate and a biased open-music sample, not mainstream coverage.'
+
+
+def build(ingestion, embeddings, output, *, name='fma2000', count=2000, parent='corpus-releases/fma1000',
+          coverage=FMA2000_COVERAGE, limits=None):
+    release_name, parent = name, ROOT / parent  # `name` is reused as a loop variable below
     parent_ids = json.loads((parent / 'ids.json').read_bytes())
     parent_vectors = (parent / 'vectors.f32').read_bytes()
     parent_catalog = json.loads((parent / 'catalog.json').read_bytes())
     parent_rights = json.loads((parent / 'rights.json').read_bytes())
     ingestion, embeddings, output = map(Path, (ingestion, embeddings, output))
-    require(output.resolve() == (ROOT / 'corpus-releases/fma2000').resolve(),
-            'The2000 builder only writes its separate fma2000 release directory')
+    parent_count = len(parent_ids)
+    require(0 < parent_count < count, 'A candidate must extend its frozen parent')
+    require(output.resolve() == (ROOT / 'corpus-releases' / release_name).resolve(),
+            'The builder only writes its separate named release directory')
     require((ingestion / 'inputs-ready.json').is_file(), 'Final2000 input readiness receipt is required')
     ready = json.loads((ingestion / 'inputs-ready.json').read_bytes())
     require(ready.get('state') == 'local-inputs-ready' and ready.get('tracks') == count,
@@ -50,23 +59,23 @@ def build(ingestion, embeddings, output):
     rights_rows = json.loads((ingestion / 'approved-rights-rows.json').read_bytes())
     ids = [track['id'] for track in tracks]
     require(ids == json.loads((ingestion / 'approved-ids.json').read_bytes()), 'Selected ID order differs from acquisition receipt')
-    require(len(ids) == count and len(set(ids)) == count and 'fma:30702' not in ids, 'Need exactly2000 approved distinct rows, excluding quarantined30702')
+    require(len(ids) == count and len(set(ids)) == count and 'fma:30702' not in ids, f'Need exactly {count} approved distinct rows, excluding quarantined30702')
     require(len({track['audioSha256'] for track in tracks}) == count, 'Duplicate selected audio bytes')
     require([row['id'] for row in rights_rows] == ids and all(row['decision'] == 'approved'
             and row.get('publicPlaybackDecision') == 'approved-with-attribution' for row in rights_rows), 'Rights selection incomplete')
-    require(ids[:1000] == parent_ids and tracks[:1000] == parent_catalog['tracks']
-            and rights_rows[:1000] == parent_rights['tracks'], 'Frozen1000 catalog/rights prefix changed')
+    require(ids[:parent_count] == parent_ids and tracks[:parent_count] == parent_catalog['tracks']
+            and rights_rows[:parent_count] == parent_rights['tracks'], 'Frozen parent catalog/rights prefix changed')
     source_ids = json.loads((embeddings / 'ids.json').read_bytes())
     source_vectors = (embeddings / 'vectors.f32').read_bytes()
     provenance = json.loads((embeddings / 'embedding-provenance.json').read_bytes())
-    require(provenance['newCount'] >= 1000 and provenance['count'] == len(source_ids)
+    require(provenance['newCount'] >= count - parent_count and provenance['count'] == len(source_ids)
             and len(source_vectors) == len(source_ids) * 2048 and sha256(source_vectors) == provenance['vectorsSha256'],
             'Real embedding output is incomplete or inconsistent')
     legacy = ROOT / 'music-search-studio/data'
     legacy_ids = json.loads((legacy / 'ids.json').read_bytes())
     legacy_vectors = (legacy / 'vectors.f32').read_bytes()
-    require(source_ids[:1000] == parent_ids and source_vectors[:len(parent_vectors)] == parent_vectors,
-            'Frozen1000 embedding prefix was not preserved')
+    require(source_ids[:parent_count] == parent_ids and source_vectors[:len(parent_vectors)] == parent_vectors,
+            'Frozen parent embedding prefix was not preserved')
     pair = json.loads((ROOT / 'model/model-space-q8.json').read_bytes())['identity']
     require(provenance['audioModelSha256'] == pair['audioModelSha256']
             and provenance['preprocessorConfigSha256'] == pair['preprocessorConfigSha256']
@@ -75,7 +84,7 @@ def build(ingestion, embeddings, output):
     require(len(lookup) == len(source_ids) and all(ident in lookup for ident in ids), 'Embedding ID coverage mismatch')
     vectors = b''.join(source_vectors[lookup[ident]*2048:(lookup[ident]+1)*2048] for ident in ids)
     source_rows = {row['id']: row for row in provenance['tracks']}
-    require(all(ident in source_rows for ident in ids[1000:]), 'Every additional recording needs real embedding provenance')
+    require(all(ident in source_rows for ident in ids[parent_count:]), 'Every additional recording needs real embedding provenance')
     output.mkdir(parents=True, exist_ok=True)
     (output / 'evidence').mkdir(exist_ok=True)
     artists = []
@@ -111,14 +120,14 @@ def build(ingestion, embeddings, output):
     source_identity = {'orderedIds': ids, 'vectorsSha256': sha256(vectors),
         'selectedInputSha256': sha256((ingestion / 'approved-catalog-tracks.json').read_bytes()),
         'legacyCatalogSha256': sha256((legacy / 'catalog.json').read_bytes()),
-        'parent1000CatalogSha256': sha256((parent / 'catalog.json').read_bytes()),
-        'parent1000VectorsSha256': sha256(parent_vectors),
-        'parent1000ReleaseSha256': sha256((parent / 'release.json').read_bytes()),
+        f'parent{parent_count}CatalogSha256': sha256((parent / 'catalog.json').read_bytes()),
+        f'parent{parent_count}VectorsSha256': sha256(parent_vectors),
+        f'parent{parent_count}ReleaseSha256': sha256((parent / 'release.json').read_bytes()),
         'embeddingProvenanceSha256': sha256((embeddings / 'embedding-provenance.json').read_bytes())}
     old_catalog = json.loads((legacy / 'catalog.json').read_bytes())
-    catalog = {'schemaVersion': 1, 'id': 'fma2000:' + object_sha(source_identity), 'dimensions': 512,
+    catalog = {'schemaVersion': 1, 'id': release_name + ':' + object_sha(source_identity), 'dimensions': 512,
         'sourceIdentity': source_identity, 'tracks': tracks,
-        'coverage': '2000 screened FMA excerpts:the complete frozen1000 selection plus1000 additional recordings. Conflicted legacy row30702 remains excluded. This is a local candidate and a biased open-music sample, not mainstream coverage.',
+        'coverage': coverage,
         'metadataAttribution': old_catalog['metadataAttribution'], 'sourceAudioPreprocessing': old_catalog['sourceAudioPreprocessing']}
     write_json(output / 'catalog.json', catalog)
     write_json(output / 'ids.json', ids)
@@ -128,8 +137,8 @@ def build(ingestion, embeddings, output):
     identity.update(count=count, vectorsSha256=sha256(vectors), orderedIdsSha256=object_sha(ids))
     graph_id = 'experimental-clap-audio-graph:' + object_sha(identity)
     manifest.update(graphId=graph_id, count=count, catalogId=catalog['id'], vectorsSha256=sha256(vectors),
-                    orderedIdsSha256=object_sha(ids), orderedIds=ids, experiment='local-reviewed-fma2000-native-api',
-                    scope='2000 screened CC BY/CC0 FMA metadata records and real audio-derived CLAP vectors. Playback is separately verified.')
+                    orderedIdsSha256=object_sha(ids), orderedIds=ids, experiment=f'local-reviewed-{release_name}-native-api',
+                    scope=f'{count} screened CC BY/CC0 FMA metadata records and real audio-derived CLAP vectors. Playback is separately verified.')
     subprocess.run(['node', str(ROOT / 'scripts/build_corpus_graph.mjs'), str(output), graph_id,
                     str(ROOT / 'web/search-studio/data/examples.json'), str(count)], check=True)
     manifest['indexSha256'] = sha256((output / 'index.json').read_bytes())
@@ -143,13 +152,15 @@ def build(ingestion, embeddings, output):
                'dimensions': 512, 'pairId': PAIR_ID, 'assets': {key: spec(output / name) for key, name in ASSETS.items()}}
     write_json(output / 'release.json', release)
     manifest_sha = sha256((output / 'release.json').read_bytes())
-    verified = validate_release(output, expected_manifest_sha256=manifest_sha, limits=ReleaseLimits(max_tracks=count))
-    receipt = {'schemaVersion': 1, 'count': count, 'preservedParentCount': 1000, 'preservedLegacyCount': 107, 'newCount': 1000,
+    verified = validate_release(output, expected_manifest_sha256=manifest_sha, limits=limits or ReleaseLimits(max_tracks=count))
+    legacy_ids = {track['id'] for track in old_catalog['tracks']}
+    receipt = {'schemaVersion': 1, 'count': count, 'preservedParentCount': parent_count,
+               'preservedLegacyCount': sum(ident in legacy_ids for ident in ids), 'newCount': count - parent_count,
                'excludedLegacyIds': ['fma:30702'], 'inputEmbeddingProvenanceSha256': source_identity['embeddingProvenanceSha256'],
                'sourceAudioModel': provenance['audioModelSha256'], 'modelRevision': provenance['modelRevision'],
                'tracks': []}
     for i, ident in enumerate(ids):
-        row = deepcopy(source_rows.get(ident, {'id': ident, 'source': 'unchanged frozen1000 vector',
+        row = deepcopy(source_rows.get(ident, {'id': ident, 'source': f'unchanged frozen{parent_count} vector',
             'parentVectorsSha256': sha256(parent_vectors)}))
         row.pop('audioPath', None)
         row['vectorSha256'] = sha256(vectors[i*2048:(i+1)*2048])
@@ -170,8 +181,18 @@ def main():
     parser.add_argument('--ingestion-dir', type=Path, required=True)
     parser.add_argument('--embeddings-dir', type=Path, required=True)
     parser.add_argument('--output-dir', type=Path, required=True)
+    parser.add_argument('--name', default='fma2000', help='release directory name under corpus-releases/')
+    parser.add_argument('--count', type=int, default=2000)
+    parser.add_argument('--parent-dir', default='corpus-releases/fma1000', help='frozen parent release, relative to the repo')
+    parser.add_argument('--coverage', default=FMA2000_COVERAGE)
+    parser.add_argument('--core-byte-budget', type=int, default=16_000_000)
+    parser.add_argument('--evidence-byte-budget', type=int, default=8_000_000)
+    parser.add_argument('--json-byte-budget', type=int, default=8_000_000)
     args = parser.parse_args()
-    print(json.dumps(build(args.ingestion_dir, args.embeddings_dir, args.output_dir), indent=2))
+    limits = ReleaseLimits(max_tracks=args.count, core_bytes=args.core_byte_budget,
+                           evidence_bytes=args.evidence_byte_budget, json_bytes=args.json_byte_budget)
+    print(json.dumps(build(args.ingestion_dir, args.embeddings_dir, args.output_dir, name=args.name, count=args.count,
+                           parent=args.parent_dir, coverage=args.coverage, limits=limits), indent=2))
 
 
 if __name__ == '__main__':

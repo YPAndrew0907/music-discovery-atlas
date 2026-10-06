@@ -17,11 +17,12 @@ def main():
     parser.add_argument('--max-tracks', type=int, default=500)
     parser.add_argument('--core-byte-budget', type=int, default=16_000_000)
     parser.add_argument('--evidence-byte-budget', type=int, default=8_000_000)
+    parser.add_argument('--json-byte-budget', type=int, default=8_000_000)
     args = parser.parse_args()
     try:
         release = validate_release(args.release_dir, expected_manifest_sha256=args.expected_manifest_sha256,
             limits=ReleaseLimits(max_tracks=args.max_tracks, core_bytes=args.core_byte_budget,
-                                 evidence_bytes=args.evidence_byte_budget))
+                                 evidence_bytes=args.evidence_byte_budget, json_bytes=args.json_byte_budget))
     except ReleaseError as error:
         print(json.dumps({'ok': False, 'error': str(error), 'runtimeActivated': False}), file=sys.stderr)
         return 1

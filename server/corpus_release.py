@@ -43,8 +43,9 @@ class ReleaseLimits:
     json_bytes: int = 8_000_000
 
     def __post_init__(self):
+        # Evidence maximum sized for the 5,777-row candidate (about 20.4 MB of per-track evidence files).
         for value, maximum in [(self.max_tracks, 10_000), (self.core_bytes, 64_000_000),
-                               (self.evidence_bytes, 16_000_000), (self.json_bytes, 16_000_000)]:
+                               (self.evidence_bytes, 32_000_000), (self.json_bytes, 16_000_000)]:
             if not integer(value, 1, maximum):
                 raise ReleaseError('Invalid explicit validation budget')
 

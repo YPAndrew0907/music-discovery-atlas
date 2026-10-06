@@ -3864,6 +3864,7 @@ __pycache__/
 !/tests/fixtures/hnsw_trace_tuple_reference.py
 !/tests/test_hnsw_storage.py
 !/tests/test_fma2000_release.py
+!/tests/test_corpus_scale_budgets.py
 !/CORPUS_2000.md
 !/NATIVE_2000_MEASUREMENT.json
 !/scripts/hydrate_corpus_audio.py

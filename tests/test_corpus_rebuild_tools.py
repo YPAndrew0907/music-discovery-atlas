@@ -1,6 +1,8 @@
 """The tools that rebuild a release under the rights quarantine list, checked against the committed tree:
 the release builder's row selection, the input reconstruction, the credits page, the pins and the
-build-time audio plan. Each must reproduce exactly what is committed for the active release."""
+build-time audio plan. Each must reproduce exactly what is committed for the reviewed v1 fma2000 release
+(the release the hydration pins name), in a v1 tree and, where the file is unchanged, in a tree where a
+release-format-v2 conversion has been activated."""
 import json
 from pathlib import Path
 import sys
@@ -11,15 +13,16 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / 'scripts'), str(ROOT / 'server')]
 import build_corpus_credits  # noqa: E402
 import build_corpus_release  # noqa: E402
+import hydrate_corpus_audio  # noqa: E402
 import derive_hydration_plan  # noqa: E402
 import pin_corpus_release  # noqa: E402
 import reconstruct_release_inputs  # noqa: E402
 import rights_quarantine  # noqa: E402
 from corpus_release import ReleaseError, ReleaseLimits, sha256, validate_release  # noqa: E402
 
-ACTIVE = json.loads((ROOT / 'active-corpus.json').read_bytes())
-NAME = ACTIVE['directory'].removeprefix('corpus-releases/')
-RELEASE_DIR, RELEASE_SHA, COUNT = ROOT / ACTIVE['directory'], ACTIVE['manifestSha256'], ACTIVE['maxTracks']
+NAME = 'fma2000'
+RELEASE_DIR, RELEASE_SHA, COUNT = ROOT / 'corpus-releases' / NAME, hydrate_corpus_audio.RELEASE_SHA, hydrate_corpus_audio.RELEASE_COUNT
+SELECTION = json.loads((ROOT / 'active-corpus.json').read_bytes())
 # The committed release, credits page, pins and plan were built with the repository's quarantine list.
 COMMITTED_QUARANTINE = rights_quarantine.load()
 
@@ -100,6 +103,12 @@ class RebuildToolTests(unittest.TestCase):
             build_corpus_credits.render(self.release, self.first_listed)
 
     def test_pins_reproduce_the_committed_tree_and_refuse_a_listed_recording(self):
+        if SELECTION['schemaVersion'] != 1:
+            # An activated v2 tree is pinned by scripts/activate_release_v2.py; the v1 pins step stays out of it.
+            with self.assertRaisesRegex(ReleaseError, 'Only a v1 selection'):
+                pin_corpus_release.pin(ROOT, NAME, RELEASE_SHA, count=COUNT, quarantine=COMMITTED_QUARANTINE, write=False)
+            return
+        self.assertEqual((SELECTION['manifestSha256'], SELECTION['maxTracks']), (RELEASE_SHA, COUNT))
         self.assertEqual(pin_corpus_release.pin(ROOT, NAME, RELEASE_SHA, count=COUNT, quarantine=COMMITTED_QUARANTINE,
                                                 write=False), {})
         with self.assertRaisesRegex(ReleaseError, 'holds quarantined recordings'):

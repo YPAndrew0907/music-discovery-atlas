@@ -1,9 +1,10 @@
 import {searchBeats,motionAt,beatEdges,indexConnections,interpolateView} from './search-motion.mjs';
-export function placeLabel(point,textWidth,boxes,anchors,width,height){
+export const DEFAULT_INSETS=Object.freeze({top:70,bottom:125});
+export function placeLabel(point,textWidth,boxes,anchors,width,height,insets=DEFAULT_INSETS){
   const candidates=[];
   for(const side of [1,-1])for(const dy of [-18,30,-46,58,-74,86]){
     const x=Math.max(8,Math.min(width-textWidth-14,side===1?point[0]+16:point[0]-textWidth-16));
-    const y=Math.max(84,Math.min(height-142,point[1]+dy));
+    const y=Math.max(insets.top+14,Math.min(height-insets.bottom-17,point[1]+dy));
     const rect={x:x-5,y:y-13,w:textWidth+10,h:23};
     const overlap=boxes.filter(b=>rect.x<b.x+b.w&&rect.x+rect.w>b.x&&rect.y<b.y+b.h&&rect.y+rect.h>b.y).length;
     const covered=anchors.filter(([px,py])=>Math.hypot(px-Math.max(rect.x,Math.min(px,rect.x+rect.w)),py-Math.max(rect.y,Math.min(py,rect.y+rect.h)))<13).length;
@@ -20,13 +21,13 @@ function boundsFor(positions,ids=null){
 // A display budget, never a change to the graph or catalog. Every retained
 // point is an actual row and every retained edge is an existing index link.
 export const LINKS_PER_VISIBLE_POINT=0.6,MAX_VISIBLE_LINKS=160;
-export function visibleGraphContext(points,connections,{width,height,detail=1,important=[]}={}){
+export function visibleGraphContext(points,connections,{width,height,detail=1,important=[],top=DEFAULT_INSETS.top,bottom=DEFAULT_INSETS.bottom}={}){
   const nodeBudget=detail<1.6?320:600,cell=detail<1.6?14:9;
   const ids=[],seen=new Set(),cells=new Set(),priority=new Set(important.filter(Number.isInteger));
   const add=id=>{
     if(seen.has(id)||ids.length>=nodeBudget||!points[id])return;
-    const [x,y]=points[id];if(x<0||x>width||y<70||y>height-125)return;
-    const key=`${Math.floor(x/cell)},${Math.floor(y/cell)}`;
+    const [x,y]=points[id];if(x<0||x>width||y<top||y>height-bottom)return;
+    const key=Math.floor(x/cell)*1e6+Math.floor(y/cell);
     if(!priority.has(id)&&cells.has(key))return;
     cells.add(key);seen.add(id);ids.push(id);
   };
@@ -45,20 +46,72 @@ export function visibleGraphContext(points,connections,{width,height,detail=1,im
   }
   return {ids,edges:[...preferred,...other].slice(0,edgeBudget),nodeBudget,edgeBudget};
 }
+// A cached raster of every layout position as soft alpha dots, drawn under the budgeted
+// interactive points so the whole collection reads as a cloud at any catalog size with one
+// drawImage per frame and no link mesh. Display only: it never changes the point or link
+// budgets, the hit targets or the stored connections. Rasterized in layout space once per
+// zoom bucket (octaves of the overview scale) and cached; the camera moves it with the same
+// transform as the points, so dots stay about the same size on screen at every zoom.
+export const DENSITY_MAX_SIDE=2048,DENSITY_BUCKETS=4;
+export const densityBucket=detail=>Math.max(0,Math.min(DENSITY_BUCKETS-1,Math.round(Math.log2(Math.max(1,detail)))));
+function defaultLayerFactory(width,height){
+  if(typeof OffscreenCanvas==='function')return new OffscreenCanvas(width,height);
+  if(typeof document!=='undefined'&&typeof document.createElement==='function'){const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;return canvas;}
+  return null;
+}
+// Raster pixels per layout unit for a bucket: its device pixels (zoom × overview), capped to maxSide.
+export function densityResolution(bounds,{overviewSize,dpr=1,zoom=1,maxSide=DENSITY_MAX_SIDE}={}){
+  const w=Math.max(.25,bounds.x1-bounds.x0),h=Math.max(.25,bounds.y1-bounds.y0),pad0=.04*Math.max(w,h);
+  return Math.max(1e-6,Math.min(Math.max(1e-6,overviewSize*zoom)*dpr,maxSide/(Math.max(w,h)+2*pad0)));
+}
+export function rasterizeDensity(positions,bounds,{overviewSize,dpr=1,zoom=1,color='#999',createLayer=defaultLayerFactory,maxSide=DENSITY_MAX_SIDE}={}){
+  const w=Math.max(.25,bounds.x1-bounds.x0),h=Math.max(.25,bounds.y1-bounds.y0);
+  const pad0=.04*Math.max(w,h),screen=Math.max(1e-6,overviewSize*zoom);
+  const res=densityResolution(bounds,{overviewSize,dpr,zoom,maxSide});
+  // About 1.2 CSS px per dot at the bucket's zoom (never below 0.75 raster px when capped).
+  const radius=Math.max(.75,1.2*res/screen),pad=Math.max(pad0,2*radius/res);
+  const width=Math.ceil((w+2*pad)*res),height=Math.ceil((h+2*pad)*res);
+  const canvas=createLayer(width,height);const ctx=canvas?.getContext?.('2d');
+  if(!ctx)return null;
+  const x0=bounds.x0-pad,y0=bounds.y0-pad;
+  ctx.clearRect(0,0,width,height);ctx.fillStyle=color;ctx.globalAlpha=.3;
+  // One fill per dot so overlapping dots accumulate into density.
+  for(const p of positions){ctx.beginPath();ctx.arc((p[0]-x0)*res,(p[1]-y0)*res,radius,0,Math.PI*2);ctx.fill();}
+  ctx.globalAlpha=1;
+  return {canvas,x0,y0,spanX:width/res,spanY:height/res,res,zoom,points:positions.length};
+}
 export class AudioMap {
-  constructor(canvas,{positions,tracks,connections=[],colors,onSelect,onHover,onTrace,onDensity=()=>{}}){this.canvas=canvas;this.ctx=canvas.getContext('2d');this.positions=positions;this.allBounds=boundsFor(positions);this.resultBounds=null;this.tracks=tracks;this.connections=connections;this.colors=colors;this.onSelect=onSelect;this.onHover=onHover;this.onTrace=onTrace;this.onDensity=onDensity;this._visibleIds=[];this._hitPoints=[];this.scale=1;this.offset=[0,0];this.focus='results';this.selected=0;this.inspected=null;this.results=[];this.resultRanks=new Map();this.events=[];this.visited=new Set();this.visitedCursor=0;this.cursor=0;this.elapsed=0;this.duration=1;this.beats=[];this.reveal=1;this.playing=false;this.raf=0;this.motionGeneration=0;this.camera=null;this.cameraTransition=null;this.hover=null;this.pointer=null;this.motion=matchMedia('(prefers-reduced-motion: reduce)');this.abort=new AbortController();const opt={signal:this.abort.signal};this.resize=new ResizeObserver(()=>{this.camera=null;this.cameraTransition=null;this.draw();});this.resize.observe(canvas);canvas.addEventListener('pointerdown',e=>{if(this.pointer)return;this.cameraTransition=null;this.pointer={id:e.pointerId,x:e.clientX,y:e.clientY,offset:[...this.offset],moved:false};canvas.setPointerCapture(e.pointerId);},opt);canvas.addEventListener('pointermove',e=>{if(this.pointer){if(e.pointerId!==this.pointer.id)return;const dx=e.clientX-this.pointer.x,dy=e.clientY-this.pointer.y;if(Math.hypot(dx,dy)>5)this.pointer.moved=true;if(this.pointer.moved){this.offset=[this.pointer.offset[0]+dx,this.pointer.offset[1]+dy];this.draw();}return;}const id=this.hit(e);if(id!==this.hover){this.hover=id;this.onHover(id,e);this.draw();}},opt);canvas.addEventListener('pointerup',e=>{const p=this.pointer;if(!p||e.pointerId!==p.id)return;this.pointer=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(!p.moved){const id=this.hit(e);if(id!==null)this.onSelect(id);}},opt);for(const event of ['pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{this.pointer=null;},opt);canvas.addEventListener('pointerleave',()=>{this.hover=null;this.onHover(null);this.draw();},opt);canvas.addEventListener('keydown',e=>{if(e.key==='Home'){e.preventDefault();this.fit('all');}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();this.cameraTransition=null;this.offset[0]+=e.key==='ArrowLeft'?35:e.key==='ArrowRight'?-35:0;this.offset[1]+=e.key==='ArrowUp'?35:e.key==='ArrowDown'?-35:0;this.draw();}if(e.key==='+'||e.key==='='){e.preventDefault();this.zoom(1.2);}if(e.key==='-'){e.preventDefault();this.zoom(1/1.2);}if(e.key==='Escape'){this.hover=null;this.onHover(null);this.draw();}},opt);document.addEventListener('visibilitychange',()=>{if(document.hidden&&this.playing)this.pause();},opt);this.motion.addEventListener('change',()=>{if(this.motion.matches)this.finish();},opt);this.draw();}
+  constructor(canvas,{positions,tracks,connections=[],colors,onSelect,onHover,onTrace,onDensity=()=>{},insets=DEFAULT_INSETS,createLayer=defaultLayerFactory}){this.readInsets=typeof insets==='function'?insets:()=>insets;this.insets=this.measureInsets();this.createLayer=createLayer;this._density=new Map();this.canvas=canvas;this.ctx=canvas.getContext('2d');this.positions=positions;this.allBounds=boundsFor(positions);this.resultBounds=null;this.tracks=tracks;this.connections=connections;this.colors=colors;this.onSelect=onSelect;this.onHover=onHover;this.onTrace=onTrace;this.onDensity=onDensity;this._visibleIds=[];this._hitPoints=[];this.scale=1;this.offset=[0,0];this.focus='results';this.selected=0;this.inspected=null;this.results=[];this.resultRanks=new Map();this.events=[];this.visited=new Set();this.visitedCursor=0;this.cursor=0;this.elapsed=0;this.duration=1;this.beats=[];this.reveal=1;this.playing=false;this.raf=0;this.motionGeneration=0;this.camera=null;this.cameraTransition=null;this.hover=null;this.pointer=null;this.motion=matchMedia('(prefers-reduced-motion: reduce)');this.abort=new AbortController();const opt={signal:this.abort.signal};this.resize=new ResizeObserver(()=>{this.insets=this.measureInsets();this._density.clear();this._warming=false;this.camera=null;this.cameraTransition=null;this.draw();});this.resize.observe(canvas);canvas.addEventListener('pointerdown',e=>{if(this.pointer)return;this.cameraTransition=null;this.pointer={id:e.pointerId,x:e.clientX,y:e.clientY,offset:[...this.offset],moved:false};canvas.setPointerCapture(e.pointerId);},opt);canvas.addEventListener('pointermove',e=>{if(this.pointer){if(e.pointerId!==this.pointer.id)return;const dx=e.clientX-this.pointer.x,dy=e.clientY-this.pointer.y;if(Math.hypot(dx,dy)>5)this.pointer.moved=true;if(this.pointer.moved){this.offset=[this.pointer.offset[0]+dx,this.pointer.offset[1]+dy];this.draw();}return;}const id=this.hit(e);if(id!==this.hover){this.hover=id;this.onHover(id,e);this.draw();}},opt);canvas.addEventListener('pointerup',e=>{const p=this.pointer;if(!p||e.pointerId!==p.id)return;this.pointer=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(!p.moved){const id=this.hit(e);if(id!==null)this.onSelect(id);}},opt);for(const event of ['pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{this.pointer=null;},opt);canvas.addEventListener('pointerleave',()=>{this.hover=null;this.onHover(null);this.draw();},opt);canvas.addEventListener('keydown',e=>{if(e.key==='Home'){e.preventDefault();this.fit('all');}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();this.cameraTransition=null;this.offset[0]+=e.key==='ArrowLeft'?35:e.key==='ArrowRight'?-35:0;this.offset[1]+=e.key==='ArrowUp'?35:e.key==='ArrowDown'?-35:0;this.draw();}if(e.key==='+'||e.key==='='){e.preventDefault();this.zoom(1.2);}if(e.key==='-'){e.preventDefault();this.zoom(1/1.2);}if(e.key==='Escape'){this.hover=null;this.onHover(null);this.draw();}},opt);document.addEventListener('visibilitychange',()=>{if(document.hidden&&this.playing)this.pause();},opt);this.motion.addEventListener('change',()=>{if(this.motion.matches)this.finish();},opt);this.draw();}
   geometry(mode=this.focus){
     let bounds=mode==='results'&&this.resultBounds?this.resultBounds:this.allBounds;
     if(mode==='selected'&&Number.isInteger(this.selected)){const p=this.positions[this.selected],radius=Math.max(this.allBounds.x1-this.allBounds.x0,this.allBounds.y1-this.allBounds.y0)/8;bounds={x0:p[0]-radius,x1:p[0]+radius,y0:p[1]-radius,y1:p[1]+radius};}
     const {x0,x1,y0,y1}=bounds;
-    const top=82,bottom=this.height-130;
+    const top=this.insets.top+12,bottom=this.height-this.insets.bottom-5;
     return{cx:(x0+x1)/2,cy:(y0+y1)/2,screenX:this.width/2-20,screenY:(top+bottom)/2,size:Math.max(1,Math.min((this.width-170)/Math.max(.25,x1-x0),(bottom-top-30)/Math.max(.25,y1-y0)))};
+  }
+  measureInsets(){const value=this.readInsets?.()??DEFAULT_INSETS,top=Number(value?.top),bottom=Number(value?.bottom);return{top:Number.isFinite(top)&&top>=0?top:DEFAULT_INSETS.top,bottom:Number.isFinite(bottom)&&bottom>=0?bottom:DEFAULT_INSETS.bottom};}
+  densityLayer(dpr,detail){
+    const overviewSize=this.geometry('all').size,zoom=2**densityBucket(detail);
+    // Buckets whose capped resolution coincides share one raster.
+    const key=densityResolution(this.allBounds,{overviewSize,dpr,zoom}).toPrecision(6)+'@'+dpr;
+    if(!this._density.has(key)){
+      this._density.set(key,rasterizeDensity(this.positions,this.allBounds,{overviewSize,dpr,zoom,color:this.colors?.node||'#999',createLayer:this.createLayer}));
+      if(this._density.size>DENSITY_BUCKETS)this._density.delete(this._density.keys().next().value);
+    }
+    return this._density.get(key);
+  }
+  // Rasterise every zoom bucket in idle time, so search animations never pay for a first build.
+  warmDensity(dpr){
+    if(this._warming||typeof requestIdleCallback!=='function')return;
+    this._warming=true;let bucket=0;
+    const next=()=>{if(this.abort.signal.aborted||bucket>=DENSITY_BUCKETS){this._warming=false;return;}if(this.width&&this.height)this.densityLayer(dpr,2**bucket++);this._warmTask=requestIdleCallback(next,{timeout:1500});};
+    this._warmTask=requestIdleCallback(next,{timeout:1500});
   }
   project(id,g){const p=this.positions[id];return[g.screenX+(p[0]-g.cx)*g.size*this.scale+this.offset[0],g.screenY+(p[1]-g.cy)*g.size*this.scale+this.offset[1]];}
   point(id){return this._drawingPoints?.[id]??this.project(id,this._drawingGeometry??this.camera??this.geometry());}
   hit(e){
     const r=this.canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,g=this.camera??this.geometry();let best=null,d=14;
-    const inspect=id=>{const p=this._hitPoints[id]??this.project(id,g);if(p[1]<70||p[1]>this.height-125)return;const n=Math.hypot(x-p[0],y-p[1]);if(n<d){d=n;best=id;}};
+    const inspect=id=>{const p=this._hitPoints[id]??this.project(id,g);if(p[1]<this.insets.top||p[1]>this.height-this.insets.bottom)return;const n=Math.hypot(x-p[0],y-p[1]);if(n<d){d=n;best=id;}};
     // Keep result-first tie behavior without allocating a second catalog-sized array.
     for(const id of this.results)if(this._visibleIds.includes(id))inspect(id);
     for(const id of this._visibleIds)if(!this.results.includes(id))inspect(id);
@@ -141,29 +194,42 @@ export class AudioMap {
     // Assigning either dimension clears and reallocates the backing store. Resize only when needed.
     if(this.canvas.width!==pixelWidth)this.canvas.width=pixelWidth;
     if(this.canvas.height!==pixelHeight)this.canvas.height=pixelHeight;
-    const ctx=this.ctx,colors=this.colors;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,this.width,this.height);
+    const ctx=this.ctx,colors=this.colors,{top,bottom}=this.insets,low=this.height-bottom;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,this.width,this.height);
     this._drawingGeometry=this.camera??this.geometry();
     this._drawingPoints=this.positions.map((_,id)=>this.project(id,this._drawingGeometry));
-    ctx.save();ctx.beginPath();ctx.rect(0,70,this.width,this.height-195);ctx.clip();
+    ctx.save();ctx.beginPath();ctx.rect(0,top,this.width,Math.max(0,low-top));ctx.clip();
     const beat=motionAt(this.beats,this.elapsed),done=this.elapsed>=this.duration;
     const event=beat?this.events[beat.eventIndex]:null;
     const visited=this.visitedThroughCursor();
     const frontier=new Set(event?.frontier?.map(x=>x.id)??[]);
     // All context lines are deduplicated stored index links, never proximity guesses.
     // Offscreen links and subpixel segments are omitted only as level-of-detail.
-    const overviewSize=this.geometry('all').size,detail=(this._drawingGeometry.size*this.scale)/overviewSize;
+    const g=this._drawingGeometry,overviewSize=this.geometry('all').size,detail=(g.size*this.scale)/overviewSize;
     const currentId=!done?(event?.type==='expand'?event.id:event?.entryIds?.[0]):null;
-    const context=visibleGraphContext(this._drawingPoints,this.connections,{width:this.width,height:this.height,detail,important:[...this.results,this.selected,this.hover,currentId,...frontier]});
-    this._visibleIds=context.ids;this._hitPoints=this._drawingPoints;
-    this.onDensity({visible:context.ids.length,edges:context.edges.length,total:this.tracks.length});
-    for(const edge of context.edges){
-      const p=this.point(edge.from),q=this.point(edge.to);
-      if((p[0]<0&&q[0]<0)||(p[0]>this.width&&q[0]>this.width)||(p[1]<70&&q[1]<70)||(p[1]>this.height-125&&q[1]>this.height-125)||Math.hypot(p[0]-q[0],p[1]-q[1])<2)continue;
-      const examined=visited.has(edge.from)&&visited.has(edge.to);
-      ctx.strokeStyle=examined&&!done?colors.visited:colors.node;
-      ctx.globalAlpha=done?.11+detail*.035:examined?.4:edge.level>0?.33:.2+detail*.045;ctx.lineWidth=edge.level>0?1:.7;
-      ctx.beginPath();ctx.moveTo(...p);ctx.lineTo(...q);ctx.stroke();
+    const context=visibleGraphContext(this._drawingPoints,this.connections,{width:this.width,height:this.height,detail,top,bottom,important:[...this.results,this.selected,this.hover,currentId,...frontier]});
+    this._visibleIds=context.ids;this._hitPoints=this._drawingPoints;this._context=context;
+    // The collection cloud: every position, cached, faded as the budgeted points take over when zoomed in.
+    const layer=this.densityLayer(dpr,detail);
+    if(layer){this.warmDensity(dpr);
+      const k=g.size*this.scale;ctx.globalAlpha=detail<=1.6?1:Math.max(.4,1-(detail-1.6)*.25);
+      ctx.drawImage(layer.canvas,g.screenX+(layer.x0-g.cx)*k+this.offset[0],g.screenY+(layer.y0-g.cy)*k+this.offset[1],layer.spanX*k,layer.spanY*k);
     }
+    // During replay only the trace's own accepted edges and the result anchors are drawn;
+    // stored context links return once the replay is done, and only when zoomed in.
+    const contextEdges=done?context.edges:[];
+    this.onDensity({visible:context.ids.length,edges:contextEdges.length,total:this.tracks.length,replaying:!done,cloud:!!layer});
+    const strokeGroup=(edges,style)=>{
+      if(!edges.length)return;ctx.beginPath();
+      for(const edge of edges){
+        const p=this.point(edge.from),q=this.point(edge.to);
+        if((p[0]<0&&q[0]<0)||(p[0]>this.width&&q[0]>this.width)||(p[1]<top&&q[1]<top)||(p[1]>low&&q[1]>low)||Math.hypot(p[0]-q[0],p[1]-q[1])<2)continue;
+        ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);
+      }
+      ctx.strokeStyle=style.color;ctx.globalAlpha=style.alpha;ctx.lineWidth=style.width;ctx.stroke();
+    };
+    // One path per style: the same pixels as per-edge strokes, at a fraction of the draw calls.
+    strokeGroup(contextEdges.filter(e=>e.level>0),{color:colors.node,alpha:.11+detail*.035,width:1});
+    strokeGroup(contextEdges.filter(e=>!(e.level>0)),{color:colors.node,alpha:.11+detail*.035,width:.7});
     // Keep the context quiet. Only recent real accepted branches form the trail.
     const trail=this.beats.slice(Math.max(0,(beat?.index??0)-3),beat?.index??0);
     ctx.strokeStyle=colors.visited;ctx.lineWidth=1;
@@ -179,19 +245,26 @@ export class AudioMap {
       const p=this.point(edge.from),q=this.point(edge.to);ctx.globalAlpha=.8;ctx.strokeStyle=colors.frontier;ctx.lineWidth=1.8;
       ctx.beginPath();ctx.moveTo(...p);ctx.lineTo(p[0]+(q[0]-p[0])*eased,p[1]+(q[1]-p[1])*eased);ctx.stroke();
     }
-    ctx.globalAlpha=1;
+    // Points: base dots and frontier rings are batched per style; results, the active visit,
+    // the selection and the hover are drawn on top of them individually.
+    const rankOf=new Map(this.results.map((id,i)=>[id,i])),plain=[],seenDots=[],rings=[],marks=[];
     for(const id of context.ids){
       const [x,y]=this.point(id);
-      if(x< -20||x>this.width+20||y<50||y>this.height-105)continue;
-      const rank=this.results.indexOf(id),explicit=id===this.inspected;
+      if(x< -20||x>this.width+20||y<top-20||y>low+20)continue;
+      const rank=rankOf.get(id)??-1;
+      (visited.has(id)?seenDots:plain).push(x,y,rank>=0?2.6:1.7);
+      if(!done&&frontier.has(id))rings.push(x,y);
+      if(rank>=0||id===activeId||id===this.selected||id===this.hover||id===this.inspected)marks.push(id);
+    }
+    const fillDots=(dots,color,alpha)=>{if(!dots.length)return;ctx.beginPath();for(let i=0;i<dots.length;i+=3){ctx.moveTo(dots[i]+dots[i+2],dots[i+1]);ctx.arc(dots[i],dots[i+1],dots[i+2],0,Math.PI*2);}ctx.fillStyle=color;ctx.globalAlpha=alpha;ctx.fill();};
+    fillDots(plain,colors.node,.55);fillDots(seenDots,colors.visited,done?.5:.85);
+    if(rings.length){ctx.beginPath();for(let i=0;i<rings.length;i+=2){ctx.moveTo(rings[i]+4.5,rings[i+1]);ctx.arc(rings[i],rings[i+1],4.5,0,Math.PI*2);}ctx.globalAlpha=.85;ctx.strokeStyle=colors.frontier;ctx.lineWidth=1.3;ctx.stroke();}
+    ctx.globalAlpha=1;
+    for(const id of marks){
+      const [x,y]=this.point(id);
+      const rank=rankOf.get(id)??-1,explicit=id===this.inspected;
       const reveal=rank<0?0:done||explicit?1:Math.max(0,Math.min(1,(this.reveal-rank/Math.max(1,this.results.length)*.45)/.55));
       const selected=id===this.selected&&reveal>0,active=id===activeId;
-      ctx.globalAlpha=visited.has(id)?(done?.5:.85):.55;ctx.fillStyle=visited.has(id)?colors.visited:colors.node;
-      ctx.beginPath();ctx.arc(x,y,rank>=0?2.6:1.7,0,Math.PI*2);ctx.fill();
-      if(!done&&frontier.has(id)){
-        ctx.globalAlpha=.85;ctx.strokeStyle=colors.frontier;ctx.lineWidth=1.3;
-        ctx.beginPath();ctx.arc(x,y,4.5,0,Math.PI*2);ctx.stroke();
-      }
       if(active){
         const pulse=Math.sin(Math.PI*(beat?.progress??0));ctx.globalAlpha=.12+.12*pulse;ctx.fillStyle=colors.frontier;
         ctx.beginPath();ctx.arc(x,y,15+4*pulse,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;
@@ -211,20 +284,20 @@ export class AudioMap {
     }
     ctx.globalAlpha=1;
     const labels=done||this.reveal>.65?[this.selected,...this.results.filter(id=>id!==this.selected).slice(0,this.width<500?1:3)]:[this.inspected,activeId];
-    const boxes=[];
+    const boxes=[],shown=new Set(context.ids);
     for(const id of [...new Set(labels)]){
-      if(id===null||id===undefined||!context.ids.includes(id))continue;
-      const p=this.point(id),rank=this.results.indexOf(id),isActive=id===activeId;
+      if(id===null||id===undefined||!shown.has(id))continue;
+      const p=this.point(id),rank=rankOf.get(id)??-1,isActive=id===activeId;
       const number=rank>=0?this.resultRanks.get(id):null;
       const prefix=isActive?(beat.kind==='entry'?'Start · ':beat.kind==='descent'?'Look closer · ':''):(number!==null&&number!==undefined?String(number)+'. ':'');
       let title=prefix+this.tracks[id].title;if(title.length>35)title=title.slice(0,33)+'…';
       ctx.font=(isActive||id===this.selected?'600 ':'')+'12px Arial';const textWidth=ctx.measureText(title).width;
-      const placed=placeLabel(p,textWidth,boxes,[...new Set([this.selected,activeId,...this.results])].filter(i=>Number.isInteger(i)).map(i=>this.point(i)),this.width,this.height),{x,y}=placed;boxes.push(placed.rect);
+      const placed=placeLabel(p,textWidth,boxes,[...new Set([this.selected,activeId,...this.results])].filter(i=>Number.isInteger(i)).map(i=>this.point(i)),this.width,this.height,this.insets),{x,y}=placed;boxes.push(placed.rect);
       ctx.fillStyle=colors.paper;ctx.globalAlpha=.96;ctx.fillRect(x-5,y-13,textWidth+10,23);ctx.globalAlpha=1;
       ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle=isActive?colors.frontier:id===this.selected?colors.ink:colors.muted;ctx.fillText(title,x,y+3);
       ctx.strokeStyle=colors.rule;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p[0]+7,p[1]);ctx.lineTo(x-4,y);ctx.stroke();
     }
     ctx.restore();this._drawingGeometry=null;this._drawingPoints=null;
   }
-  destroy(){this.pause();this.abort.abort();this.resize.disconnect();}
+  destroy(){this.pause();this.abort.abort();this.resize.disconnect();if(this._warmTask&&typeof cancelIdleCallback==='function')cancelIdleCallback(this._warmTask);}
 }

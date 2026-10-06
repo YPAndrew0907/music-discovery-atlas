@@ -3847,3 +3847,4 @@
 !server/search_v2.py
 !server/collection_v2.py
 !web/search-studio/src/collection-api.mjs
+!web/search-studio/src/map-lod.mjs

@@ -287,10 +287,11 @@ async function nearbyOnServer(row){
 }
 async function initCollection(){
   collection=new Collection({manifest,pageOrigin:location.origin});
+  const delivery=loadRowDelivery(collection);// fetched alongside the data files (it never throws), not after them
   const[layoutData,exampleData]=await Promise.all([verified('layout'),verified('examples')]);
   const layout=collection.loadLayout(layoutData);examples=collection.loadExamples(exampleData);
   catalog={id:manifest.catalogId,tracks:collection.tracks};artistRecords=collection.artists;vectors=null;index=null;
-  audioDelivery=await loadRowDelivery(collection);
+  audioDelivery=await delivery;
   const count=manifest.count.toLocaleString(),summary=manifest.summary??{};
   $('#catalog-count').textContent=count+' recordings';$('#about-count').textContent=count+' recordings';
   const credits=$('#about-dialog a[href="/notices/track-attribution.html"]');if(credits)credits.href='/collection/credits';
@@ -299,15 +300,25 @@ async function initCollection(){
   $('#collection-summary').textContent=`${count} FMA excerpts · ${Number.isSafeInteger(summary.artists)?summary.artists.toLocaleString()+' source artist IDs':'artist metadata unavailable'} · ${(summary.genres??[]).length.toLocaleString()} source genres · read page by page from this server`;
   const css=getComputedStyle(document.body),colors=Object.fromEntries(['paper','ink','muted','rule','node','visited','frontier','result'].map(key=>[key,css.getPropertyValue('--'+key).trim()]));
   const showTip=(id,e)=>{const tip=$('#tooltip'),t=catalog.tracks[id],r=$('#map').getBoundingClientRect();tip.innerHTML=t?`<strong>${esc(t.title)}</strong><br>${esc(t.artist)}`:'…';tip.style.left=Math.min(r.width-240,Math.max(8,e.clientX-r.left+15))+'px';tip.style.top=Math.max(48,e.clientY-r.top-50)+'px';};
+  // Level of detail: region labels from the pinned overview, tiles streamed for the viewport when the overview
+  // is a sample, and the stored links of the selected recording only, read from the server once each.
+  const links=new Map(),loading=new Set(),refused=new Map();
+  const requestLinks=row=>{
+    if(links.has(row)||loading.has(row)||Date.now()-(refused.get(row)??-Infinity)<10_000)return;
+    loading.add(row);
+    collection.links(row).then(found=>{links.set(row,found);if(links.size>64)links.delete(links.keys().next().value);map?.requestDraw();},()=>refused.set(row,Date.now())).finally(()=>loading.delete(row));
+  };
   map=new AudioMap($('#map'),{positions:collection.positions,tracks:catalog.tracks,connections:layout.connections,density:{points:layout.points,weights:layout.weights},bounds:layout.bounds,colors,insets:mapInsets,
-    onDensity:s=>setText($('#map-density'),`${s.visible} selectable · ${s.replaying?'search path only':s.edges?`${s.edges} connections`:'zoom in for connections'}`),
+    lod:{sampleRows:layout.rows,regions:layout.regions,tiles:layout.tiles?{...layout.tiles,fetchTile:(z,x,y,options)=>collection.tile(z,x,y,options)}:null,links:{get:row=>links.get(row)??null,request:requestLinks}},
+    onDensity:s=>setText($('#map-density'),`${s.visible} selectable · ${s.replaying?'search path only':s.edges?`${s.edges} links of the selection`:'zoom in for links'}`),
     onSelect:row=>{void collection.ensure([row]).then(()=>choose(row,{scroll:true,explicit:true}),e=>status('Recording unavailable: '+e.message));},
     onHover:(id,e)=>{$('#tooltip').hidden=id===null;if(id===null)return;showTip(id,e);if(!catalog.tracks[id])void collection.ensure([id]).then(()=>{if(map.hover===id)showTip(id,e);},()=>{});},
     onTrace:s=>{$('#trace-play').disabled=!s.total||s.reducedMotion;$('#trace-skip').disabled=!s.total||s.completed;$('#trace-skip').hidden=!s.total||s.completed;setText($('#trace-play'),s.playing?'Pause':!s.completed?'Continue':'Watch again');$('#trace-fill').style.width=(s.total?s.progress*100:100)+'%';setText($('#trace-note'),!s.total?'':s.reducedMotion?'Animation off (reduced motion)':!s.completed?(s.phase==='entry'?'Starting':s.phase==='descent'?'Narrowing':s.phase==='results'?'Matches':'Exploring'):'Ready');}});
   $('#examples').innerHTML=examples.examples.map(e=>`<button data-example="${esc(e.id)}" aria-pressed="false">${esc(e.label)}</button>`).join('');
   for(const b of document.querySelectorAll('[data-needs-catalog]'))b.disabled=false;
   $('#enable-local').disabled=true;$('#model-detail').textContent='On-device search needs every audio vector in this browser. This collection stays on the server and is read page by page, so live search runs on the server.';
-  $('#layout-method').textContent=`${layout.description} The cloud is drawn from ${manifest.layout.sampleCount.toLocaleString()} of ${count} positions (${manifest.layout.sampleMethod}); every search places its own results and visited recordings exactly.`;
+  $('#layout-method').textContent=`${layout.description} The cloud is drawn from ${manifest.layout.sampleCount.toLocaleString()} of ${count} positions (${manifest.layout.sampleMethod})${layout.tiles?'; zooming in reads every position of the area in view from this server':''}; every search places its own results and visited recordings exactly. Area labels name the most common source genre where it holds at least ${Math.round((layoutData.regions?.majority??.4)*100)}% of the recordings; they are catalog labels, not learned genres. Lines are the stored index links of the selected recording.`;
+  $('#map').setAttribute('aria-label','Approximate music map. Use the result list for every recording. Plus and minus zoom; arrow keys pan; Home shows the collection. Zooming in shows more recordings and the stored links of the selected one.');
   exampleSearch(examples.defaultExampleId??examples.examples[0].id,{animate:false});updateShelf();refreshPlaybackAvailability();document.body.dataset.ready='true';await connectServer();
 }
 async function init(){try{const manifestResponse=await fetch(new URL('../data/manifest.json',import.meta.url));if(!manifestResponse.ok)throw new Error('Collection manifest unavailable');const manifestBytes=await manifestResponse.arrayBuffer();if(await sha(manifestBytes)!==MANIFEST_SHA)throw new Error('Collection release identity mismatch');manifest=JSON.parse(new TextDecoder().decode(manifestBytes));if(manifest.format===2){await initCollection();return;}[catalog,vectors,examples]=await Promise.all([verified('catalog'),verified('vectors'),verified('examples')]);audioDelivery=await loadAudioDelivery({catalog,catalogSha256:manifest.files.catalog.sha256,pageOrigin:location.origin});const[graph,layout]=await Promise.all([verified('index'),verified('layout')]);if(catalog.id!==manifest.catalogId||catalog.id!==RELEASE.catalogId||graph.spaceId!==manifest.graphId||layout.positions.length!==catalog.tracks.length)throw new Error('Catalog/index identity mismatch');try{const artistResponse=await fetch(new URL('../data/artist-records.json',import.meta.url));if(!artistResponse.ok)throw new Error('Artist metadata unavailable');const artistBytes=await artistResponse.arrayBuffer();if(await sha(artistBytes)!==ARTIST_METADATA_SHA)throw new Error('Artist metadata identity mismatch');const artistData=JSON.parse(new TextDecoder().decode(artistBytes));if(artistData.catalogId!==catalog.id||artistData.rows.length!==catalog.tracks.length||artistData.rows.some((r,i)=>r.trackId!==catalog.tracks[i].id||typeof r.artistId!=='string'))throw new Error('Artist order mismatch');artistRecords=new Map(artistData.rows.map(r=>[r.trackId,r.artistId]));}catch{artistRecords=null;}index=HNSW.load(graph,vectors);$('#catalog-count').textContent=catalog.tracks.length.toLocaleString()+' recordings';$('#about-count').textContent=catalog.tracks.length.toLocaleString()+' recordings';// Atlas: the map is always open (so every search animates, phones included) and refinements start as one collapsed bar.

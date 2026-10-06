@@ -3893,3 +3893,5 @@ __pycache__/
 !/tests/browser_collection_v2.mjs
 !/web/search-studio/src/collection-api.mjs
 !/tests/v2_web_fixture.mjs
+!/web/search-studio/src/map-lod.mjs
+!/tests/web_map_lod.test.mjs

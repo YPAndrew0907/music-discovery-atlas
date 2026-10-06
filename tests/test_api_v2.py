@@ -210,16 +210,27 @@ console.log(JSON.stringify(out));"""
         for name in ('catalog.json', 'vectors.f32', 'index.json', 'ids.json', 'artist-records.json'):
             self.assertFalse((self.web / 'search-studio/data' / name).exists(), name)
         layout = json.loads((self.web / 'search-studio/data/layout.json').read_bytes())
+        self.assertEqual((layout['schemaVersion'], layout['kind'], layout['links']), (3, 'music-layout-lod-v2', '/collection/links'))
         self.assertEqual((layout['sampleCount'], layout['rows']), (2000, list(range(2000))))
         self.assertNotIn('weights', layout)
-        index = json.loads((V1_DIR / 'index.json').read_bytes())
-        pairs = {}
-        for source, layers in enumerate(index['links']):  # indexConnections() from search-motion.mjs
-            for level, neighbors in enumerate(layers):
-                for target in neighbors:
-                    key = (min(source, target), max(source, target))
-                    pairs[key] = max(pairs.get(key, level), level)
-        self.assertEqual(layout['edges'], [v for (a, b), level in pairs.items() for v in (a, b, level)])
+        self.assertNotIn('edges', layout)  # stored links are read per recording from /collection/links
+        self.assertIsNone(layout['tiles'])  # every position is pinned at this size
+        # Region labels: honest majorities of source genres, two zoom levels, every recording in one area per level.
+        genres = [t.get('genre') for t in self.catalog['tracks']]
+        self.assertEqual([(lv['clusters'], lv['fromDetail'], lv['toDetail']) for lv in layout['regions']['levels']], [(12, 0, 2), (48, 2, 10)])
+        for level in layout['regions']['levels']:
+            self.assertEqual(sum(item['count'] for item in level['items']), 2000)
+            for item in level['items']:
+                top, top_count = item['genres'][0] if item['genres'] else (None, 0)
+                self.assertAlmostEqual(item['share'], round(top_count / item['count'], 3))
+                if item['label'] is not None:
+                    self.assertEqual(item['label'], top)
+                    self.assertGreaterEqual(top_count / item['count'], 0.4)
+                    self.assertNotEqual(item['label'], 'Unknown')
+                    self.assertIn(item['label'], genres)
+                else:
+                    self.assertTrue(top_count / item['count'] < 0.4 or top == 'Unknown')
+        self.assertGreater(sum(item['label'] is not None for item in layout['regions']['levels'][0]['items']), 3)
         examples = json.loads((self.web / 'search-studio/data/examples.json').read_bytes())
         v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=2000))
         reference = HNSW(json.loads(v1.assets['index']), v1.assets['vectors'])
@@ -273,6 +284,23 @@ console.log(JSON.stringify(out));"""
         self.assertIn(b'href="/collection/credits"', small)
         self.assertIn(intro.encode(), small)
         self.assertEqual(self.web_receipt['credits']['pagedAt'], '/collection/credits')
+
+    def test_a_sampled_overview_pins_the_tile_pyramid_and_builds_deterministically(self):
+        from build_web_v2 import build
+        from collection_v2 import TILE_CAP, TILE_MAX_LEVEL, tile_domain
+        outputs = []
+        for name in ('one', 'two'):
+            root = Path(self.temp.name) / ('sampled-' + name)
+            (root / 'search-studio/src').mkdir(parents=True)
+            receipt = build(self.dir, self.sha, root, sample_cap=500)
+            outputs.append((root / 'search-studio/data/layout.json').read_bytes())
+        layout = json.loads(outputs[0])
+        self.assertEqual(outputs[0], outputs[1])
+        self.assertLessEqual(layout['sampleCount'], 500)
+        self.assertEqual(sum(layout['weights']), 2000)
+        self.assertEqual(layout['tiles'], {'api': '/collection/tiles', 'domain': tile_domain(self.release.manifest['layout']['bounds']),
+                                           'cap': TILE_CAP, 'maxLevel': TILE_MAX_LEVEL})
+        self.assertTrue(receipt['tiles'])
 
     def tile(self, client, z, x, y):
         reply = client.get(f'/collection/tiles?z={z}&x={x}&y={y}')

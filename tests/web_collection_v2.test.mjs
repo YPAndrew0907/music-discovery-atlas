@@ -21,7 +21,8 @@ import {RELEASE} from '../web/listen-lab/src/release.mjs';
 import {metadataSearch} from '../web/listen-lab/src/retrieval.mjs';
 
 import {root,origin,bytes,v1,catalog,v1Examples,v1Layout,artists,indexJson,vectors,graph,hex,sha,count,identity,display,traceRows,labelRows,packet,
-  examplesV2,bounds,layoutV2,layoutBytes,examplesBytes,manifestV2,manifestBytes,MANIFEST_SHA,serverManifest,bitset,deliverySummary,collectionTracks} from './v2_web_fixture.mjs';
+  examplesV2,bounds,layoutV2,layoutBytes,examplesBytes,manifestV2,manifestBytes,MANIFEST_SHA,serverManifest,bitset,deliverySummary,collectionTracks,
+  tiles,storedLinks,sampledFixture} from './v2_web_fixture.mjs';
 
 // ---- collection client ------------------------------------------------------------------------
 test('collection manifest validation pins identities, same-origin reads and the audio policy',()=>{
@@ -48,8 +49,43 @@ test('rows, pages, packets and the layout sample are validated before they reach
   const bad=packet(new Float32Array(v1Examples.examples[0].queryVector));bad.layout={rows:[],xy:[]};
   assert.throws(()=>new Collection({manifest:manifestV2,pageOrigin:origin}).absorbPacket(bad),/lacks positions/);
   const layout=new Collection({manifest:manifestV2,pageOrigin:origin}).loadLayout(layoutV2);
-  assert.deepEqual(layout.connections,indexConnections(indexJson.links));assert.equal(layout.points.length,count);assert.equal(layout.weights,null);
-  assert.throws(()=>new Collection({manifest:manifestV2,pageOrigin:origin}).loadLayout({...layoutV2,edges:[5,5,0]}),/Invalid layout links/);
+  // The overview no longer ships stored links: the page reads the selected recording's links from the server.
+  assert.deepEqual(layout.connections,[]);assert.equal(layout.points.length,count);assert.equal(layout.weights,null);assert.equal(layout.tiles,null);
+  assert.deepEqual(layout.rows,catalog.tracks.map((_,r)=>r));
+  assert.ok(layout.regions[0].items.length>5&&layout.regions[0].items.every(i=>typeof i.label==='string'));
+  assert.equal(layout.regions[1].items.length,0,'unlabelled areas are not drawn');
+  const fresh=()=>new Collection({manifest:manifestV2,pageOrigin:origin});
+  for(const [change,message] of [[{schemaVersion:2},/Invalid layout sample/],[{links:'/elsewhere'},/Invalid layout sample/],[{rows:[0,0,...layoutV2.rows.slice(2)]},/Invalid layout sample/],
+    [{regions:{levels:[{fromDetail:2,toDetail:1,items:[]}]}},/Invalid map regions/],[{regions:{levels:[{fromDetail:0,toDetail:2,items:[{x:0,y:NaN,count:1,label:'Rock'}]}]}},/Invalid map regions/],
+    [{tiles:{api:'/collection/tiles',domain:[0,0,1],cap:1024,maxLevel:12}},/Invalid map tiles/]])
+    assert.throws(()=>fresh().loadLayout({...layoutV2,...change}),message);
+});
+
+test('map tiles and stored links are decoded, bounded and checked against the positions the page holds',async()=>{
+  const sample=catalog.tracks.map((_,r)=>r).filter(r=>r%4===0),fixture=sampledFixture(sample),calls=[];
+  const fetcher=async url=>{url=new URL(url);calls.push(url);const q=url.searchParams;
+    if(url.pathname==='/collection/tiles')return new Response(JSON.stringify(tiles.tile(Number(q.get('z')),Number(q.get('x')),Number(q.get('y')))));
+    if(url.pathname==='/collection/links')return new Response(JSON.stringify(storedLinks(Number(q.get('row')))));
+    return new Response('{}',{status:404});};
+  const c=new Collection({manifest:fixture.manifest,pageOrigin:origin,fetcher}),layout=c.loadLayout(fixture.layout);
+  assert.deepEqual(layout.tiles,{domain:tiles.domain,cap:1024,maxLevel:12});assert.equal(layout.points.length,500);assert.ok(layout.weights.every(w=>w===4));
+  assert.equal(c.positions[1],undefined,'rows outside the sample have no position yet');
+  const root=await c.tile(0,0,0);assert.equal(root.complete,false);assert.equal(root.total,count);assert.ok(root.rows.length>256&&root.rows.length<=1024);
+  assert.equal(root.weights.reduce((a,b)=>a+b,0),count);
+  const leaf=await c.tile(2,1,2);assert.equal(leaf.complete,true);assert.equal(leaf.weights,null);
+  for(let i=0;i<leaf.rows.length;i++)assert.deepEqual(c.positions[leaf.rows[i]],v1Layout.positions[leaf.rows[i]]);
+  assert.ok(calls.every(u=>u.origin===origin&&u.pathname.startsWith('/collection/')));
+  const links=await c.links(7);assert.deepEqual(links.levels,indexJson.links[7]);for(const n of links.levels.flat())assert.ok(c.positions[n]);
+  // A reply for another tile, another domain or a moved position is refused.
+  const lying=(patch)=>new Collection({manifest:fixture.manifest,pageOrigin:origin,fetcher:async url=>{const q=new URL(url).searchParams;
+    return new Response(JSON.stringify({...tiles.tile(Number(q.get('z')),Number(q.get('x')),Number(q.get('y'))),...patch}));}});
+  for(const patch of [{x:0},{domain:[0,0,1]},{count:5},{complete:false},{total:1}]){const l=lying(patch);l.loadLayout(fixture.layout);await assert.rejects(l.tile(2,1,2),/Invalid map tile/);}
+  const moved=new Collection({manifest:fixture.manifest,pageOrigin:origin,fetcher});moved.loadLayout(fixture.layout);
+  const first=Buffer.from(tiles.tile(2,1,2).rows,'base64').readUInt32LE(0);moved.positions[first]=[9,9];
+  await assert.rejects(moved.tile(2,1,2),/position changed/);
+  await assert.rejects(c.tile(13,0,0),/Invalid map tile request/);
+  const wrong=new Collection({manifest:fixture.manifest,pageOrigin:origin,fetcher:async()=>new Response(JSON.stringify({...storedLinks(7),levels:[[7]]}))});
+  await assert.rejects(wrong.links(7),/Invalid stored links/);
 });
 
 test('preview availability comes from the pinned policy and the server bitset, never from catalog paths',async()=>{
@@ -115,12 +151,13 @@ async function harness({available=catalog.tracks.map((_,r)=>r)}={}){
     if(url.pathname==='/v1/search'){searches.push(body);return new Response(JSON.stringify({...serverManifest,...body,...packet(new Float32Array(v1Examples.examples[2].queryVector)),timingMs:{serverCompute:1},tokenization:{truncated:false}}));}
     if(url.pathname==='/collection/tracks')return new Response(JSON.stringify(collectionTracks(url.searchParams,availableSet)));
     if(url.pathname==='/collection/neighbors'){const row=Number(url.searchParams.get('row'));return new Response(JSON.stringify({...packet(vectors.slice(row*512,(row+1)*512),{exclude:row}),catalogId:v1.catalogId,graphId:v1.graphId,indexSha256:identity.indexSha256,releaseSha256:identity.releaseSha256,row}));}
+    if(url.pathname==='/collection/links')return new Response(JSON.stringify(storedLinks(Number(url.searchParams.get('row')))));
     const data={'/search-studio/data/manifest.json':manifestBytes,'/search-studio/data/layout.json':layoutBytes,'/search-studio/data/examples.json':examplesBytes}[url.pathname];
     assert.ok(data,'The v2 page must not fetch '+url.pathname);
     return new Response(data);
   };
   let map;
-  class TestAudioMap{constructor(canvas,options){map=this;this.options=options;this.searches=[];this.hover=null;}select(){}fit(){}draw(){}destroy(){}finish(){}zoom(){}replay(){}pause(){}setSearch(trace,rows,options){this.searches.push({trace,rows,options});}}
+  class TestAudioMap{constructor(canvas,options){map=this;this.options=options;this.searches=[];this.hover=null;this.redraws=0;}select(){}fit(){}draw(){}destroy(){}finish(){}zoom(){}replay(){}pause(){}requestDraw(){this.redraws++;}setSearch(trace,rows,options){this.searches.push({trace,rows,options});}}
   class Encoder{constructor({status}){this.status=status;this.state='unloaded';}set(s){this.state=s;this.status({state:s});}async prepare(){this.set('ready');}encode(){throw new Error('no local encoder in v2');}cancel(){this.set('unloaded');}}
   const context=vm.createContext({BrowserEncoder:Encoder,AudioMap:TestAudioMap,
     ServerSearch:class extends ServerSearch{constructor(o){super({...o,fetcher});}},loadDeploymentConfig:o=>loadDeploymentConfig({...o,fetcher}),
@@ -145,7 +182,13 @@ test('v2 bootstrap loads only the pinned manifest, layout sample and example pac
   assert.deepEqual(data,['/search-studio/data/examples.json','/search-studio/data/layout.json','/search-studio/data/manifest.json']);
   assert.equal(h.collectionCalls().length,0,'the first view is the pinned recorded example');
   const m=h.map();assert.equal(m.options.tracks.length,count);assert.equal(m.options.density.points.length,count);
-  assert.deepEqual(m.options.connections,indexConnections(indexJson.links));assert.equal(m.searches.length,1);
+  assert.deepEqual(m.options.connections,[]);assert.equal(m.searches.length,1);
+  // Level of detail: the whole overview is pinned at this size (no tiles), with region labels, and the
+  // selected recording's stored links are read from the server once each.
+  assert.equal(m.options.lod.tiles,null);assert.equal(m.options.lod.sampleRows.length,count);assert.ok(m.options.lod.regions[0].items.length>5);
+  assert.equal(m.options.lod.links.get(5),null);m.options.lod.links.request(5);m.options.lod.links.request(5);await flush();
+  assert.equal(h.collectionCalls().filter(c=>c.path==='/collection/links').length,1);assert.deepEqual(m.options.lod.links.get(5).levels,indexJson.links[5]);
+  assert.equal(m.redraws,1);
   assert.equal(m.searches[0].rows.length,12);assert.equal(h.el('#catalog-count').textContent,'2,000 recordings');
   assert.equal(h.el('#engine-label').textContent,'Recorded example');assert.equal(h.el('#enable-local').disabled,true);
   assert.equal(h.el('#audio-availability').hidden,true);assert.equal(h.el('#open-engine').textContent,'Server ready');

@@ -18183,8 +18183,8 @@
     },
     {
       "path": "web-manifest.json",
-      "bytes": 8757,
-      "sha256": "0a24ca26558f7a9cff25961ecd0036c1e417fc0289465d39941dd398169de8b1"
+      "bytes": 8921,
+      "sha256": "590f2ff8bed415b9d8c586b643e4edf4a7a730dde32a090ce3e2b8dbb3b0a2b3"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18373,8 +18373,8 @@
     },
     {
       "path": "web/search-studio/src/app.mjs",
-      "bytes": 55483,
-      "sha256": "433581e98cd6e9485fd4596f696c65821649717dae7c31c0e0e77816522cfb3c"
+      "bytes": 57018,
+      "sha256": "a7fadc1d54b79fe8ae6240b8a219217bdd1611ec3a1f5aeb02b8a62299a61b7b"
     },
     {
       "path": "web/search-studio/src/audio-delivery.mjs",
@@ -18383,8 +18383,8 @@
     },
     {
       "path": "web/search-studio/src/collection-api.mjs",
-      "bytes": 13968,
-      "sha256": "3d4053061121e481bfdcf7301b8a598421334881647e7c1ab878a4705c71ce8f"
+      "bytes": 18848,
+      "sha256": "87fa097eb1d50b9a47b8bca3122a13dec71302b49d64e521ad0e98144481dfd7"
     },
     {
       "path": "web/search-studio/src/contracts.mjs",
@@ -18393,8 +18393,8 @@
     },
     {
       "path": "web/search-studio/src/graph.mjs",
-      "bytes": 26785,
-      "sha256": "7daeb4aedde6428f529e46580ed5aa644507d73f0eec211a5fdcc6acf06f9c7f"
+      "bytes": 33030,
+      "sha256": "129b7f8e4c2954e45b0b46dc4066c5b7a568a025940f089bc645019bec960a8b"
     },
     {
       "path": "web/search-studio/src/hnsw.mjs",
@@ -18430,6 +18430,11 @@
       "path": "web/search-studio/src/studio-release.mjs",
       "bytes": 195,
       "sha256": "81c1ac6e961e98a49b5e5218d500692cd9cadc39267d0884148d916cec5e2bba"
+    },
+    {
+      "path": "web/search-studio/src/map-lod.mjs",
+      "bytes": 9140,
+      "sha256": "0abd86a5df7a5ffa1a632bef839fa4391adad2bcc5bd8ca095a17cae079136e5"
     },
     {
       "path": "web/search-studio/style.css",

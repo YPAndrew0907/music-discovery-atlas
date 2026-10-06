@@ -184,8 +184,8 @@
     },
     {
       "path": "search-studio/index.html",
-      "bytes": 13232,
-      "sha256": "0459bc3066b8cdd64fd7a8e5f5b72283a027c2ae7a8c1be185c052d734c4bcd1"
+      "bytes": 14077,
+      "sha256": "9c74abccfc007bb6c4cf7ad5ab0d5a609e50a1ae4f0baeb7e00c39bc0585111c"
     },
     {
       "path": "search-studio/src/app.mjs",

@@ -102,7 +102,11 @@ function applyDisplayPolicy({preserveSelection=false,animate=false}={}){
   $('#previous-page').disabled=pageIndex===0;$('#next-page').disabled=pageIndex+1>=viewPage.pages;
   $('#results-empty').hidden=rows.length>0;
   $('#empty-detail').textContent=hasFilters?`No ${resultChannel==='sound'||resultChannel==='neighbors'?'retrieved sound candidates':'catalog matches'} meet these refinements. Clear them, try a new search, or browse the full collection.`:'No recorded title or artist matches this query. Try fewer words or browse the collection.';
-  map.setSearch(currentTrace,rows,{animate:animate&&$('#map-panel').open});
+  // A browse page is not a ranking: nothing is drawn as a match and the Matches stage is off.
+  // Name matches are marked but unnumbered. Refinement and paging keep the viewer's map view.
+  const mapRows=resultChannel==='browse'?[]:resultChannel==='lookup'?rows.map(r=>({...r,displayRank:null})):rows;
+  $('#fit').disabled=resultChannel==='browse';
+  map.setSearch(currentTrace,mapRows,{animate:animate&&$('#map-panel').open,preserveView:preserveSelection});
   selected=preserveSelection&&rows.some(r=>r.row===old)?old:rows[0]?.row??null;
   $('#focus-track').disabled=selected===null;$('#node-inspector').hidden=true;
   renderResults();if(selected!==null)choose(selected);

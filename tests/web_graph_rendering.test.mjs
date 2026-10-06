@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {AudioMap,visibleGraphContext} from '../web/search-studio/src/graph.mjs';
+import {AudioMap,visibleGraphContext,LINKS_PER_VISIBLE_POINT,MAX_VISIBLE_LINKS} from '../web/search-studio/src/graph.mjs';
 import {indexConnections} from '../web/search-studio/src/search-motion.mjs';
 
 const data=new URL('../web/search-studio/data/',import.meta.url);
@@ -101,6 +101,50 @@ test('5k context display has hard density budgets and uses only real points and 
   const detail=visibleGraphContext(points,connections,{width:740,height:505,detail:2,important});
   assert.ok(detail.ids.length<=600);assert.ok(detail.edges.length<=160);
   for(const edge of detail.edges){assert.ok(connections.includes(edge));assert.ok(detail.ids.includes(edge.from)&&detail.ids.includes(edge.to));}
+  // Links are budgeted against the points actually shown, and links touching important points come first.
+  assert.equal(LINKS_PER_VISIBLE_POINT,0.6);assert.equal(MAX_VISIBLE_LINKS,160);
+  assert.equal(detail.edgeBudget,Math.min(160,Math.round(detail.ids.length*0.6)));assert.ok(detail.edges.length<=detail.edgeBudget);
+  const touching=detail.edges.map(e=>important.includes(e.from)||important.includes(e.to));
+  assert.ok(touching.some(Boolean));assert.ok(!touching.slice(touching.lastIndexOf(true)).includes(false)||touching.indexOf(false)>touching.lastIndexOf(true));
+  const sparse=visibleGraphContext(points.slice(0,40),connections.slice(0,40),{width:740,height:505,detail:3,important:[1]});
+  assert.ok(sparse.ids.length<=40);assert.equal(sparse.edgeBudget,Math.round(sparse.ids.length*0.6));assert.ok(sparse.edges.length<=sparse.edgeBudget);
+});
+
+test('refinement and paging replace highlighted rows but keep the camera, zoom, pan, selection and trace position',()=>{
+  const h=harness();try{
+    const trace={events:[{type:'enter',entryIds:[3]},{type:'expand',id:3,level:0,considered:[{id:7,accepted:true,distance:.2}]},{type:'complete'}]};
+    h.map.setSearch(trace,[{row:3},{row:7},{row:12}]);h.map.zoom(1.5);h.map.offset=[40,-25];h.map.select(7);h.map.cursor=1;
+    const camera={...h.map.camera},scale=h.map.scale,offset=[...h.map.offset],elapsed=h.map.elapsed;
+    h.map.setSearch(trace,[{row:12,displayRank:13},{row:27,displayRank:14}],{preserveView:true});
+    assert.deepEqual(h.map.camera,camera);assert.equal(h.map.scale,scale);assert.deepEqual(h.map.offset,offset);
+    assert.equal(h.map.cursor,1);assert.equal(h.map.elapsed,elapsed);assert.equal(h.map.selected,7);assert.deepEqual(h.map.events,trace.events);
+    assert.deepEqual(h.map.results,[12,27]);assert.equal(h.map.resultRanks.get(12),13);assert.equal(h.map.resultRanks.get(27),14);assert.equal(h.map.resultRanks.has(3),false);
+    // A view that follows the results (camera recomputed every frame) is frozen first, so the page change does not re-frame it.
+    h.map.fit('results');assert.equal(h.map.camera,null);const framed=h.map.geometry();
+    h.map.setSearch(trace,[{row:55}],{preserveView:true});assert.deepEqual(h.map.camera,framed);assert.deepEqual(h.map.results,[55]);
+    // A full setSearch still resets the view.
+    h.map.setSearch(trace,[{row:3}]);assert.equal(h.map.scale,1);assert.deepEqual(h.map.offset,[0,0]);assert.equal(h.map.selected,3);
+  }finally{h.restore();}
+});
+
+test('Selected framing re-centres on a changed selection and keeps the pan for the same one; name matches are unnumbered',()=>{
+  const h=harness();try{
+    h.map.setSearch(null,[{row:3},{row:7}]);h.map.select(3);h.map.fit('selected');
+    h.handlers.keydown({key:'ArrowRight',preventDefault(){}});assert.deepEqual(h.map.offset,[-35,0]);
+    h.map.select(3);assert.deepEqual(h.map.offset,[-35,0]);
+    h.map.select(7);assert.deepEqual(h.map.offset,[0,0]);assert.equal(h.map.geometry().cx,layout.positions[7][0]);
+    h.map.fit('results');h.map.offset=[5,5];h.map.select(3);assert.deepEqual(h.map.offset,[5,5]);
+    const texts=[];h.map.ctx.fillText=text=>texts.push(String(text));
+    h.map.setSearch(null,[{row:3,displayRank:null},{row:7,displayRank:null}]);
+    assert.equal(h.map.resultRanks.get(3),null);assert.equal(h.map.resultRanks.get(7),null);
+    assert.ok(!texts.includes('null')&&!texts.includes('1')&&!texts.includes('2'));
+    assert.ok(texts.some(t=>t===catalog.tracks[3].title.slice(0,35)||t.startsWith(catalog.tracks[3].title.slice(0,20))));
+    assert.ok(!texts.some(t=>/^\d+\. /.test(t)));
+    texts.length=0;h.map.setSearch(null,[{row:3},{row:7}]);assert.ok(texts.includes('1')&&texts.includes('2'));
+    // With no matches (catalog browse) the selected recording is still marked and labelled.
+    texts.length=0;h.map.setSearch(null,[]);h.map.select(12);assert.equal(h.map.results.length,0);
+    assert.ok(texts.some(t=>t.startsWith(catalog.tracks[12].title.slice(0,20))));
+  }finally{h.restore();}
 });
 
 test('manual map stages and keyboard Home stop motion and select deliberate camera bounds',()=>{

@@ -419,3 +419,20 @@ test('a retained refinement that hides new results is stated on the status line,
   if(after<16)assert.match(h.el('#status').textContent,new RegExp(`Refinements hide ${16-after} of 16`));else assert.doesNotMatch(h.el('#status').textContent,/Refinements hide/);
   assert.ok(shown>=1);
 });
+
+test('the map draws sound matches numbered, name matches unnumbered and browse pages not at all; refinements keep its view',async()=>{
+  const h=await harness();const count=h.map.searches.length;
+  assert.equal(h.el('#fit').disabled,false);assert.deepEqual(h.map.searches.at(-1).rows.map(r=>r.displayRank),[1,2,3,4,5,6,7,8,9,10,11,12]);
+  assert.notEqual(h.map.searches.at(-1).options.preserveView,true);
+  for(const text of ['p','pi','pia']){h.el('#refine-text').value=text;h.el('#refine-text').handlers.input();}
+  assert.equal(h.map.searches.length,count+3);assert.ok(h.map.searches.slice(-3).every(s=>s.options.preserveView===true&&s.options.animate===false));
+  h.el('#refine-text').value='';h.el('#refine-text').handlers.input();h.el('#next-page').onclick();
+  assert.equal(h.map.searches.at(-1).options.preserveView,true);assert.deepEqual(h.map.searches.at(-1).rows.map(r=>r.displayRank),[13,14,15,16]);
+  h.el('#browse-collection').onclick();
+  assert.equal(h.map.searches.at(-1).rows.length,0);assert.equal(h.map.searches.at(-1).options.preserveView,false);assert.equal(h.el('#fit').disabled,true);
+  assert.equal(vm.runInContext('rows.length',h.context),12);
+  h.el('#query-kind').value='lookup';h.el('#query-kind').handlers.change();await h.submit(catalog.tracks[0].artist);
+  assert.ok(h.map.searches.at(-1).rows.length>0);assert.ok(h.map.searches.at(-1).rows.every(r=>r.displayRank===null));assert.equal(h.el('#fit').disabled,false);
+  h.el('#query-kind').value='description';h.el('#query-kind').handlers.change();await h.clickExample('dev-02');
+  assert.deepEqual(h.map.searches.at(-1).rows.map(r=>r.displayRank).slice(0,3),[1,2,3]);assert.equal(h.map.searches.at(-1).options.animate,true);
+});

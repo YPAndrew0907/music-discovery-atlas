@@ -19,8 +19,9 @@ function boundsFor(positions,ids=null){
 }
 // A display budget, never a change to the graph or catalog. Every retained
 // point is an actual row and every retained edge is an existing index link.
+export const LINKS_PER_VISIBLE_POINT=0.6,MAX_VISIBLE_LINKS=160;
 export function visibleGraphContext(points,connections,{width,height,detail=1,important=[]}={}){
-  const nodeBudget=detail<1.6?320:600,edgeBudget=detail<1.6?0:160,cell=detail<1.6?14:9;
+  const nodeBudget=detail<1.6?320:600,cell=detail<1.6?14:9;
   const ids=[],seen=new Set(),cells=new Set(),priority=new Set(important.filter(Number.isInteger));
   const add=id=>{
     if(seen.has(id)||ids.length>=nodeBudget||!points[id])return;
@@ -31,6 +32,10 @@ export function visibleGraphContext(points,connections,{width,height,detail=1,im
   };
   for(const id of priority)add(id);
   for(let id=0;id<points.length&&ids.length<nodeBudget;id++)add(id);
+  // Links are budgeted against the points actually shown, so a tight Matches view is not
+  // covered by the full 160-link allowance; links touching results, the selection, the
+  // hover or the frontier are kept first.
+  const edgeBudget=detail<1.6?0:Math.min(MAX_VISIBLE_LINKS,Math.round(ids.length*LINKS_PER_VISIBLE_POINT));
   const preferred=[],other=[];
   if(edgeBudget)for(const edge of connections){
     if(!seen.has(edge.from)||!seen.has(edge.to))continue;
@@ -68,11 +73,12 @@ export class AudioMap {
     }
     return this.visited;
   }
-  setSearch(trace,rows,{animate=false}={}){
+  setSearch(trace,rows,{animate=false,preserveView=false}={}){
+    if(preserveView){this.updateResults(rows);return;}
     const viewport=this.canvas.getBoundingClientRect();this.width=viewport.width;this.height=viewport.height;
     const base=this.width&&this.results.length?this.camera??this.geometry():null;
     const previous=base?{...base,size:base.size*this.scale,screenX:base.screenX+this.offset[0],screenY:base.screenY+this.offset[1]}:null;
-    this.pause();this.events=trace?.events??[];this.visited.clear();this.visitedCursor=0;this.results=rows.map(r=>r.row);this.resultRanks=new Map(rows.map((r,i)=>[r.row,r.displayRank??i+1]));this.resultBounds=this.results.length?boundsFor(this.positions,this.results):null;
+    this.pause();this.events=trace?.events??[];this.visited.clear();this.visitedCursor=0;this.setRows(rows);
     this.beats=searchBeats(this.events);this.duration=this.beats.reduce((sum,b)=>sum+b.duration,0)||1;
     this.cursor=this.events.length;this.elapsed=this.duration;this.reveal=1;
     this.selected=rows[0]?.row??null;this.inspected=null;
@@ -80,6 +86,16 @@ export class AudioMap {
     if(animate&&this.events.length&&!this.motion.matches){
       this.prepareCamera(previous);this.elapsed=0;this.cursor=0;this.reveal=0;this.replay();
     }else{this.draw();this.notify();}
+  }
+  // An explicit null display rank marks rows that are matches but not a ranking (name lookup).
+  setRows(rows){this.results=rows.map(r=>r.row);this.resultRanks=new Map(rows.map((r,i)=>[r.row,r.displayRank===null?null:r.displayRank??i+1]));this.resultBounds=this.results.length?boundsFor(this.positions,this.results):null;}
+  // Refinement, paging and display-policy changes replace the highlighted rows but keep the
+  // viewer's camera, zoom, pan, selection and trace position exactly as they were.
+  updateResults(rows){
+    const viewport=this.canvas.getBoundingClientRect();this.width=viewport.width;this.height=viewport.height;
+    if(this.width&&this.height&&!this.camera&&!this.cameraTransition)this.camera=this.geometry();
+    this.setRows(rows);
+    if(!this.playing)this.draw();
   }
   searchView(){return this.geometry('results');}
   prepareCamera(previous=null){
@@ -95,7 +111,7 @@ export class AudioMap {
     this.camera=interpolateView(from,to,ease);
     if(this.elapsed>=this.duration){this.camera=plan.to;this.cameraTransition=null;}
   }
-  select(id,{explicit=false}={}){this.selected=id;if(explicit)this.inspected=id;this.draw();}
+  select(id,{explicit=false}={}){if(this.focus==='selected'&&this.selected!==id)this.offset=[0,0];this.selected=id;if(explicit)this.inspected=id;this.draw();}
   notify(){const beat=motionAt(this.beats,this.elapsed);this.onTrace({playing:this.playing,cursor:this.cursor,total:this.events.length,event:this.events[Math.max(0,this.cursor-1)]??null,reducedMotion:this.motion.matches,completed:this.elapsed>=this.duration,progress:this.elapsed/this.duration,phase:beat?.kind,beat:beat?.index,beatCount:this.beats.length});}
   replay(){
     if(this.motion.matches){this.finish();return;}
@@ -185,7 +201,11 @@ export class AudioMap {
       if(reveal>0){
         ctx.globalAlpha=reveal;ctx.fillStyle=colors.result;ctx.beginPath();ctx.arc(x,y,(selected?8:6)*(.7+.3*reveal),0,Math.PI*2);ctx.fill();
         if(selected){ctx.strokeStyle=colors.result;ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,12,0,Math.PI*2);ctx.stroke();}
-        ctx.font='11px Arial';ctx.fillStyle=colors.paper;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(this.resultRanks.get(id)),x,y+.5);
+        const number=this.resultRanks.get(id);
+        if(number!==null&&number!==undefined){ctx.font='11px Arial';ctx.fillStyle=colors.paper;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(number),x,y+.5);}
+      }else if(id===this.selected){
+        ctx.globalAlpha=1;ctx.fillStyle=colors.result;ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=colors.result;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.stroke();
       }
       if(id===this.hover){ctx.globalAlpha=1;ctx.strokeStyle=colors.result;ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,10,0,Math.PI*2);ctx.stroke();}
     }
@@ -195,7 +215,8 @@ export class AudioMap {
     for(const id of [...new Set(labels)]){
       if(id===null||id===undefined||!context.ids.includes(id))continue;
       const p=this.point(id),rank=this.results.indexOf(id),isActive=id===activeId;
-      const prefix=isActive?(beat.kind==='entry'?'Start · ':beat.kind==='descent'?'Look closer · ':''):(rank>=0?String(this.resultRanks.get(id))+'. ':'');
+      const number=rank>=0?this.resultRanks.get(id):null;
+      const prefix=isActive?(beat.kind==='entry'?'Start · ':beat.kind==='descent'?'Look closer · ':''):(number!==null&&number!==undefined?String(number)+'. ':'');
       let title=prefix+this.tracks[id].title;if(title.length>35)title=title.slice(0,33)+'…';
       ctx.font=(isActive||id===this.selected?'600 ':'')+'12px Arial';const textWidth=ctx.measureText(title).width;
       const placed=placeLabel(p,textWidth,boxes,[...new Set([this.selected,activeId,...this.results])].filter(i=>Number.isInteger(i)).map(i=>this.point(i)),this.width,this.height),{x,y}=placed;boxes.push(placed.rect);

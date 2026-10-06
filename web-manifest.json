@@ -204,8 +204,8 @@
     },
     {
       "path": "search-studio/src/graph.mjs",
-      "bytes": 26113,
-      "sha256": "6bc5c3b8a96f2754498087540d15776ba42e4e95647c8a74cd6ec81bd64a712d"
+      "bytes": 26433,
+      "sha256": "7eab1920496bac7d5424706308a1fc57ddcbf4ee576c1cf74b2d36cd2ebd5b1b"
     },
     {
       "path": "search-studio/src/hnsw.mjs",

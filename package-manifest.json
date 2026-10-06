@@ -18169,7 +18169,7 @@
     {
       "path": "web-manifest.json",
       "bytes": 8585,
-      "sha256": "2ffa172c4a7b4a7bb0dc263af17328039c5a3814b664318ef1dc8de307ea2de8"
+      "sha256": "8822ca56bc87fa576420ab3a88304527e23eacdb15030895b1858a0485464ca0"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18373,8 +18373,8 @@
     },
     {
       "path": "web/search-studio/src/graph.mjs",
-      "bytes": 26113,
-      "sha256": "6bc5c3b8a96f2754498087540d15776ba42e4e95647c8a74cd6ec81bd64a712d"
+      "bytes": 26433,
+      "sha256": "7eab1920496bac7d5424706308a1fc57ddcbf4ee576c1cf74b2d36cd2ebd5b1b"
     },
     {
       "path": "web/search-studio/src/hnsw.mjs",

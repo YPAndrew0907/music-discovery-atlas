@@ -8,7 +8,7 @@ const data=new URL('../web/search-studio/data/',import.meta.url);
 const read=async name=>JSON.parse(await readFile(new URL(name,data)));
 const catalog=await read('catalog.json'),layout=await read('layout.json'),index=await read('index.json');
 
-function harness({positions=layout.positions,tracks=catalog.tracks,connections=indexConnections(index.links),createLayer,insets,onDensity}={}){
+function harness({positions=layout.positions,tracks=catalog.tracks,connections=indexConnections(index.links),createLayer,insets,onDensity,idle=null}={}){
   let rect={width:740,height:505,left:0,top:0},dimensions={width:0,height:0},writes={width:0,height:0},rafId=0;
   const frames=new Map(),handlers={},notifications=[];
   const ctx=new Proxy({measureText:text=>({width:text.length*6})},{get:(o,k)=>o[k]??(()=>{}),set:(o,k,v)=>{o[k]=v;return true;}});
@@ -17,7 +17,8 @@ function harness({positions=layout.positions,tracks=catalog.tracks,connections=i
   const previous=new Map();
   const globals={devicePixelRatio:1,matchMedia:()=>({matches:false,addEventListener(){}}),document:{hidden:false,addEventListener(){}},
     ResizeObserver:class{constructor(fn){this.callback=fn;}observe(){}disconnect(){}},
-    requestAnimationFrame:fn=>{frames.set(++rafId,fn);return rafId;},cancelAnimationFrame:id=>frames.delete(id)};
+    requestAnimationFrame:fn=>{frames.set(++rafId,fn);return rafId;},cancelAnimationFrame:id=>frames.delete(id),
+    ...(idle?{requestIdleCallback:fn=>{idle.set(++rafId,fn);return rafId;},cancelIdleCallback:id=>idle.delete(id)}:{})};
   for(const [key,value] of Object.entries(globals)){previous.set(key,Object.getOwnPropertyDescriptor(globalThis,key));Object.defineProperty(globalThis,key,{configurable:true,writable:true,value});}
   const map=new AudioMap(canvas,{positions,tracks,connections,colors:{},onSelect(){},onHover(){},onTrace:state=>notifications.push(state),...(createLayer?{createLayer}:{}),...(insets?{insets}:{}),...(onDensity?{onDensity}:{})});
   return{map,canvas,frames,writes,handlers,notifications,resize(next){rect={...rect,...next};map.resize.callback();},restore(){map.destroy();for(const[key,descriptor]of previous){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}}};
@@ -221,5 +222,19 @@ test('during replay only the trace edges are drawn: the density callback reports
     assert.equal(atRest.replaying,false);assert.ok(atRest.edges>0,'zoomed in at rest: stored connections are drawn');
     h.map.replay();const during=states.at(-1);assert.equal(during.replaying,true);assert.equal(during.edges,0);
     h.map.finish();assert.equal(states.at(-1).replaying,false);assert.equal(states.at(-1).edges,h.map._context.edges.length);
+  }finally{h.restore();}
+});
+
+test('idle time pre-builds every density bucket once per layout size, then schedules nothing more',()=>{
+  const recorder=recordingLayers(),idle=new Map(),h=harness({createLayer:recorder.createLayer,idle});
+  const drain=()=>{let n=0;while(idle.size){const [id,fn]=idle.entries().next().value;idle.delete(id);fn();n++;}return n;};
+  try{
+    h.map.setSearch(null,[{row:3},{row:7}]);assert.ok(idle.size<=1);
+    assert.ok(drain()>=1);const built=recorder.layers.length;assert.ok(built>=2&&built<=4,'every distinct bucket raster exists after one idle pass');
+    for(let n=0;n<4;n++){h.map.draw();h.map.zoom(1.5);}h.map.fit('all');h.map.draw();
+    assert.equal(idle.size,0,'no further idle work once warm');assert.equal(recorder.layers.length,built,'animation and zoom reuse the cached rasters');
+    // A new layout size drops the rasters and warms again.
+    h.resize({width:400,height:300});assert.ok(idle.size<=1);drain();assert.ok(recorder.layers.length>built);
+    h.map.destroy();assert.equal(idle.size,0,'destroy cancels pending idle work');
   }finally{h.restore();}
 });

@@ -32,7 +32,10 @@ def tree_copy(destination):
         if relative in WRITTEN or relative.startswith('web/search-studio/'):
             shutil.copyfile(source, target)
         else:
-            os.link(source, target)
+            try:
+                os.link(source, target)
+            except OSError:  # another volume: copy instead
+                shutil.copyfile(source, target)
     return destination
 
 
@@ -60,7 +63,8 @@ class ActivationTests(unittest.TestCase):
         for line in ['!/corpus-releases/fma2000-v2/', '!/corpus-releases/fma2000-v2/catalog.sqlite']:
             self.assertIn(line, (root / '.gitignore').read_text().splitlines())
             self.assertIn(line, (root / '.dockerignore').read_text().splitlines())
-        self.assertIn('web/search-studio/data/catalog.json (removed)', result['changed'])
+        if (ROOT / 'web/search-studio/data/catalog.json').exists():  # this tree serves the v1 page
+            self.assertIn('web/search-studio/data/catalog.json (removed)', result['changed'])
         checked = activation.check(root)
         self.assertEqual((checked['ok'], checked['release']['count']), (True, 2000))
         package = json.loads((root / 'package-manifest.json').read_bytes())
@@ -74,10 +78,11 @@ class ActivationTests(unittest.TestCase):
     def test_object_store_activation_commits_no_release_files(self):
         root = self.root()
         source = {'kind': 'object-store', 'origin': 'https://objects.example', 'pathPrefix': '/music-atlas/v2/'}
+        ignored = {name: (root / name).read_bytes() for name in ('.gitignore', '.dockerignore')}
         activation.activate(root, self.dir, self.sha, name='fma2000-v2', source=source)
         self.assertFalse((root / 'corpus-releases/fma2000-v2').exists())
         self.assertEqual(json.loads((root / 'active-corpus.json').read_bytes())['source'], source)
-        self.assertNotIn('!/corpus-releases/fma2000-v2/', (root / '.gitignore').read_text().splitlines())
+        self.assertEqual({name: (root / name).read_bytes() for name in ignored}, ignored)  # nothing to allowlist
         self.assertTrue(activation.check(root, self.dir)['ok'])
         with self.assertRaisesRegex(ReleaseError, 'local copy'):
             activation.check(root)
@@ -92,8 +97,12 @@ class ActivationTests(unittest.TestCase):
         for name, sha, message in [('../escape', self.sha, 'Invalid release name'), ('ok', '0' * 64, 'Unreviewed')]:
             with self.subTest(name=name), self.assertRaisesRegex(ReleaseError, message):
                 activation.activate(self.root(), self.dir, sha, name=name, source={'kind': 'bundled'})
+        root = self.root()
+        disabled = b'{\n  "schemaVersion": 1,\n  "enabled": false\n}\n'
+        (root / 'active-corpus.json').write_bytes(disabled)
+        activation.repin_package(root, set())
         with self.assertRaisesRegex(ReleaseError, 'does not select a v2 release'):
-            activation.check(self.root())
+            activation.check(root)
 
 
 if __name__ == '__main__':

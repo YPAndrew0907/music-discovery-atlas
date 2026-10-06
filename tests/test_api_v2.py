@@ -240,9 +240,19 @@ console.log(JSON.stringify(out));"""
         manifest.write_text(json.dumps(web_manifest_for(broken)))
         with self.assertRaisesRegex(ValueError, 'must not ship the whole catalog.json'):
             WebGateway(object(), web_root=broken, web_manifest=manifest, catalog_path=None, release_v2=self.release)
+        other = Path(self.temp.name) / 'other-release'
+        shutil.copytree(self.web, other)
+        page = json.loads((other / 'search-studio/data/manifest.json').read_bytes())
+        page['releaseSha256'] = '0' * 64  # built for a different release
+        (other / 'search-studio/data/manifest.json').write_text(json.dumps(page))
+        manifest = other.parent / 'other-manifest.json'
+        manifest.write_text(json.dumps(web_manifest_for(other)))
         with self.assertRaisesRegex(ValueError, 'does not match the active v2 release'):
-            WebGateway(object(), web_root=ROOT / 'web', web_manifest=ROOT / 'web-manifest.json', catalog_path=None,
-                       release_v2=self.release)
+            WebGateway(object(), web_root=other, web_manifest=manifest, catalog_path=None, release_v2=self.release)
+        if json.loads((ROOT / 'web/search-studio/data/manifest.json').read_bytes()).get('format') != 2:
+            with self.assertRaisesRegex(ValueError, 'does not match the active v2 release'):  # a v1 page package
+                WebGateway(object(), web_root=ROOT / 'web', web_manifest=ROOT / 'web-manifest.json', catalog_path=None,
+                           release_v2=self.release)
 
     def test_v1_gateway_keeps_its_routes_and_headers(self):
         # The v1 release catalog is byte-identical to the v1 page's, and stays in the tree after v2 activation.

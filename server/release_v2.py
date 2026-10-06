@@ -28,7 +28,7 @@ import struct
 import threading
 from types import MappingProxyType
 import unicodedata
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import numpy as np
 
@@ -48,6 +48,10 @@ ASSET_PATHS = MappingProxyType({
 CORE_ASSETS = ('catalog', 'vectors', 'graph', 'layout', 'graphManifest')
 LAZY_ASSETS = ('evidence', 'examples')  # pinned by size here; content verified when read
 SELECTION_KEYS = {'schemaVersion', 'enabled', 'format', 'directory', 'manifestSha256'}
+SELECTION_OPTIONAL = {'limits', 'source'}
+SOURCE_KINDS = ('bundled', 'object-store')
+# Object keys sit under at most four plain path segments: <origin>/<a>/<b>/<sha256>.
+SOURCE_PREFIX = re.compile(r'/(?:[A-Za-z0-9_-]{1,64}/){0,4}\Z')
 DIMENSIONS = 512
 # Small, scan-friendly display/search columns in `tracks`; the exact source objects live in
 # `records` so a lookup or browse never pages through multi-kilobyte JSON rows.
@@ -101,6 +105,39 @@ class LimitsV2:
 
     def as_config(self):
         return {key: getattr(self, name) for key, name in self.CONFIG_KEYS.items()}
+
+
+def exact_https_origin(value):
+    """An exact https://host[:port] origin: no path, query, fragment, credentials or wildcard."""
+    parsed = urlsplit(value) if isinstance(value, str) else None
+    require(parsed is not None and parsed.scheme == 'https' and parsed.hostname and not parsed.username
+            and not parsed.password and not parsed.path and not parsed.query and not parsed.fragment
+            and value == f'https://{parsed.netloc}' and '*' not in value, 'Audio origin must be an exact HTTPS origin')
+    parsed.port  # rejects malformed ports
+    return value
+
+
+def install_source(value):
+    """The selection's optional "source": where the image build materialises the release from.
+
+    Absent or {"kind": "bundled"}: the release directory ships in the image (COPY corpus-releases/).
+    {"kind": "object-store", "origin": "https://host", "pathPrefix": "/a/b/"}: every file is fetched
+    from that one origin under its content-addressed key <origin><pathPrefix><sha256>, and
+    release.json is the object whose key is the selection's manifestSha256. The running server never
+    reads this block; scripts/install_release_v2.py does."""
+    if value is None:
+        return MappingProxyType({'kind': 'bundled'})
+    require(isinstance(value, dict) and value.get('kind') in SOURCE_KINDS, 'Invalid v2 release source')
+    if value['kind'] == 'bundled':
+        require(set(value) == {'kind'}, 'Invalid v2 release source')
+    else:
+        require(set(value) == {'kind', 'origin', 'pathPrefix'} and isinstance(value['pathPrefix'], str)
+                and SOURCE_PREFIX.fullmatch(value['pathPrefix']) is not None, 'Invalid v2 release source')
+        try:
+            exact_https_origin(value['origin'])
+        except (ReleaseError, ValueError) as error:
+            raise ReleaseError('Invalid v2 release source origin') from error
+    return MappingProxyType(dict(value))
 
 
 def fold(value):
@@ -505,9 +542,22 @@ class SelectionV2:
     config: object
 
 
-def selected_release_v2(root, package):
-    """Return the verified v2 selection, or None when active-corpus.json is absent, disabled
-    or a v1 (schemaVersion 1) selection. The file must be pinned by the reviewed package."""
+@dataclass(frozen=True)
+class SelectionConfigV2:
+    """A parsed, package-pinned v2 selection. Nothing here has looked at the release directory."""
+    root: Path
+    relative: str
+    directory: Path
+    manifest_sha256: str
+    limits: LimitsV2
+    source: object
+    config: object
+
+
+def selection_config_v2(root, package):
+    """Parse active-corpus.json as a v2 selection without opening the release. Returns None when the
+    file is absent, disabled or a v1 (schemaVersion 1) selection. The file must be pinned by the
+    reviewed package. The installer uses this before the release directory exists."""
     root = Path(root)
     config_path = root / 'active-corpus.json'
     if not config_path.exists() and not config_path.is_symlink():
@@ -520,23 +570,33 @@ def selected_release_v2(root, package):
     if config.get('schemaVersion') != 2 or type(config.get('schemaVersion')) is not int:
         return None
     # A v2 selection is always an activation; disabling uses the v1 form {"schemaVersion": 1, "enabled": false}.
-    require(config.get('enabled') is True and SELECTION_KEYS <= set(config) <= SELECTION_KEYS | {'limits'} and config['format'] == FORMAT
-            and valid_sha(config['manifestSha256']), 'Incomplete v2 corpus selection')
+    require(config.get('enabled') is True and SELECTION_KEYS <= set(config) <= SELECTION_KEYS | SELECTION_OPTIONAL
+            and config['format'] == FORMAT and valid_sha(config['manifestSha256']), 'Incomplete v2 corpus selection')
     relative = config['directory']
     require(isinstance(relative, str) and re.fullmatch(r'corpus-releases/[A-Za-z0-9][A-Za-z0-9_-]{0,63}', relative),
             'Invalid corpus release directory')
-    directory = root
-    for part in relative.split('/'):
+    source = install_source(config.get('source'))
+    return SelectionConfigV2(root, relative, root.joinpath(*relative.split('/')), config['manifestSha256'],
+                             LimitsV2.from_config(config.get('limits')), source, MappingProxyType(config))
+
+
+def selected_release_v2(root, package):
+    """Return the verified v2 selection, or None when active-corpus.json is absent, disabled
+    or a v1 (schemaVersion 1) selection. The file must be pinned by the reviewed package."""
+    parsed = selection_config_v2(root, package)
+    if parsed is None:
+        return None
+    directory = parsed.root
+    for part in parsed.relative.split('/'):
         directory = directory / part
         require(not directory.is_symlink() and directory.is_dir(), 'Corpus directory cannot contain symlinks')
-    limits = LimitsV2.from_config(config.get('limits'))
-    key = (str(directory.resolve()), config['manifestSha256'], limits)
+    key = (str(directory.resolve()), parsed.manifest_sha256, parsed.limits)
     with _cache_lock:
         release = _loaded.get(key)
         if release is None:
-            release = load_release_v2(directory, expected_manifest_sha256=config['manifestSha256'], limits=limits)
+            release = load_release_v2(directory, expected_manifest_sha256=parsed.manifest_sha256, limits=parsed.limits)
             _loaded[key] = release
-    return SelectionV2(directory, release, MappingProxyType(config))
+    return SelectionV2(directory, release, parsed.config)
 
 
 def page_query(release, *, offset=0, limit=12, query='', text='', genre='', rows_filter=None, facets=False):

@@ -3892,3 +3892,5 @@ __pycache__/
 !/tests/browser_collection_v2.mjs
 !/web/search-studio/src/collection-api.mjs
 !/tests/v2_web_fixture.mjs
+!/scripts/install_release_v2.py
+!/tests/test_install_release_v2.py

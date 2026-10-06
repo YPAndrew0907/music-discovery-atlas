@@ -18122,6 +18122,11 @@
       "sha256": "d3fde5132a6cee880236edad379a8c8d81e82d1e33bde435118da9c5d6d9ac31"
     },
     {
+      "path": "scripts/install_release_v2.py",
+      "bytes": 20514,
+      "sha256": "fd7a28bf53f719aabc764114ae593338e36cf2c883030f28372afe5fa7a7ddc4"
+    },
+    {
       "path": "server/active_corpus.py",
       "bytes": 3517,
       "sha256": "616a8b802f72d41353beccc82b7a89063a18e0b7b04b54566acfe6d87c9dcd74"
@@ -18168,8 +18173,8 @@
     },
     {
       "path": "server/release_v2.py",
-      "bytes": 41391,
-      "sha256": "c34c756a41d428d01f40a4f093890fa5831f19931def5ce25c63301d03182d04"
+      "bytes": 44466,
+      "sha256": "65c5a67e11c0bdf94058f936eaf6bfb7fdfba7989318bd885c518bca456541d5"
     },
     {
       "path": "server/search_v2.py",
@@ -18178,8 +18183,8 @@
     },
     {
       "path": "server/collection_v2.py",
-      "bytes": 17876,
-      "sha256": "b4bee0cf9c8f72fab21e1ca3307edb226e36f2cc82eddf460c66affc673c84c1"
+      "bytes": 17403,
+      "sha256": "b541d475690ed9fca24fad08be871deeb89555c804b45db59f01ef435b9aae31"
     },
     {
       "path": "web-manifest.json",

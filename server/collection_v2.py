@@ -24,10 +24,10 @@ from pathlib import Path
 import re
 import threading
 import time
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl
 
 from corpus_release import ReleaseError, require, strict_json, valid_sha
-from release_v2 import page_query
+from release_v2 import exact_https_origin, page_query
 
 LOCAL_ROUTE = re.compile(r'/audio/([0-9]{6})\.mp3\Z')
 REMOTE_PATH = re.compile(r'(/(?:[A-Za-z0-9_-]{1,64}/){0,4})([a-f0-9]{64})\.mp3\Z')
@@ -38,15 +38,6 @@ DELIVERY_KIND = 'music-audio-delivery-v2'
 def local_route(track_id):
     match = FMA_ID.fullmatch(track_id)
     return '/audio/%06d.mp3' % int(match.group(1)) if match else None
-
-
-def exact_https_origin(value):
-    parsed = urlsplit(value) if isinstance(value, str) else None
-    require(parsed is not None and parsed.scheme == 'https' and parsed.hostname and not parsed.username
-            and not parsed.password and not parsed.path and not parsed.query and not parsed.fragment
-            and value == f'https://{parsed.netloc}' and '*' not in value, 'Audio origin must be an exact HTTPS origin')
-    parsed.port  # rejects malformed ports
-    return value
 
 
 class AudioDeliveryV2:

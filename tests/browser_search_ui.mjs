@@ -41,6 +41,9 @@ try{
       await page.locator('#next-page').click();assert.equal(await page.locator('#results > li').count(),4);
       assert.match(await page.locator('#results .rank').first().textContent(),/13/);
       await page.locator('#browse-collection').click();assert.match(await page.locator('#result-scope').textContent(),/2,000 recordings in the collection/);
+      // The refinement panel starts collapsed on phones (like the map) and open on desktop.
+      assert.equal(await page.locator('.refinement').getAttribute('open'),name==='desktop'?'':null);
+      await page.locator('.refinement').evaluate(el=>{el.open=true;});
       await page.locator('#refine-text').fill('no such name 000000');await page.locator('#results-empty').waitFor({state:'visible'});
       await page.locator('#empty-browse').click();assert.equal(await page.locator('#results > li').count(),12);
       assert.equal(await page.evaluate(()=>document.activeElement.id),'results-heading');

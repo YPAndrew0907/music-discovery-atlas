@@ -241,7 +241,9 @@ test('title lookup remains local and cancels an outstanding server query on the 
 test('replay, skip, neighbors and reduced-motion callback retain the existing graph behavior without server queries',async()=>{
   const h=await harness();h.el('#trace-play').onclick();assert.equal(h.map.replays,1);
   h.map.options.onTrace({total:1,completed:true,progress:1,reducedMotion:true});
-  assert.equal(h.el('#trace-note').textContent,'Motion reduced');assert.equal(h.el('#trace-skip').hidden,true);
+  // Under reduced motion replay() finishes immediately, so "Watch again" is not offered as a live control.
+  assert.equal(h.el('#trace-note').textContent,'Animation off (reduced motion)');assert.equal(h.el('#trace-skip').hidden,true);assert.equal(h.el('#trace-play').disabled,true);
+  h.map.options.onTrace({total:1,completed:true,progress:1,reducedMotion:false});assert.equal(h.el('#trace-play').disabled,false);assert.equal(h.el('#trace-note').textContent,'Ready');
   h.el('#trace-skip').onclick();vm.runInContext('nearby(0)',h.context);
   assert.equal(h.searches.length,0);assert.equal(h.el('#engine-label').textContent,'Audio neighbors');
   assert.ok(h.map.searches.at(-1).rows.every(r=>r.row!==0));assert.ok(h.map.searches.at(-1).trace.events.length);
@@ -451,4 +453,55 @@ test('an over-long server reply is rejected before any label or row changes, and
   // The same guard protects showResult itself: a packet the display policy rejects changes nothing.
   assert.throws(()=>vm.runInContext(`showResult({text:'bad',ranked:Array.from({length:21},(_,i)=>({row:i,score:.5})),trace:{events:[],finalResults:[]},label:'Live search · server Q8',timing:'x'})`,h.context),/Unsupported display policy/);
   assert.equal(h.el('#results-source').textContent,before.source);assert.equal(vm.runInContext('candidateRows.length',h.context),before.candidates);
+});
+
+test('pagination scales: First/Last, a page jump and compact top controls reach any of the 167 browse pages',async()=>{
+  const h=await harness();h.el('#browse-collection').onclick();
+  const pages=Math.ceil(catalog.tracks.length/12);
+  assert.equal(h.el('#page-position').textContent,`Page 1 of ${pages}`);assert.equal(h.el('#page-count').textContent,String(pages));assert.equal(h.el('#page-number').value,'1');assert.equal(h.el('#page-number').max,pages);
+  assert.equal(h.el('#first-page').disabled,true);assert.equal(h.el('#previous-page-top').disabled,true);assert.equal(h.el('#last-page').disabled,false);assert.equal(h.el('#next-page-top').disabled,false);assert.equal(h.el('#page-go').disabled,false);
+  let focused=0;h.el('#results-heading').focus=()=>{focused++;};
+  h.el('#page-number').value='50';h.el('#page-jump').handlers.submit({preventDefault(){}});
+  assert.equal(h.el('#page-position').textContent,`Page 50 of ${pages}`);assert.equal(vm.runInContext('rows[0].displayRank',h.context),589);assert.equal(focused,1);
+  h.el('#last-page').onclick();assert.equal(h.el('#page-position').textContent,`Page ${pages} of ${pages}`);assert.equal(vm.runInContext('rows.length',h.context),catalog.tracks.length-(pages-1)*12);
+  assert.equal(h.el('#last-page').disabled,true);assert.equal(h.el('#next-page-top').disabled,true);assert.equal(h.el('#next-page').disabled,true);
+  h.el('#previous-page-top').onclick();assert.equal(h.el('#page-position').textContent,`Page ${pages-1} of ${pages}`);
+  h.el('#first-page').onclick();assert.equal(h.el('#page-position').textContent,`Page 1 of ${pages}`);assert.equal(vm.runInContext('rows[0].displayRank',h.context),1);
+  h.el('#next-page-top').onclick();assert.equal(h.el('#page-position').textContent,`Page 2 of ${pages}`);
+  for(const [input,expected] of [['999',pages],['0',1],['abc',1],['2.6',3]]){h.el('#page-number').value=input;h.el('#page-jump').handlers.submit({preventDefault(){}});assert.equal(h.el('#page-position').textContent,`Page ${expected} of ${pages}`);}
+  assert.equal(h.searches.length,0);
+  await h.clickExample('dev-01');assert.equal(h.el('#page-count').textContent,'2');assert.equal(h.el('#page-go').disabled,false);
+  h.el('#genre-filter').value=catalog.tracks[vm.runInContext('rows[0].row',h.context)].genre;h.el('#genre-filter').handlers.change();
+  if(vm.runInContext('viewPage.pages',h.context)<=1){assert.equal(h.el('#page-number').disabled,true);assert.equal(h.el('#page-go').disabled,true);}
+});
+
+test('the refinement summary counts active refinements, the panel opens by default off phones, and the preview filter appears only when it can act',async()=>{
+  const h=await harness();
+  assert.equal(h.el('.refinement').open,true,'no phone media query in this harness');assert.equal(h.el('#map-panel').open,true);
+  assert.equal(h.el('#refinement-active').textContent,'');assert.equal(h.el('#preview-only-label').hidden,true,'no previews: the filter cannot change anything');
+  h.el('#genre-filter').value=catalog.tracks[vm.runInContext('rows[0].row',h.context)].genre;h.el('#genre-filter').handlers.change();
+  assert.equal(h.el('#refinement-active').textContent,' · 1 active');
+  h.el('#refine-text').value='a';h.el('#refine-text').handlers.input();assert.equal(h.el('#refinement-active').textContent,' · 2 active');
+  h.el('#clear-refinements').onclick();assert.equal(h.el('#refinement-active').textContent,'');
+  h.api.enableAudio=true;await h.events.pageshow({persisted:true});
+  assert.equal(h.el('#preview-only-label').hidden,false,'1 of 2,000 verified previews: the filter is offered');
+  h.el('#preview-only').checked=true;h.el('#preview-only').handlers.change();assert.equal(h.el('#refinement-active').textContent,' · 1 active');
+  h.events.pagehide({persisted:true});h.api.enableAudio=false;await h.events.pageshow({persisted:true});
+  assert.equal(h.el('#preview-only-label').hidden,true);assert.equal(h.el('#preview-only').checked,false,'a filter that can no longer act is cleared');
+  assert.equal(h.el('#refinement-active').textContent,'');
+});
+
+test('the About dialog derives its collection facts from the loaded data and labels the selected recording separately',async()=>{
+  const h=await harness();
+  const artists=JSON.parse(await bytes('search-studio/data/artist-records.json'));
+  const artistCount=new Set(artists.rows.map(r=>r.artistId)).size,genreCount=sourceGenres(catalog.tracks.map((_,row)=>({row})),catalog.tracks).length;
+  assert.equal(h.el('#collection-summary').textContent,`${catalog.tracks.length.toLocaleString()} FMA excerpts · ${artistCount.toLocaleString()} source artist IDs · ${genreCount.toLocaleString()} source genres`);
+  assert.equal(artistCount,551);assert.equal(genreCount,14);
+  const row=vm.runInContext('rows[1].row',h.context);vm.runInContext(`choose(${row},{explicit:true})`,h.context);
+  const t=catalog.tracks[row];assert.equal(h.el('#selected-summary').textContent,`Selected: ${t.title} · ${t.artist} · ${t.genre||'no source genre'}`);assert.equal(h.el('#selected-summary').hidden,false);
+  assert.match(h.el('#collection-summary').textContent,/^2,000 FMA excerpts/);
+  const html=(await bytes('search-studio/index.html')).toString();
+  assert.match(html,/<span data-catalog-count>2,000<\/span> public FMA recording records/);assert.doesNotMatch(html,/id="selection-summary"/);
+  assert.match(html,/<details class="refinement"><summary>/);assert.match(html,/<p id="audio-availability" class="fine">[^<]*<\/p>\s*<p class="list-foot">/);
+  assert.match(html,/<div class="results-meta"><span id="engine-label">/);assert.doesNotMatch(html,/<div class="query-kind"><span id="engine-label">/);
 });

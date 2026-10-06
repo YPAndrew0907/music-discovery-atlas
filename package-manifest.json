@@ -18169,7 +18169,7 @@
     {
       "path": "web-manifest.json",
       "bytes": 8585,
-      "sha256": "0093512a20b6c6d1cd2c2a0af0a22afdfa6d3d4c5e52b16db04242d23933e23f"
+      "sha256": "d63f4aa0a33441618f7b1dfa289e2380c6801af9c855a8558898778d75ead2bf"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18353,13 +18353,13 @@
     },
     {
       "path": "web/search-studio/index.html",
-      "bytes": 11795,
-      "sha256": "8a731a99d4b22720533dd14d9ddd5b3d74adcb657954bbc888a3a322b155a5f9"
+      "bytes": 12603,
+      "sha256": "2d090477df43786af8669cf25eb206cdbb7ecec935743777a464379b14f66ea3"
     },
     {
       "path": "web/search-studio/src/app.mjs",
-      "bytes": 42413,
-      "sha256": "33f886d797e2711ecbb8df979d056855aa5f5dbe83073fe33be530fa48c285ce"
+      "bytes": 44275,
+      "sha256": "0ee9847d975e1028b8c7cd5c9d89eaea1d14997b5823f4cfe41e3c28b7944d78"
     },
     {
       "path": "web/search-studio/src/audio-delivery.mjs",
@@ -18413,8 +18413,8 @@
     },
     {
       "path": "web/search-studio/style.css",
-      "bytes": 14630,
-      "sha256": "8549082e0c3ad1c0f162357818e5a3acdcae504535eb1aed9d24ac708974ae83"
+      "bytes": 15457,
+      "sha256": "0ab3c7e30c96ddb0761c4de8e0e50ffa0fc93e55b0607131bba466f97d464ff2"
     }
   ]
 }

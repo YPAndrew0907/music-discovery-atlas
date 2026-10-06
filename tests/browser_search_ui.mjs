@@ -41,6 +41,10 @@ try{
       await page.locator('#next-page').click();assert.equal(await page.locator('#results > li').count(),4);
       assert.match(await page.locator('#results .rank').first().textContent(),/13/);
       await page.locator('#browse-collection').click();assert.match(await page.locator('#result-scope').textContent(),/2,000 recordings in the collection/);
+      // The page jump clamps out-of-range input in the page itself (no native validation bubble intercepts the submit).
+      await page.locator('#page-number').fill('999');await page.locator('#page-number').press('Enter');
+      assert.equal(await page.locator('#page-position').textContent(),'Page 167 of 167');assert.equal(await page.evaluate(()=>document.activeElement.id),'results-heading');
+      await page.locator('#page-number').fill('0');await page.locator('#page-number').press('Enter');assert.equal(await page.locator('#page-position').textContent(),'Page 1 of 167');
       // The refinement panel starts collapsed on phones (like the map) and open on desktop.
       assert.equal(await page.locator('.refinement').getAttribute('open'),name==='desktop'?'':null);
       await page.locator('.refinement').evaluate(el=>{el.open=true;});

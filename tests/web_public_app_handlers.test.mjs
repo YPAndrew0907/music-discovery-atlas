@@ -504,4 +504,6 @@ test('the About dialog derives its collection facts from the loaded data and lab
   assert.match(html,/<span data-catalog-count>2,000<\/span> public FMA recording records/);assert.doesNotMatch(html,/id="selection-summary"/);
   assert.match(html,/<details class="refinement"><summary>/);assert.match(html,/<p id="audio-availability" class="fine">[^<]*<\/p>\s*<p class="list-foot">/);
   assert.match(html,/<div class="results-meta"><span id="engine-label">/);assert.doesNotMatch(html,/<div class="query-kind"><span id="engine-label">/);
+  // Both forms opt out of native validation so the page's own clamp (page jump) and limit message (description) are what users see.
+  assert.match(html,/<form id="query-form" novalidate>/);assert.match(html,/<form id="page-jump" class="page-jump" novalidate>/);
 });

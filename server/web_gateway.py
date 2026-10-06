@@ -123,8 +123,9 @@ class AudioDelivery:
 class WebGateway:
     def __init__(self, api, *, web_root, web_manifest, catalog_path,
                  mode='authenticated', public_origin='', audio_manifest=None,
-                 enable_audio=False, audio_directory=None, catalog_bytes=None):
+                 enable_audio=False, audio_directory=None, catalog_bytes=None, release_v2=None):
         self.api, self.mode, self.public_origin = api, mode, public_origin
+        self.headers, self.collection = SECURITY_HEADERS, None
         self.web_root = Path(web_root)
         manifest = json.loads(Path(web_manifest).read_text())
         if manifest.get('schemaVersion') != 1 or manifest.get('kind') != 'music-public-web-assets':
@@ -144,10 +145,29 @@ class WebGateway:
             self.assets[relative] = path
         if total > total_limit or 'search-studio/index.html' not in self.assets:
             raise ValueError('Unexpected public web package')
-        self.audio = AudioDelivery(audio_manifest, catalog_path,
-                                   enabled=enable_audio, directory=audio_directory, catalog_bytes=catalog_bytes)
+        if release_v2 is not None:
+            self.configure_v2(release_v2, audio_manifest, enable_audio, audio_directory)
+        else:
+            self.audio = AudioDelivery(audio_manifest, catalog_path,
+                                       enabled=enable_audio, directory=audio_directory, catalog_bytes=catalog_bytes)
         if hasattr(getattr(self.api, 'app', None), 'audio_enabled'):
             self.api.app.audio_enabled = self.audio.manifest['enabled']
+
+    def configure_v2(self, release, audio_manifest, enable_audio, audio_directory):
+        """Release format v2: paged collection reads and lazily verified (or remote) previews."""
+        from collection_v2 import AudioDeliveryV2, CollectionRoutes, check_web_release
+        from corpus_release import ReleaseError
+        from search_v2 import GraphV2
+        try:
+            check_web_release(self.web_root, self.assets, release)
+            self.audio = AudioDeliveryV2(audio_manifest, release, enabled=enable_audio, directory=audio_directory)
+        except ReleaseError as error:
+            raise ValueError(str(error)) from None
+        if self.audio.origin:
+            # Hardening only: previews may load from the one pinned object-store origin.
+            self.headers = {**SECURITY_HEADERS, 'Content-Security-Policy':
+                            SECURITY_HEADERS['Content-Security-Policy'] + f"; media-src 'self' {self.audio.origin}"}
+        self.collection = CollectionRoutes(release, GraphV2(release), audio=self.audio, headers=self.headers)
 
     def deployment_config(self, scope):
         hosts = [v.decode('latin-1').lower() for k, v in scope.get('headers', []) if k.lower() == b'host']
@@ -170,28 +190,36 @@ class WebGateway:
             return
         if method not in ('GET', 'HEAD'):
             await JSONResponse({'error': 'Method not allowed'}, status_code=405,
-                headers={**SECURITY_HEADERS, 'Cache-Control': 'no-store'})(scope, receive, send)
+                headers={**self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
             return
         if path == '/deployment-config.json':
             await JSONResponse(self.deployment_config(scope), headers={
-                **SECURITY_HEADERS, 'Cache-Control': 'no-store'})(scope, receive, send)
+                **self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
             return
         if path == '/audio-delivery.json':
             await JSONResponse(self.audio.manifest, headers={
-                **SECURITY_HEADERS, 'Cache-Control': 'no-store'})(scope, receive, send)
+                **self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
             return
         if path == '/':
             await RedirectResponse('/search-studio/', status_code=307,
-                headers=SECURITY_HEADERS)(scope, receive, send)
+                headers=self.headers)(scope, receive, send)
+            return
+        if self.collection is not None and path.startswith('/collection/'):
+            await self.collection(scope, receive, send)
             return
         if path in self.audio.paths:
             try:
-                audio_path = self.audio.resolve(path)
+                if self.collection is not None:
+                    # v2: hash on first request (off the event loop), then identity checks only.
+                    import asyncio
+                    audio_path = await asyncio.to_thread(self.audio.resolve, path)
+                else:
+                    audio_path = self.audio.resolve(path)
             except (OSError, ValueError):
                 await JSONResponse({'error': 'Preview unavailable'}, status_code=404,
-                    headers={**SECURITY_HEADERS, 'Cache-Control': 'no-store'})(scope, receive, send)
+                    headers={**self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
                 return
-            await FileResponse(audio_path, media_type='audio/mpeg', headers=SECURITY_HEADERS)(scope, receive, send)
+            await FileResponse(audio_path, media_type='audio/mpeg', headers=self.headers)(scope, receive, send)
             return
         relative = path[1:] if path.startswith('/') else ''
         if relative.endswith('/'):
@@ -199,15 +227,15 @@ class WebGateway:
         path_on_disk = self.assets.get(relative)
         if path_on_disk is None:
             await JSONResponse({'error': 'Not found'}, status_code=404,
-                headers={**SECURITY_HEADERS, 'Cache-Control': 'no-store'})(scope, receive, send)
+                headers={**self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
             return
         # Recheck confinement at each read; the image remains read-only at runtime.
         try:
             path_on_disk = confined_file(self.web_root, relative)
         except (OSError, ValueError):
             await JSONResponse({'error': 'Not found'}, status_code=404,
-                headers={**SECURITY_HEADERS, 'Cache-Control': 'no-store'})(scope, receive, send)
+                headers={**self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
             return
         mime = {'.mjs': 'text/javascript', '.js': 'text/javascript', '.wasm': 'application/wasm',
                 '.f32': 'application/octet-stream'}.get(path_on_disk.suffix)
-        await FileResponse(path_on_disk, media_type=mime, headers=SECURITY_HEADERS)(scope, receive, send)
+        await FileResponse(path_on_disk, media_type=mime, headers=self.headers)(scope, receive, send)

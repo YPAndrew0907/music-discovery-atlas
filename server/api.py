@@ -41,8 +41,31 @@ def valid_id(value):
     return isinstance(value,str) and re.fullmatch(r'[A-Za-z0-9._:-]{1,128}',value) is not None
 
 
+def load_graph_v2(encoder, release, directory):
+    """Bind a release-format-v2 graph: memory-mapped vectors, CSR links, unchanged search code."""
+    from search_v2 import GraphV2
+    if directory is None or Path(directory).resolve()!=Path(encoder.release_directory).resolve():
+        raise RuntimeError('Active corpus graph directory mismatch')
+    if (encoder.catalog_version!=release.catalog_id or encoder.ids!=list(release.ordered_ids)
+        or encoder.catalog_sha!=release.catalog_sha256
+        or encoder.audio_receipt['vectorsSha256']!=release.vectors_sha256
+        or encoder.vectors is not release.vectors):
+        raise RuntimeError('Active corpus encoder snapshot mismatch')
+    profile=release.graph_manifest['allowedQueryProfiles'][0]
+    if encoder.engine!=profile['id'] or object_sha(encoder.query_profile)!=object_sha(profile['identity']):
+        raise RuntimeError('Active corpus query profile mismatch')
+    binding={'indexSpaceId':release.graph_id,'graphId':release.graph_id,
+             'indexSha256':release.graph_sha256,
+             'graphManifestSha256':release.graph_manifest_sha256,
+             'orderedIdsSha256':object_sha(encoder.ids),'bindingStatus':'verified-corpus-release-v2',
+             'corpusReleaseSha256':release.manifest_sha256,'releaseFormat':2}
+    return GraphV2(release),binding
+
+
 def load_graph(encoder, directory):
     from hnsw_trace import HNSW
+    if getattr(encoder,'release_v2',None) is not None:
+        return load_graph_v2(encoder,encoder.release_v2,directory)
     release=getattr(encoder,'validated_release',None)
     if isinstance(release,ValidatedRelease):
         # Consume the approved immutable bytes, never reopen mutable candidate files.
@@ -194,7 +217,7 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
     @app.get('/v1/manifest')
     async def manifest():
         enc=app.state.encoder
-        return {**enc.manifest(),**({'quality':'Experimental reviewed-release catalog; no listener relevance judgments'} if isinstance(getattr(enc,'validated_release',None),ValidatedRelease) else {}),**app.state.graph_binding,
+        return {**enc.manifest(),**({'quality':'Experimental reviewed-release catalog; no listener relevance judgments'} if isinstance(getattr(enc,'validated_release',None),ValidatedRelease) or getattr(enc,'release_v2',None) is not None else {}),**app.state.graph_binding,
                 'deploymentGeneration':settings.deployment_generation,
                 'rankingAlgorithm':'exact-cosine-js-order-v1',
                 'traceAlgorithm':'hnsw-static-cosine-v1',
@@ -245,7 +268,7 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
             ann={**trace_result['stats'],'recallAgainstExactAtK':len(set(ann_ids)&set(exact_ids))/value['k'],
                  'resultRows':ann_ids,'exactRows':exact_ids,
                  'meaning':'Index agreement on this query; not music relevance or a speedup claim'}
-        return {'schemaVersion':1,'requestId':value['requestId'],'generation':value['generation'],
+        response={'schemaVersion':1,'requestId':value['requestId'],'generation':value['generation'],
                 'deploymentGeneration':settings.deployment_generation,'engineId':enc.engine,
                 'queryProfileId':enc.engine,'pairId':enc.pair['id'],
                 'catalogId':enc.catalog_version,'catalogSha256':enc.catalog_sha,
@@ -256,6 +279,18 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
                 'timingMs':{'queue':(started-queued_at)*1000,**timing,
                     'exactSearch':(exact_at-encoded)*1000,'graphTrace':(finished-exact_at)*1000,
                     'serverCompute':(finished-started)*1000}}
+        release=getattr(app.state.graph,'release',None)
+        if release is not None:
+            # Release format v2: the page holds no catalog or layout, so each reply carries the
+            # display rows of its results and labelled trace nodes, and 2-D positions for every
+            # row the trace or results mention. Rankings, scores and trace are unchanged.
+            from search_v2 import label_rows, trace_rows
+            rows=[item['id'] for item in exact]
+            labels=[row for row in label_rows(trace) if row not in rows]
+            response['tracks']=release.display_rows(rows+labels)
+            response['layout']=release.positions(trace_rows(trace,exact))
+            response['timingMs']['collectionMetadata']=(time.perf_counter()-finished)*1000
+        return response
 
     @app.post('/v1/search')
     async def search(request:Request):

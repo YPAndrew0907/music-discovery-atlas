@@ -3876,3 +3876,17 @@ __pycache__/
 !/tests/web_scale_views.test.mjs
 !/tests/test_ui_static_package.py
 !/tests/browser_search_ui.mjs
+!/server/release_v2.py
+!/server/search_v2.py
+!/server/collection_v2.py
+!/scripts/convert_release_v1_to_v2.py
+!/scripts/verify_release_v2.py
+!/scripts/build_web_v2.py
+!/scripts/make_audio_delivery_v2.py
+!/docs/
+!/docs/PLATFORM_V2.md
+!/tests/v2_fixtures.py
+!/tests/test_release_v2.py
+!/tests/test_api_v2.py
+!/tests/web_collection_v2.test.mjs
+!/tests/browser_collection_v2.mjs

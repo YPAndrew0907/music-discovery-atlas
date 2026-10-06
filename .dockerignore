@@ -3843,3 +3843,6 @@
 !/HYDRATION_2000.md
 !/NATIVE_2000_HYDRATION_MEASUREMENT.json
 !web/search-studio/src/results-view.mjs
+!server/release_v2.py
+!server/search_v2.py
+!server/collection_v2.py

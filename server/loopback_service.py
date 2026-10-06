@@ -12,6 +12,7 @@ from pathlib import Path
 import sys
 import time
 from active_corpus import selected_corpus
+from release_v2 import selected_release_v2
 import numpy as np
 import onnxruntime as ort
 import transformers
@@ -61,19 +62,33 @@ class Engine:
         start=time.perf_counter()
         self.precision=precision
         package=verify_package()
-        selected=selected_corpus(WORK,package)
-        data=selected.directory if selected else WORK/'music-search-studio/data'
+        # A schemaVersion 2 selection loads release format v2; anything else keeps the v1 path.
+        v2=selected_release_v2(WORK,package)
+        selected=None if v2 else selected_corpus(WORK,package)
+        data=v2.directory if v2 else selected.directory if selected else WORK/'music-search-studio/data'
         models=WORK/'model'
         self.pack=WORK/'not-a-research-pack'
         self.model=models/'text_model_quantized.onnx'
         if digest(self.model)!=Q8_SHA or digest(models/'tokenizer.json')!=TOKENIZER_SHA:
             raise RuntimeError('Pinned text artifact mismatch')
-        if selected is None and (digest(data/'vectors.f32')!=VECTORS_SHA or digest(data/'catalog.json')!=CATALOG_SHA):
+        if v2 is None and selected is None and (digest(data/'vectors.f32')!=VECTORS_SHA or digest(data/'catalog.json')!=CATALOG_SHA):
             raise RuntimeError('Pinned catalog/vector mismatch')
         self.pair=json.loads((WORK/'model/model-space-q8.json').read_text())
         if self.pair['id']!=PAIR_ID or PAIR_ID!='experimental-fma-q8:'+object_sha(self.pair['identity']):
             raise RuntimeError('Pinned pairing contract mismatch')
-        if selected is None:
+        if v2 is not None:
+            # Verified at selection: manifest digest, streamed asset digests, mapped vectors.
+            release=v2.release
+            self.release_v2=release
+            self.release_directory=v2.directory
+            self.metadata=self.catalog=None
+            self.catalog_version=release.catalog_id
+            self.catalog_sha=release.catalog_sha256
+            self.ids=list(release.ordered_ids)
+            self.vectors=release.vectors
+            self.audio_receipt={'vectorsSha256':release.vectors_sha256,
+                'executionProfileSha256':object_sha(self.pair['identity']['audioExecutionProfile'])}
+        elif selected is None:
             self.metadata=json.loads((data/'catalog.json').read_text())
             self.catalog=self.metadata
             self.catalog_version=CATALOG_ID

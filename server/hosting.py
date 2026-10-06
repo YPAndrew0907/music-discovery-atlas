@@ -80,7 +80,16 @@ def build_application(*, mode='authenticated', token='', generation='',
     from web_gateway import WebGateway
     root = Path(__file__).resolve().parent.parent
     from active_corpus import selected_corpus
-    selected=selected_corpus(root,json.loads((root / 'package-manifest.json').read_text()))
+    from release_v2 import selected_release_v2
+    package = json.loads((root / 'package-manifest.json').read_text())
+    v2 = selected_release_v2(root, package)
+    if v2 is not None:
+        # Release format v2: the catalog stays on the server; the gateway serves bounded pages.
+        return WebGateway(gate, web_root=root / 'web', web_manifest=root / 'web-manifest.json',
+            catalog_path=None, mode=mode, public_origin=public_origin,
+            audio_manifest=audio_manifest_path or root / 'audio-delivery.json',
+            enable_audio=enable_audio, audio_directory=audio_directory, release_v2=v2.release)
+    selected=selected_corpus(root,package)
     catalog_path=(selected.directory if selected else root / 'music-search-studio/data') / 'catalog.json'
     return WebGateway(gate, web_root=root / 'web', web_manifest=root / 'web-manifest.json',
         catalog_path=catalog_path, catalog_bytes=selected.release.assets['catalog'] if selected else None, mode=mode,

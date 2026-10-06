@@ -18128,8 +18128,8 @@
     },
     {
       "path": "server/api.py",
-      "bytes": 17837,
-      "sha256": "82b3a3b62dbacca9ada73ef9a3cf39079743eafbb14d7fc016966b935bdc8a70"
+      "bytes": 20145,
+      "sha256": "e06b99648e584572200d555e6d102183a5301bcf59e1daed1b6295e765063c5f"
     },
     {
       "path": "server/corpus_release.py",
@@ -18148,13 +18148,13 @@
     },
     {
       "path": "server/hosting.py",
-      "bytes": 5918,
-      "sha256": "75384140700979a2382a85d6d008bdbc4e1b350d2fa889484b25aab80e4d7ff9"
+      "bytes": 6492,
+      "sha256": "37820972f84673d130746e75fefc6d5a1a0f5916fe6376372c771c4131e089b7"
     },
     {
       "path": "server/loopback_service.py",
-      "bytes": 6579,
-      "sha256": "c82c7e01349002c9f6372401d3ff0f532193bc1b05f01fac7840bdfa5688b4bd"
+      "bytes": 7465,
+      "sha256": "decf59c651f356c6b85a9788fa5dddb5d07137a045d6600f7c3c2c39335365f4"
     },
     {
       "path": "server/public_boundary.py",
@@ -18163,8 +18163,23 @@
     },
     {
       "path": "server/web_gateway.py",
-      "bytes": 11636,
-      "sha256": "2ffa95dd70fd38a03b034267a5676c7961d4f855ecf3d639d3a7d78f6daf22a0"
+      "bytes": 13327,
+      "sha256": "f52aac7abd5afc296fdbcb253302b3b99c178287b1f23e10bb8d64ea735f8092"
+    },
+    {
+      "path": "server/release_v2.py",
+      "bytes": 41010,
+      "sha256": "b9d1786b7315a8ec76345625f942cf43751ab9d527293151d3c0ad41d1defc37"
+    },
+    {
+      "path": "server/search_v2.py",
+      "bytes": 7392,
+      "sha256": "bb220535d198684e213b078b8ea2ed1a6caa99399bcb1b81f95dbf12869e1efd"
+    },
+    {
+      "path": "server/collection_v2.py",
+      "bytes": 17876,
+      "sha256": "b4bee0cf9c8f72fab21e1ca3307edb226e36f2cc82eddf460c66affc673c84c1"
     },
     {
       "path": "web-manifest.json",

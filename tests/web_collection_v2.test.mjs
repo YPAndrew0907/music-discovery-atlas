@@ -173,6 +173,25 @@ test('browse, paging, page jump and refinements are server pages with the v1 pag
   await until(()=>h.el('#results-empty').hidden===false);assert.equal(h.el('#page-position').textContent,'No results');
 });
 
+test('a server page that lands while someone types into the page box keeps the typed number until it is submitted',async()=>{
+  const h=await harness();
+  h.el('#browse-collection').onclick();await until(()=>h.el('#page-position').textContent==='Page 1 of 167');
+  assert.equal(h.el('#page-number').value,'1');
+  // Next is clicked, and the page box is edited while that page is still on its way from the server.
+  h.el('#next-page').onclick();assert.equal(h.el('#results-region').attributes['aria-busy'],'true');
+  h.el('#page-number').value='15';h.el('#page-number').handlers.input();
+  await until(()=>h.el('#page-position').textContent==='Page 2 of 167');
+  assert.equal(h.el('#page-number').value,'15','the landing page did not replace the typed number');
+  assert.equal(h.el('#results-region').attributes['aria-busy'],'false');
+  // Escape gives the draft up and shows the current page again.
+  h.el('#page-number').handlers.keydown({key:'Escape'});assert.equal(h.el('#page-number').value,'2');
+  // A submitted draft is a navigation like any other: the box then follows the page shown.
+  h.el('#page-number').value='15';h.el('#page-number').handlers.input();h.el('#page-jump').handlers.submit({preventDefault(){}});
+  await until(()=>h.el('#page-position').textContent==='Page 15 of 167');assert.equal(h.el('#page-number').value,'15');
+  h.el('#page-number').value='7';h.el('#page-number').handlers.input();h.el('#previous-page').onclick();
+  await until(()=>h.el('#page-position').textContent==='Page 14 of 167');assert.equal(h.el('#page-number').value,'14','Previous clears an unsubmitted draft');
+});
+
 test('title/artist lookup and audio neighbors run on the server with v1 semantics; search packets carry their rows',async()=>{
   const h=await harness();
   h.el('#query-kind').value='lookup';h.el('#query-kind').handlers.change();assert.match(h.el('#search-processing').textContent,/matched on this server/);

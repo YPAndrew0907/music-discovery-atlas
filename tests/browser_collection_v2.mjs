@@ -12,6 +12,7 @@ const origin='https://music.test',pages=Math.ceil(count/12),available=new Set(ca
 const studio=`export const MANIFEST_SHA='${MANIFEST_SHA}';\nexport const ARTIST_METADATA_SHA='${identity.catalogSha256}';\n`;
 const json=body=>({status:200,contentType:'application/json',body:JSON.stringify(body)});
 const browser=await chromium.launch(process.env.MUSIC_UI_CHROMIUM?{executablePath:process.env.MUSIC_UI_CHROMIUM}:{});
+let pageDelayMs=0;// a slow server page, to type into the page box while it is on its way
 async function serve(page,log){
   await page.route('**/*',async route=>{
     const request=route.request(),url=new URL(request.url());log.push(url.pathname+url.search);
@@ -21,7 +22,7 @@ async function serve(page,log){
     if(url.pathname==='/v1/manifest')return route.fulfill(json(serverManifest));
     if(url.pathname==='/v1/cancel')return route.fulfill(json({}));
     if(url.pathname==='/v1/search'){const body=JSON.parse(request.postData());return route.fulfill(json({...serverManifest,...body,...packet(new Float32Array(v1Examples.examples[3].queryVector)),timingMs:{serverCompute:1},tokenization:{truncated:false}}));}
-    if(url.pathname==='/collection/tracks')return route.fulfill(json(collectionTracks(url.searchParams,available)));
+    if(url.pathname==='/collection/tracks'){if(pageDelayMs)await new Promise(r=>setTimeout(r,pageDelayMs));return route.fulfill(json(collectionTracks(url.searchParams,available)));}
     if(url.pathname==='/collection/neighbors'){const row=Number(url.searchParams.get('row'));return route.fulfill(json({...packet(vectors.slice(row*512,(row+1)*512),{exclude:row}),catalogId:manifestV2.catalogId,graphId:manifestV2.graphId,indexSha256:identity.indexSha256,releaseSha256:identity.releaseSha256,row}));}
     const data={'/search-studio/data/manifest.json':manifestBytes,'/search-studio/data/layout.json':layoutBytes,'/search-studio/data/examples.json':examplesBytes,'/search-studio/src/studio-release.mjs':Buffer.from(studio)}[url.pathname];
     if(data)return route.fulfill({body:data,contentType:url.pathname.endsWith('.mjs')?'text/javascript':'application/json'});
@@ -52,6 +53,16 @@ try{
     assert.equal(await page.locator('#results > li').count(),count-(pages-1)*12);
     await page.locator('#page-number').fill('999');await page.locator('#page-number').press('Enter');
     await page.waitForFunction(p=>document.querySelector('#page-position').textContent===p,`Page ${pages} of ${pages}`);
+    // The page-jump race: a server page that lands while someone types keeps the typed number.
+    pageDelayMs=700;await page.locator('#first-page').click();
+    await page.waitForFunction(()=>document.querySelector('#results-region').getAttribute('aria-busy')==='true');
+    await page.locator('#page-number').fill('15');
+    await page.waitForFunction(()=>document.querySelector('#page-position').textContent.startsWith('Page 1 of')&&document.querySelector('#results-region').getAttribute('aria-busy')==='false');
+    assert.equal(await page.locator('#page-number').inputValue(),'15','a landing page replaced the typed number');
+    pageDelayMs=0;await page.locator('#page-number').press('Enter');
+    await page.waitForFunction(()=>document.querySelector('#page-position').textContent.startsWith('Page 15 of'));
+    assert.equal(await page.locator('#page-number').inputValue(),'15');
+    await page.locator('#last-page').click();await page.waitForFunction(p=>document.querySelector('#page-position').textContent===p,`Page ${pages} of ${pages}`);
     await page.screenshot({path:`${output}/v2-${name}-browse-last.png`});
     await page.locator('#query-kind').selectOption('lookup');await page.locator('#query').fill('love');await page.locator('#search').click();
     await page.waitForFunction(()=>document.querySelector('#results-heading').textContent==='Title / artist matches');

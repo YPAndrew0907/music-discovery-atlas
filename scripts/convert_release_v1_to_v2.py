@@ -4,7 +4,9 @@
 The source is validated first with the unchanged v1 validator at explicit budgets. The output
 directory receives catalog.sqlite, evidence.sqlite, vectors.f32 (identical bytes), graph.bin
 (CSR int32), layout.f32, graph-manifest.json and examples.json (identical bytes), then
-release.json, whose SHA-256 is the v2 release identity. Before publishing, the converter
+release.json, whose SHA-256 is the v2 release identity. By default the output is release format
+2.1: catalog.sqlite also carries the FTS5 trigram lookup index (--no-lookup-index writes 2.0).
+Before publishing, the converter
 proves the conversion: the database rebuilds the v1 catalog, rights and artist objects
 exactly, every evidence blob is byte-identical, the CSR decodes to the v1 index links, the
 layout is unchanged, the server loader accepts the result, and a sampled oracle finds the
@@ -29,8 +31,8 @@ sys.path.insert(0, str(ROOT / 'server'))
 from corpus_release import PAIR_ID, ReleaseError, ReleaseLimits, object_sha, require, sha256, strict_json, validate_release  # noqa: E402
 from hnsw_trace import HNSW  # noqa: E402
 from release_v2 import (ASSET_PATHS, CATALOG_KIND, CATALOG_SCHEMA, EVIDENCE_KIND, EVIDENCE_SCHEMA, FORMAT,  # noqa: E402
-                        GRAPH_ENCODING, GRAPH_HEADER, GRAPH_MAGIC, LimitsV2, fold, load_release_v2,
-                        reconstruct_sources, validate_rows)
+                        GRAPH_ENCODING, GRAPH_HEADER, GRAPH_MAGIC, LOOKUP_INDEX, LimitsV2, check_lookup_index,
+                        create_lookup_index, fold, load_release_v2, page_query, reconstruct_sources, validate_rows)
 from search_v2 import GraphV2  # noqa: E402
 
 COMPACT = {'ensure_ascii': False, 'separators': (',', ':')}
@@ -53,7 +55,7 @@ def read_bound(path, label, max_bytes, expected=None):
     return data
 
 
-def build_catalog_db(path, *, catalog, catalog_sha, rights, artists, ids, source_digests):
+def build_catalog_db(path, *, catalog, catalog_sha, rights, artists, ids, source_digests, lookup_index=False):
     tracks, rights_rows, artist_rows = catalog['tracks'], rights['tracks'], artists['rows']
     require([row['trackId'] for row in artist_rows] == ids, 'Artist records do not follow catalog order')
     connection = sqlite3.connect(path)
@@ -80,9 +82,26 @@ def build_catalog_db(path, *, catalog, catalog_sha, rights, artists, ids, source
             connection.execute('INSERT INTO records (row, track_json, rights_json) VALUES (?, ?, ?)',
                                (row, compact(track), compact(right)))
         connection.commit()
-        connection.execute('VACUUM')
+        finish_catalog_db(connection, lookup_index=lookup_index)
     finally:
         connection.close()
+
+
+def finish_catalog_db(connection, *, lookup_index):
+    """Compact the release-2.0 catalog file, then optionally upgrade it to 2.1 in place."""
+    connection.execute('VACUUM')
+    if lookup_index:
+        add_lookup_index(connection)
+
+
+def add_lookup_index(connection):
+    """2.0 -> 2.1 on a writable catalog: add the lookup index, compact again, then let FTS5 check the
+    index against every tracks row. The converter and scripts/upgrade_release_v2.py both end with this
+    step on the same 2.0 bytes, so a converted and an upgraded 2.1 catalog are byte-identical."""
+    create_lookup_index(connection)
+    connection.commit()
+    connection.execute('VACUUM')
+    check_lookup_index(connection)
 
 
 def build_evidence_db(path, *, source, rights):
@@ -175,7 +194,30 @@ def oracle(v1, v2, examples, *, samples, seed):
             'v2ExactPath': dict(v2.stats)}
 
 
-def convert(source, expected_manifest_sha256, output, *, v1_limits, v2_limits=None, samples=48, seed=20261006):
+def lookup_oracle(release, *, samples, seed):
+    """Name lookups and refinements through the 2.1 index versus the plain scan, on sampled words."""
+    rng = np.random.default_rng(seed)
+    rows = sorted(rng.choice(release.count, size=min(samples, release.count), replace=False).tolist())
+    texts = [text for (text,) in release.connection().execute(
+        'SELECT fold_text FROM tracks WHERE row IN ({})'.format(','.join('?' * len(rows))), rows)]
+    cases = [('', '', ''), ('zz qq', '', ''), ('a', 'e', ''), ('"quoted"', '', '')]
+    for text in texts:
+        words = text.split() or ['']
+        word = words[int(rng.integers(len(words)))]
+        start = int(rng.integers(max(1, len(word) - 2)))
+        cases.append((word, '', ''))
+        cases.append((word[start:start + 3], '', ''))
+        cases.append((' '.join(words[:2]), word[-4:], ''))
+    mismatches = []
+    for query, refine, genre in cases:
+        args = dict(query=query, text=refine, genre=genre, limit=48, facets=True)
+        if page_query(release, **args) != page_query(release, **args, use_index=False):
+            mismatches.append([query, refine, genre])
+    return {'cases': len(cases), 'mismatches': mismatches[:20], 'indexedLookups': release.lookup_stats['indexed']}
+
+
+def convert(source, expected_manifest_sha256, output, *, v1_limits, v2_limits=None, samples=48, seed=20261006,
+            lookup_index=True):
     started = time.perf_counter()
     source, output = Path(source).resolve(), Path(output)
     require(not output.exists() and not output.is_symlink(), 'Refusing to overwrite an existing output directory')
@@ -212,7 +254,7 @@ def convert(source, expected_manifest_sha256, output, *, v1_limits, v2_limits=No
         stage = Path(temporary) / output.name
         stage.mkdir()
         build_catalog_db(stage / ASSET_PATHS['catalog'], catalog=catalog, catalog_sha=sha256(raw['catalog']), rights=rights,
-                         artists=artists, ids=ids, source_digests=source_digests)
+                         artists=artists, ids=ids, source_digests=source_digests, lookup_index=lookup_index)
         evidence_files, evidence_bytes = build_evidence_db(stage / ASSET_PATHS['evidence'], source=source, rights=rights)
         (stage / ASSET_PATHS['vectors']).write_bytes(raw['vectors'])
         (stage / ASSET_PATHS['graph']).write_bytes(csr)
@@ -224,7 +266,8 @@ def convert(source, expected_manifest_sha256, output, *, v1_limits, v2_limits=No
             data = (stage / relative).read_bytes()
             assets[name] = {'path': relative, 'bytes': len(data), 'sha256': sha256(data)}
         manifest = {
-            'schemaVersion': 2, 'kind': FORMAT, 'catalogId': verified.catalog_id, 'graphId': verified.graph_id,
+            'schemaVersion': 2, 'kind': FORMAT, **({'minorVersion': 1} if lookup_index else {}),
+            'catalogId': verified.catalog_id, 'graphId': verified.graph_id,
             'count': verified.count, 'dimensions': verified.dimensions, 'pairId': PAIR_ID, 'orderedIdsSha256': object_sha(ids), 'vectorsSha256': sha256(raw['vectors']),
             'assets': assets, 'graph': graph, 'layout': layout_block(layout, positions),
             'source': {'kind': 'music-corpus-release', 'manifestSha256': expected_manifest_sha256,
@@ -246,9 +289,13 @@ def convert(source, expected_manifest_sha256, output, *, v1_limits, v2_limits=No
             catalog_bytes_equal = (json.dumps(rebuilt_catalog, indent=2, ensure_ascii=False) + '\n').encode() == raw['catalog']
             require(decode_links(release) == index['links'], 'CSR graph does not decode to the v1 index links')
             require(bool(np.array_equal(np.asarray(release.layout, dtype=np.float64), positions)), 'Layout changed')
-            rows = validate_rows(release)
+            rows = validate_rows(release, scratch_dir=temporary)
             require(rows['evidenceFiles'] == evidence_files and rows['evidenceBytes'] == evidence_bytes
                     == verified.evidence_bytes, 'Evidence inventory changed during conversion')
+            require(release.lookup_index == (LOOKUP_INDEX if lookup_index else None), 'Lookup index was not loaded')
+            lookups = lookup_oracle(release, samples=samples, seed=seed) if lookup_index else None
+            require(lookups is None or not lookups['mismatches'],
+                    'Lookup index oracle failed: ' + json.dumps(lookups and lookups['mismatches'][:3]))
             v1 = HNSW(index, raw['vectors'])
             parity = oracle(v1, GraphV2(release), examples, samples=samples, seed=seed)
             require(parity['exactMismatches'] == 0 and parity['traceMismatches'] == 0,
@@ -263,7 +310,8 @@ def convert(source, expected_manifest_sha256, output, *, v1_limits, v2_limits=No
                'proofs': {'catalogRightsArtistObjectsEqual': True, 'catalogJsonBytesReconstructed': catalog_bytes_equal,
                           'evidenceBlobsByteIdentical': evidence_files, 'csrDecodesToIndexLinks': True,
                           'layoutUnchanged': True, 'vectorsByteIdentical': True, 'rowValidation': rows,
-                          'parityOracle': parity},
+                          'parityOracle': parity, 'lookupOracle': lookups},
+               'formatVersion': '2.1' if lookup_index else '2.0',
                'elapsedSeconds': round(time.perf_counter() - started, 3), 'build': manifest['build']}
     return receipt
 
@@ -278,13 +326,15 @@ def main():
     parser.add_argument('--evidence-byte-budget', type=int, default=8_000_000)
     parser.add_argument('--json-byte-budget', type=int, default=8_000_000)
     parser.add_argument('--oracle-samples', type=int, default=48)
+    parser.add_argument('--no-lookup-index', action='store_true',
+                        help='write release format 2.0 (no FTS5 lookup index in catalog.sqlite)')
     parser.add_argument('--receipt', type=Path, help='write the conversion receipt JSON here as well')
     args = parser.parse_args()
     try:
         receipt = convert(args.source_dir, args.expected_manifest_sha256, args.output_dir,
                           v1_limits=ReleaseLimits(max_tracks=args.max_tracks, core_bytes=args.core_byte_budget,
                                                   evidence_bytes=args.evidence_byte_budget, json_bytes=args.json_byte_budget),
-                          samples=args.oracle_samples)
+                          samples=args.oracle_samples, lookup_index=not args.no_lookup_index)
     except ReleaseError as error:
         print(json.dumps({'ok': False, 'error': str(error)}), file=sys.stderr)
         return 1

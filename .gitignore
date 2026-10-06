@@ -3883,6 +3883,7 @@ __pycache__/
 !/scripts/verify_release_v2.py
 !/scripts/build_web_v2.py
 !/scripts/make_audio_delivery_v2.py
+!/scripts/upgrade_release_v2.py
 !/docs/
 !/docs/PLATFORM_V2.md
 !/tests/v2_fixtures.py

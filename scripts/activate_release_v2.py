@@ -12,8 +12,10 @@ the result. It never pushes, deploys, downloads or touches a running server. Ste
 4. Rebuild the page data for the release (scripts/build_web_v2.py): manifest.json, layout.json,
    examples.json and studio-release.mjs; the whole-catalog v1 page files are removed, and
    web/notices/track-attribution.html becomes the small page that links to /collection/credits.
-5. Re-pin web-manifest.json and package-manifest.json (changed rows refreshed, deleted rows dropped;
-   the release files themselves are pinned by the selection, not the package manifest).
+5. Re-pin web-manifest.json and package-manifest.json: only the rows of the files this step rewrites are
+   refreshed and the deleted rows dropped; any other stale pin is refused, and so is a tree whose pins are
+   already stale before the activation starts (the release files themselves are pinned by the selection,
+   not the package manifest).
 6. bundled: allowlist the release files in .gitignore and .dockerignore (both default-deny).
 
 --check verifies an activated tree without changing it (the pre-push gate in the deploy plan).
@@ -40,6 +42,10 @@ NAME = r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}'
 WEB_DATA = 'web/search-studio/data/'
 STUDIO = 'web/search-studio/src/studio-release.mjs'
 CREDITS = 'web/notices/track-attribution.html'  # rewritten by build_web_v2 for a v2 package
+# The pinned files the activation rewrites (repository paths). Only their pins are refreshed; any other stale pin
+# is refused, so an activation commit cannot carry a fresh pin for an unrelated change.
+REBUILT = tuple(WEB_DATA + n for n in ('manifest.json', 'layout.json', 'examples.json')) + (STUDIO, CREDITS)
+PACKAGE_REFRESHED = frozenset({'active-corpus.json', 'web-manifest.json', *REBUILT})
 
 
 def sha256(data):
@@ -83,8 +89,30 @@ def copy_release(source_dir, target):
     return True
 
 
+def stale_pins(root):
+    """Rows of package-manifest.json and web-manifest.json whose file no longer matches its pin (the model
+    weight, fetched during the image build, may be absent)."""
+    package = json.loads((root / 'package-manifest.json').read_text())
+    weight = json.loads((root / 'runtime-assets.json').read_text())['weights'][0]['path']
+    stale = []
+    for row in package['files']:
+        file = root / row['path']
+        if row['path'] == weight and not file.exists():
+            continue
+        data = file.read_bytes() if file.is_file() else None
+        if data is None or (row['bytes'], row['sha256']) != (len(data), sha256(data)):
+            stale.append(row['path'])
+    for row in json.loads((root / 'web-manifest.json').read_text())['files']:
+        file = root / 'web' / row['path']
+        data = file.read_bytes() if file.is_file() else None
+        if data is None or (row['bytes'], row['sha256']) != (len(data), sha256(data)):
+            stale.append('web/' + row['path'])
+    return stale
+
+
 def repin_web(root, removed):
-    """web-manifest.json rows: refresh every listed file, drop the removed v1 data files."""
+    """web-manifest.json rows: refresh the page files this step rebuilt, drop the removed v1 data files, and
+    refuse any other row whose file changed."""
     path = root / 'web-manifest.json'
     manifest = json.loads(path.read_text())
     rows = []
@@ -94,6 +122,8 @@ def repin_web(root, removed):
             require(not file.exists(), 'A removed v1 page file is still present: ' + row['path'])
             continue
         data = file.read_bytes()
+        if (row['bytes'], row['sha256']) != (len(data), sha256(data)):
+            require('web/' + row['path'] in REBUILT, 'Unexpected stale web pin: ' + row['path'])
         rows.append({**row, 'bytes': len(data), 'sha256': sha256(data)})
     listed = {row['path'] for row in rows}
     for name in ('manifest.json', 'layout.json', 'examples.json'):
@@ -102,8 +132,9 @@ def repin_web(root, removed):
     return write_if_changed(path, dump(manifest))
 
 
-def repin_package(root, removed):
-    """package-manifest.json rows: refresh what changed, drop removed files, keep the order."""
+def repin_package(root, removed, refreshable=PACKAGE_REFRESHED):
+    """package-manifest.json rows: refresh the files this step rewrote, drop removed files, keep the order, and
+    refuse any other row whose file changed."""
     path = root / 'package-manifest.json'
     package = json.loads(path.read_text())
     weight = json.loads((root / 'runtime-assets.json').read_text())['weights'][0]
@@ -117,6 +148,7 @@ def repin_package(root, removed):
             continue
         data = file.read_bytes()
         if (row['bytes'], row['sha256']) != (len(data), sha256(data)):
+            require(row['path'] in refreshable, 'Unexpected stale package pin: ' + row['path'])
             refreshed.append(row['path'])
         rows.append({**row, 'bytes': len(data), 'sha256': sha256(data)})
     package['files'] = rows
@@ -142,6 +174,8 @@ def activate(root, release_dir, manifest_sha256, *, name, source, limits=None, a
              audio_origin=None, audio_prefix=None):
     root, release_dir = Path(root), Path(release_dir)
     require(re.fullmatch(NAME, name) is not None, 'Invalid release name')
+    stale = stale_pins(root)
+    require(not stale, 'Stale pins before the activation (start from a clean checkout): ' + ', '.join(stale[:8]))
     source = install_source(source)
     limits_v2 = LimitsV2.from_config(limits)
     parsed = SimpleNamespace(manifest_sha256=manifest_sha256, limits=limits_v2)

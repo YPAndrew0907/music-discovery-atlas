@@ -98,6 +98,27 @@ class ActivationTests(unittest.TestCase):
         with self.assertRaisesRegex(ReleaseError, 'local copy'):
             activation.check(root)
 
+    def test_a_stray_change_to_a_pinned_file_is_refused_never_re_pinned(self):
+        def replace(root, relative, extra):  # inputs are hard links to the repository: replace, never edit in place
+            path = root / relative
+            data = path.read_bytes()
+            path.unlink()
+            path.write_bytes(data + extra)
+        root = self.root()
+        before = {name: (root / name).read_bytes() for name in ('active-corpus.json', 'package-manifest.json', 'web-manifest.json')}
+        replace(root, 'server/hosting.py', b'\n# a stray edit\n')
+        with self.assertRaisesRegex(ReleaseError, 'Stale pins before the activation .*server/hosting.py'):
+            activation.activate(root, self.dir, self.sha, name='fma2000-v2', source={'kind': 'bundled'})
+        self.assertEqual({name: (root / name).read_bytes() for name in before}, before)  # nothing was written
+        self.assertFalse((root / 'corpus-releases/fma2000-v2').exists())
+        # The re-pin steps refresh only the files the activation rewrites and refuse any other stale row.
+        with self.assertRaisesRegex(ReleaseError, 'Unexpected stale package pin: server/hosting.py'):
+            activation.repin_package(root, set())
+        root = self.root()
+        replace(root, 'web/search-studio/index.html', b'\n')
+        with self.assertRaisesRegex(ReleaseError, 'Unexpected stale web pin: search-studio/index.html'):
+            activation.repin_web(root, set())
+
     def test_a_different_release_under_the_name_and_bad_inputs_are_refused(self):
         root = self.root()
         target = root / 'corpus-releases/fma2000-v2'

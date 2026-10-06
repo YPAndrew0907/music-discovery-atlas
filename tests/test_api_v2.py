@@ -245,8 +245,9 @@ console.log(JSON.stringify(out));"""
                        release_v2=self.release)
 
     def test_v1_gateway_keeps_its_routes_and_headers(self):
+        # The v1 release catalog is byte-identical to the v1 page's, and stays in the tree after v2 activation.
         gateway = WebGateway(object(), web_root=ROOT / 'web', web_manifest=ROOT / 'web-manifest.json',
-                             catalog_path=ROOT / 'web/search-studio/data/catalog.json')
+                             catalog_path=V1_DIR / 'catalog.json')
         self.assertIsNone(gateway.collection)
         self.assertIs(gateway.headers, SECURITY_HEADERS)
         client = TestClient(gateway, base_url=ORIGIN)

@@ -3896,3 +3896,6 @@ __pycache__/
 !/tests/test_install_release_v2.py
 !/scripts/hydrate_release_v2.py
 !/tests/test_hydrate_release_v2.py
+!/tests/fixtures/fma2000-v1-web-manifest.json
+!/tests/v1_page_data.mjs
+!/tests/web_v1_page_data.test.mjs

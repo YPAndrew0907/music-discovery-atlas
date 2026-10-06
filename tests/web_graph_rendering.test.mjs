@@ -4,8 +4,9 @@ import {readFile} from 'node:fs/promises';
 import {AudioMap,visibleGraphContext,rasterizeDensity,densityBucket,DENSITY_MAX_SIDE,LINKS_PER_VISIBLE_POINT,MAX_VISIBLE_LINKS} from '../web/search-studio/src/graph.mjs';
 import {indexConnections} from '../web/search-studio/src/search-motion.mjs';
 
-const data=new URL('../web/search-studio/data/',import.meta.url);
-const read=async name=>JSON.parse(await readFile(new URL(name,data)));
+import {v1Data} from './v1_page_data.mjs';
+
+const read=async name=>JSON.parse(await v1Data(name));
 const catalog=await read('catalog.json'),layout=await read('layout.json'),index=await read('index.json');
 
 function harness({positions=layout.positions,tracks=catalog.tracks,connections=indexConnections(index.links),createLayer,insets,onDensity,idle=null}={}){

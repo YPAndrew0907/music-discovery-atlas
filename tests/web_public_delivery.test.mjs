@@ -5,8 +5,9 @@ import {SERVER_CONFIG, validateDeploymentConfig, loadDeploymentConfig} from '../
 import {validateAudioDelivery, loadAudioDelivery, previewForTrack, UNAVAILABLE_PREVIEW} from '../web/search-studio/src/audio-delivery.mjs';
 const origin='https://music.example';
 const config={schemaVersion:1,enabled:true,mode:'anonymous-preview',origin,apiBase:'/v1/',recipient:'This site’s server',privacySummary:'Submitted descriptions are processed on this site.'};
-const catalog=JSON.parse(await readFile(new URL('../web/search-studio/data/catalog.json',import.meta.url)));
-const manifest=JSON.parse(await readFile(new URL('../web/search-studio/data/manifest.json',import.meta.url)));
+import {v1Data} from './v1_page_data.mjs';
+const catalog=JSON.parse(await v1Data('catalog.json'));
+const manifest=JSON.parse(await v1Data('manifest.json'));
 const expected={catalog,catalogSha256:manifest.files.catalog.sha256,pageOrigin:origin};
 const track=catalog.tracks[0], other=catalog.tracks[1];
 const row={id:track.id,available:true,url:'/audio/001382.mp3',bytes:track.audioBytes,sha256:track.audioSha256};

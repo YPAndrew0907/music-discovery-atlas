@@ -12,7 +12,10 @@ const root=fileURLToPath(new URL('../',import.meta.url));
 const baseline=process.env.MUSIC_UI_BASELINE;
 if(baseline&&!/^[a-f0-9]{40}$/.test(baseline))throw new Error('Expected an exact baseline commit ID');
 const output=process.env.MUSIC_UI_EVIDENCE_DIR??'/tmp/music-ui-browser-evidence';await mkdir(output,{recursive:true});
-const bytes=async path=>baseline?execFileSync('git',['show',`${baseline}:web/${path}`],{cwd:root,maxBuffer:20_000_000}):readFile(new URL('../web/'+path,import.meta.url));
+import {servesV1,v1Data,v1StudioRelease} from './v1_page_data.mjs';
+// Once a v2 release is active this tree serves the v2 page data; the v1 page under test still gets the v1 data.
+const v1Page=path=>servesV1?null:path==='search-studio/src/studio-release.mjs'?Buffer.from(v1StudioRelease):path.startsWith('search-studio/data/')?v1Data(path.slice('search-studio/data/'.length)):null;
+const bytes=async path=>baseline?execFileSync('git',['show',`${baseline}:web/${path}`],{cwd:root,maxBuffer:20_000_000}):(await v1Page(path))??readFile(new URL('../web/'+path,import.meta.url));
 const browser=await chromium.launch(process.env.MUSIC_UI_CHROMIUM?{executablePath:process.env.MUSIC_UI_CHROMIUM}:{});
 async function serve(page){
     await page.route('**/*',async route=>{

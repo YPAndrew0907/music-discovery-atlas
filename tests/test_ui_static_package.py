@@ -26,8 +26,17 @@ class UiPackageTests(unittest.TestCase):
                 data = path.read_bytes()
                 self.assertEqual(len(data), item['bytes'])
                 self.assertEqual(hashlib.sha256(data).hexdigest(), item['sha256'])
-        gateway = WebGateway(object(), web_root=ROOT / 'web', web_manifest=ROOT / 'web-manifest.json',
-                             catalog_path=ROOT / 'web/search-studio/data/catalog.json')
+        from release_v2 import selected_release_v2
+        selected = selected_release_v2(ROOT, package)
+        if selected is None:
+            gateway = WebGateway(object(), web_root=ROOT / 'web', web_manifest=ROOT / 'web-manifest.json',
+                                 catalog_path=ROOT / 'web/search-studio/data/catalog.json')
+        else:  # release format v2: the served page must be the one built for the selected release
+            gateway = WebGateway(object(), web_root=ROOT / 'web', web_manifest=ROOT / 'web-manifest.json',
+                                 catalog_path=None, release_v2=selected.release)
+            self.addCleanup(gateway.collection.close)
+            self.assertIn('search-studio/src/collection-api.mjs', gateway.assets)
+            self.assertNotIn('search-studio/data/catalog.json', gateway.assets)
         self.assertIn('search-studio/src/results-view.mjs', gateway.assets)
         self.assertIn('search-studio/src/graph.mjs', gateway.assets)
         self.assertFalse(gateway.audio.manifest['enabled'])

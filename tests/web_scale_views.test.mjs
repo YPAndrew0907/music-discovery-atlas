@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {refineCandidates,resultPage,resultScope,compactResultScope,sourceGenres,RESULT_PAGE_SIZE} from '../web/search-studio/src/results-view.mjs';
-const catalog=JSON.parse(await readFile(new URL('../web/search-studio/data/catalog.json',import.meta.url)));
+import {v1Data} from './v1_page_data.mjs';
+const catalog=JSON.parse(await v1Data('catalog.json'));
 const candidates=catalog.tracks.map((_,row)=>({row,score:null,sourceRank:row+1}));
 
 test('real catalog refinements use recorded genre and names without reindexing or changing scores',()=>{

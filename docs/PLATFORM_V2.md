@@ -211,6 +211,7 @@ After that, a browse page is about 5 KB and a search reply about 105 KB, most of
 - Rounds:
   - rounds 1–2 ran back to back at loads of 240–560;
   - rounds 3–4 ran when the load fell to 70–150, and are the comparable figures;
+  - round 5 re-measured the two v2 roots staged from the final commit (`4f2c0ee`, load about 100). Earlier rounds ran on `a3fefb5` or `38942a2`, which have the same server code apart from the block-wise graph check;
   - E, the v1 fma5777 root from `corpus-20k`, is the like-for-like v1 reference at 5,777.
 - Tools and receipts are in `platform_v2/`: `tools/stage_root.py`, `start_server.sh`, `bench.py`, `parity.py`, `summarize.py`; `runs/*`; `receipts/*.json`.
 
@@ -244,10 +245,12 @@ After that, a browse page is about 5 KB and a search reply about 105 KB, most of
 | r2-C | fma2000 v2 · platform-v2 | 18.5 | 4.4 | 347.1 | 79 / 197 | 46 / 60 | 4.9 | 20.7 | 341 |
 | r3-C | fma2000 v2 · platform-v2 | 10.5 | 1.7 | 356.1 | 26 / 30 | 15 / 19 | 1.7 | 6.8 | 124 |
 | r4-C | fma2000 v2 · platform-v2 | 7.8 | 1.9 | 348.7 | 26 / 36 | 15 / 18 | 1.6 | 6.8 | 90 |
+| r5-C | fma2000 v2 · platform-v2 | 2.4 | 1.6 | 361.9 | 25 / 29 | 15 / 18 | 1.7 | 6.7 | 108 |
 | r1-D | fma5777 v2 · platform-v2 | 58.7 | 4.7 | 362.3 | 85 / 306 | 51 / 245 | 4.8 | 26.8 | 241 |
 | r2-D | fma5777 v2 · platform-v2 | 29.2 | 4.7 | 359.6 | 455 / 795 | 327 / 513 | 5.3 | 209.9 | 465 |
 | r3-D | fma5777 v2 · platform-v2 | 14.5 | 1.8 | 391.5 | 31 / 120 | 19 / 45 | 1.9 | 8.6 | 104 |
 | r4-D | fma5777 v2 · platform-v2 | 10.6 | 1.8 | 382.9 | 29 / 52 | 17 / 23 | 1.8 | 7.8 | 81 |
+| r5-D | fma5777 v2 · platform-v2 | 5.0 | 1.7 | 371.3 | 26 / 33 | 15 / 21 | 1.8 | 7.9 | 101 |
 | r2-E | fma5777 v1 · corpus-20k | 178.1 | 22.0 | 467.7 | 519 / 1576 | 494 / 1513 | 453.4 | 23.7 | 513 |
 | r3-E | fma5777 v1 · corpus-20k | 100.9 | 9.5 | 489.1 | 149 / 155 | 141 / 146 | 127.3 | 7.5 | 70 |
 | r3-L | fma5777 v2 · lean package | 3.7 | 1.4 | 395.4 | 26 / 33 | 15 / 20 | 1.8 | 7.5 | 105 |

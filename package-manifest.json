@@ -18183,8 +18183,8 @@
     },
     {
       "path": "web-manifest.json",
-      "bytes": 8921,
-      "sha256": "590f2ff8bed415b9d8c586b643e4edf4a7a730dde32a090ce3e2b8dbb3b0a2b3"
+      "bytes": 8922,
+      "sha256": "516f532b761206938932e9cdaba68c73b66e5410980ca2b9195f23965122a174"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18383,8 +18383,8 @@
     },
     {
       "path": "web/search-studio/src/collection-api.mjs",
-      "bytes": 18848,
-      "sha256": "87fa097eb1d50b9a47b8bca3122a13dec71302b49d64e521ad0e98144481dfd7"
+      "bytes": 19109,
+      "sha256": "fefd94d9e3f3cf14eb26499b9abc2bd364b5d51613701f62d4f27608785efe1a"
     },
     {
       "path": "web/search-studio/src/contracts.mjs",
@@ -18393,8 +18393,8 @@
     },
     {
       "path": "web/search-studio/src/graph.mjs",
-      "bytes": 33030,
-      "sha256": "129b7f8e4c2954e45b0b46dc4066c5b7a568a025940f089bc645019bec960a8b"
+      "bytes": 33381,
+      "sha256": "c3d9db81c9dbf9ed0294c656654d6becb3e4623888f9105ed78c5f0a036076c9"
     },
     {
       "path": "web/search-studio/src/hnsw.mjs",
@@ -18433,8 +18433,8 @@
     },
     {
       "path": "web/search-studio/src/map-lod.mjs",
-      "bytes": 9140,
-      "sha256": "0abd86a5df7a5ffa1a632bef839fa4391adad2bcc5bd8ca095a17cae079136e5"
+      "bytes": 10788,
+      "sha256": "65d362d54134dc0ec0bdad62e7c4f51dcc9ea170daf2673f9e55ab4b23e8a30f"
     },
     {
       "path": "web/search-studio/style.css",

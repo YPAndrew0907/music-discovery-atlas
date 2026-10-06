@@ -213,17 +213,22 @@ export class AudioMap {
     return{tiles:true,z,list:tilesInView(f.domain,z,{x0:ax-mx,y0:ay-my,x1:bx+mx,y1:by+my})};
   }
   // Each tile in view replaces the overview cloud under it with its own raster (or its loaded ancestor's);
-  // tile edges are snapped to device pixels so neighbouring tiles meet without seams.
-  drawTiles(ctx,g,dpr,view,alpha){
+  // tile edges are snapped to device pixels so neighbouring tiles meet without seams. The overview is drawn
+  // (and cleared under the tiles) only while some tile in view has nothing to show yet.
+  drawTiles(ctx,g,dpr,view,alpha,drawOverview){
     const f=this.tileField,k=g.size*this.scale,s=f.domain[2]/2**view.z;f.beginFrame();
     const sx=i=>Math.round((g.screenX+(f.domain[0]+i*s-g.cx)*k+this.offset[0])*dpr)/dpr,sy=j=>Math.round((g.screenY+(f.domain[1]+j*s-g.cy)*k+this.offset[1])*dpr)/dpr;
+    const sources=view.list.map(([x,y])=>[x,y,f.source(view.z,x,y)]),partial=sources.some(([,,src])=>!src);
+    if(partial)drawOverview();
     ctx.globalAlpha=alpha;
-    for(const [x,y] of view.list){
-      const src=f.source(view.z,x,y);if(!src)continue;
+    for(const [x,y,src] of sources){
+      if(!src)continue;
       const x0=sx(x),x1=sx(x+1),y0=sy(y),y1=sy(y+1);
-      ctx.clearRect(x0,y0,x1-x0,y1-y0);ctx.drawImage(src.canvas,src.sx,src.sy,src.size,src.size,x0,y0,x1-x0,y1-y0);
+      if(partial)ctx.clearRect(x0,y0,x1-x0,y1-y0);
+      ctx.drawImage(src.canvas,src.sx,src.sy,src.size,src.size,x0,y0,x1-x0,y1-y0);
     }
     ctx.globalAlpha=1;
+    return partial;
   }
   textWidth(ctx,text){let w=this._textWidths.get(text);if(w===undefined){w=ctx.measureText(text).width;this._textWidths.set(text,w);}return w;}
   // Region labels: the most common source genre of an area, shown only within its level's zoom range,
@@ -283,11 +288,12 @@ export class AudioMap {
     this._visibleIds=context.ids;this._hitPoints=this._drawingPoints;this._context=context;
     // The collection cloud: every position, cached, faded as the budgeted points take over when zoomed in.
     const layer=this.densityLayer(dpr,detail),cloudAlpha=detail<=1.6?1:Math.max(.4,1-(detail-1.6)*.25);
-    if(layer){this.warmDensity(dpr);
+    const drawOverview=()=>{if(!layer)return;
       const k=g.size*this.scale;ctx.globalAlpha=cloudAlpha;
       ctx.drawImage(layer.canvas,g.screenX+(layer.x0-g.cx)*k+this.offset[0],g.screenY+(layer.y0-g.cy)*k+this.offset[1],layer.spanX*k,layer.spanY*k);
-    }
-    if(view?.tiles)this.drawTiles(ctx,g,dpr,view,cloudAlpha);
+    };
+    if(layer)this.warmDensity(dpr);
+    if(view?.tiles)this.drawTiles(ctx,g,dpr,view,cloudAlpha,drawOverview);else drawOverview();
     // During replay only the trace's own accepted edges and the result anchors are drawn;
     // stored context links return once the replay is done, and only when zoomed in.
     const contextEdges=done?context.edges:[];

@@ -56,15 +56,16 @@ function tileIndex(positions,box){
   const codes=positions.map(([x,y])=>spread(Math.max(0,Math.min(top,Math.floor((x-x0)*scale))))+2*spread(Math.max(0,Math.min(top,Math.floor((y-y0)*scale)))));
   const order=codes.map((_,row)=>row).sort((a,b)=>codes[a]-codes[b]||a-b),sorted=order.map(r=>codes[r]);
   const b64=(Kind,values)=>Buffer.from(Kind.from(values).buffer).toString('base64');
+  const first=value=>{let lo=0,hi=sorted.length;while(lo<hi){const mid=(lo+hi)>>1;if(sorted[mid]<value)lo=mid+1;else hi=mid;}return lo;};
   return{domain,tile(z,x,y){
-    const span=2**(2*(TILE_BITS-z)),prefix=spread(x)+2*spread(y),lo=sorted.findIndex(c=>c>=prefix*span),hiAt=sorted.findIndex(c=>c>=(prefix+1)*span);
-    const a=lo<0?sorted.length:lo,b=hiAt<0?sorted.length:hiAt,rows=order.slice(a,b),cs=sorted.slice(a,b),total=b-a;
+    const span=2**(2*(TILE_BITS-z)),prefix=spread(x)+2*spread(y),a=first(prefix*span),b=first((prefix+1)*span);
+    const rows=order.slice(a,b),cs=sorted.slice(a,b),total=b-a;
     let chosen,weights=null;
     if(total<=TILE_CAP)chosen=[...rows].sort((p,q)=>p-q);
     else{
       let starts=null;
       for(let depth=1;depth<=TILE_BITS-z;depth++){const unit=2**(2*(TILE_BITS-z-depth)),found=[];cs.forEach((c,i)=>{if(!i||Math.floor(c/unit)!==Math.floor(cs[i-1]/unit))found.push(i);});if(found.length>TILE_CAP)break;starts=found;}
-      const cells=starts.map((s,i)=>{const end=i+1<starts.length?starts[i+1]:total;return{low:Math.min(...rows.slice(s,end)),n:end-s};}).sort((p,q)=>p.low-q.low);
+      const cells=starts.map((s,i)=>{const end=i+1<starts.length?starts[i+1]:total;let low=Infinity;for(let j=s;j<end;j++)low=Math.min(low,rows[j]);return{low,n:end-s};}).sort((p,q)=>p.low-q.low);
       chosen=cells.map(c=>c.low);weights=cells.map(c=>c.n);
     }
     return{z,x,y,domain,cap:TILE_CAP,total,complete:weights===null,count:chosen.length,rows:b64(Uint32Array,chosen),

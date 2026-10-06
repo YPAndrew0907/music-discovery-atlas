@@ -8,11 +8,14 @@ export const COLLECTION_TIMEOUT_MS = 15_000;
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const text = (value, max = 4096) => typeof value === 'string' && value.length <= max;
 // Little-endian typed values from base64 (the tile payloads), independent of the platform's byte order.
+const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
 function decode(base64, kind, length) {
   if (typeof base64 !== 'string' || base64.length > 4 * 1024 * 1024) throw new Error('Invalid map tile');
-  const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0)), view = new DataView(bytes.buffer);
+  const binary = atob(base64), bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   if (bytes.length !== length * 4) throw new Error('Invalid map tile');
-  const out = kind === 'f32' ? new Float32Array(length) : new Uint32Array(length);
+  if (LITTLE_ENDIAN) return kind === 'f32' ? new Float32Array(bytes.buffer) : new Uint32Array(bytes.buffer);
+  const view = new DataView(bytes.buffer), out = kind === 'f32' ? new Float32Array(length) : new Uint32Array(length);
   for (let i = 0; i < length; i++) out[i] = kind === 'f32' ? view.getFloat32(4 * i, true) : view.getUint32(4 * i, true);
   return out;
 }

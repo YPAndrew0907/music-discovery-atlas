@@ -3,7 +3,7 @@
 // tile rasters in view, region labels at their zoom and stored links around the selection only.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {TileField,tileLevel,tilesInView,regionAlpha,quantize,TILE_CONCURRENCY,TILE_MIN_LEVEL,TILE_RASTERS_PER_FRAME} from '../web/search-studio/src/map-lod.mjs';
+import {TileField,tileLevel,tilesInView,regionAlpha,quantize,splat,parseColor,TILE_CONCURRENCY,TILE_MIN_LEVEL,TILE_RASTERS_PER_FRAME,TILE_SCREEN_PX} from '../web/search-studio/src/map-lod.mjs';
 import {AudioMap} from '../web/search-studio/src/graph.mjs';
 import {Collection} from '../web/search-studio/src/collection-api.mjs';
 import {catalog,v1Layout,indexJson,tiles,tileIndex,regions,bounds,sampledFixture,origin,count} from './v2_web_fixture.mjs';
@@ -11,8 +11,8 @@ import {catalog,v1Layout,indexJson,tiles,tileIndex,regions,bounds,sampledFixture
 const flush=async()=>{for(let i=0;i<6;i++)await new Promise(setImmediate);};
 
 test('tile levels, tiles in view and region fades follow the zoom',()=>{
-  const domain=[-1,-1,2];
-  assert.deepEqual([60,128,129,600,1e9].map(k=>tileLevel(domain,k,12)),[0,0,1,3,12]);
+  const domain=[-1,-1,2],whole=TILE_SCREEN_PX/2;// pixels per unit at which the whole domain is one tile on screen
+  assert.deepEqual([whole/4,whole,whole*1.01,whole*4,1e9].map(k=>tileLevel(domain,k,12)),[0,0,1,2,12],'tiles span at most TILE_SCREEN_PX');
   const list=tilesInView(domain,2,{x0:-.2,y0:-.2,x1:.4,y1:.3});
   assert.deepEqual(list,[[2,2],[2,1],[1,2],[1,1]],'nearest the view centre first');
   assert.deepEqual(tilesInView(domain,2,{x0:2,y0:2,x1:3,y1:3}),[]);
@@ -70,6 +70,19 @@ function decodeTile(p){
   const f32=s=>{const b=Buffer.from(s,'base64');return Float32Array.from({length:b.length/4},(_,i)=>b.readFloatLE(4*i));};
   return{z:p.z,x:p.x,y:p.y,total:p.total,complete:p.complete,rows:u32(p.rows),xy:f32(p.xy),weights:p.weights===null?null:u32(p.weights)};
 }
+
+test('a tile raster accumulates dots like stacked canvas fills',()=>{
+  assert.deepEqual(parseColor('#94a9a0'),[148,169,160]);assert.deepEqual(parseColor('#abc'),[170,187,204]);assert.deepEqual(parseColor('rgb(1,2,3)'),[153,153,153]);
+  const size=16,data=new Uint8ClampedArray(size*size*4),keep=new Float32Array(size*size);
+  const tile={rows:[1,2,3],xy:new Float32Array([8,8,8,8,2,2]),weights:null};
+  splat(data,tile,0,0,1,[10,20,30],keep,size);
+  const at=(x,y)=>data.slice(4*(y*size+x),4*(y*size+x)+4);
+  assert.deepEqual([...at(8,8)].slice(0,3),[10,20,30]);
+  assert.equal(at(8,8)[3],Math.round((1-.7*.7)*255),'two dots on the same pixel: 1-(1-0.3)^2');
+  assert.equal(at(2,2)[3],Math.round(.3*255),'one dot');assert.equal(at(12,12)[3],0,'nothing far from every dot');
+  const weighted=new Uint8ClampedArray(size*size*4);splat(weighted,{rows:[1],xy:new Float32Array([8,8]),weights:new Uint32Array([3])},0,0,1,[0,0,0],keep,size);
+  assert.equal(weighted[4*(8*size+8)+3],Math.round((1-Math.pow(.7,3))*255),'a sample row standing for 3 rows');
+});
 
 test('rasters are built a few per frame and candidates spread round-robin over the tiles in view',async()=>{
   const layers=[];const createLayer=(w,h)=>{const calls=[];const ctx=new Proxy({},{get:(o,k)=>o[k]??((...a)=>calls.push([k,...a])),set:(o,k,v)=>{o[k]=v;return true;}});const l={width:w,height:h,calls,getContext:()=>ctx};layers.push(l);return l;};

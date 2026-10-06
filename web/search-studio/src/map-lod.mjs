@@ -2,11 +2,29 @@
 // pinned density sample with region labels; zooming in streams point tiles for the viewport from
 // /collection/tiles, and stored index links are drawn only around the recording in focus. Display
 // only: nothing here changes a search result, a ranking, a stored link or a recording's position.
-export const TILE_SCREEN_PX=256;   // a level is chosen so each tile spans at most this many CSS pixels
+export const TILE_SCREEN_PX=512;   // a level is chosen so each tile spans at most this many CSS pixels
 export const TILE_RASTER_PX=256;   // each tile is rasterised once into a square of this many pixels
 export const TILE_MIN_LEVEL=2;     // above this level a tile sample is denser than the overview sample
-export const TILE_CONCURRENCY=3,TILE_CACHE=256,TILE_RASTERS=96,TILE_CANDIDATES=4096,TILE_SETTLE_MS=90,TILE_RASTERS_PER_FRAME=2;
+export const TILE_CONCURRENCY=3,TILE_CACHE=256,TILE_RASTERS=96,TILE_CANDIDATES=2048,TILE_SETTLE_MS=90,TILE_RASTERS_PER_FRAME=3;
 const TILE_BITS=16;
+// '#rgb' or '#rrggbb' (the page's colour tokens); anything else draws in a neutral grey.
+export function parseColor(color){
+  const hex=/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(color??'').trim());if(!hex)return[153,153,153];
+  const h=hex[1].length===3?[...hex[1]].map(c=>c+c).join(''):hex[1];return[0,2,4].map(i=>parseInt(h.slice(i,i+2),16));
+}
+// A tile raster as pixels: each row is a soft dot of radius 1.5 px, and dots accumulate like stacked canvas fills
+// (alpha 1-(1-a)^n), the same look as one fill per dot at a fraction of the cost. `keep` is reusable scratch.
+export function splat(data,tile,x0,y0,k,[r,g,b],keep,size=TILE_RASTER_PX,radius=1.5){
+  keep.fill(1);
+  for(let i=0;i<tile.rows.length;i++){
+    const a=tile.weights?1-Math.pow(.7,tile.weights[i]):.3,px=(tile.xy[2*i]-x0)*k,py=(tile.xy[2*i+1]-y0)*k;
+    const ax=Math.max(0,Math.floor(px-radius)),bx=Math.min(size-1,Math.floor(px+radius)),ay=Math.max(0,Math.floor(py-radius)),by=Math.min(size-1,Math.floor(py+radius));
+    for(let y=ay;y<=by;y++)for(let x=ax;x<=bx;x++){
+      const cover=Math.min(1,Math.max(0,radius+.5-Math.hypot(x+.5-px,y+.5-py)));if(cover>0)keep[y*size+x]*=1-a*cover;
+    }
+  }
+  for(let p=0;p<size*size;p++){const alpha=1-keep[p];if(alpha>.002){data[4*p]=r;data[4*p+1]=g;data[4*p+2]=b;data[4*p+3]=Math.round(alpha*255);}}
+}
 
 export function tileLevel(domain,pixelsPerUnit,maxLevel){
   const z=Math.ceil(Math.log2(Math.max(1e-12,domain[2]*pixelsPerUnit/TILE_SCREEN_PX)));
@@ -38,6 +56,7 @@ export function regionAlpha(detail,from,to){
 export class TileField{
   constructor({domain,cap,maxLevel,fetchTile,onChange=()=>{},createLayer=null,color='#999',schedule=(fn,ms)=>setTimeout(fn,ms),cancel=id=>clearTimeout(id),now=()=>Date.now()}){
     Object.assign(this,{domain,cap,maxLevel,fetchTile,onChange,createLayer,color,schedule,cancel,now});
+    this.rgb=parseColor(color);this.keep=new Float32Array(TILE_RASTER_PX*TILE_RASTER_PX);
     this.tiles=new Map();this.inflight=new Map();this.wanted=null;this.timer=0;this.frame=0;this.rasterBudget=TILE_RASTERS_PER_FRAME;this.rasters=0;
     this.stats={requested:0,loaded:0,synthesized:0,failed:0,aborted:0,rasterised:0};
   }
@@ -79,10 +98,15 @@ export class TileField{
     if(!this.createLayer||this.rasterBudget<=0){if(this.createLayer)this.redrawSoon();return null;}
     const canvas=this.createLayer(TILE_RASTER_PX,TILE_RASTER_PX),ctx=canvas?.getContext?.('2d');if(!ctx)return null;
     this.rasterBudget--;const {x0,y0,s}=this.rect(t.z,t.x,t.y),k=TILE_RASTER_PX/s;
-    ctx.clearRect(0,0,TILE_RASTER_PX,TILE_RASTER_PX);ctx.fillStyle=this.color;
     // As the overview cloud: one soft dot per row, or the alpha of w overlapping dots for a sample row.
-    for(let i=0;i<t.rows.length;i++){ctx.globalAlpha=t.weights?1-Math.pow(.7,t.weights[i]):.3;ctx.beginPath();ctx.arc((t.xy[2*i]-x0)*k,(t.xy[2*i+1]-y0)*k,1.5,0,Math.PI*2);ctx.fill();}
-    ctx.globalAlpha=1;t.raster=canvas;this.rasters++;this.stats.rasterised++;this.evictRasters();return canvas;
+    const image=typeof ctx.createImageData==='function'?ctx.createImageData(TILE_RASTER_PX,TILE_RASTER_PX):null;
+    if(image?.data){splat(image.data,t,x0,y0,k,this.rgb,this.keep);ctx.putImageData(image,0,0);}
+    else{
+      ctx.clearRect(0,0,TILE_RASTER_PX,TILE_RASTER_PX);ctx.fillStyle=this.color;
+      for(let i=0;i<t.rows.length;i++){ctx.globalAlpha=t.weights?1-Math.pow(.7,t.weights[i]):.3;ctx.beginPath();ctx.arc((t.xy[2*i]-x0)*k,(t.xy[2*i+1]-y0)*k,1.5,0,Math.PI*2);ctx.fill();}
+      ctx.globalAlpha=1;
+    }
+    t.raster=canvas;this.rasters++;this.stats.rasterised++;this.evictRasters();return canvas;
   }
   beginFrame(){this.frame++;this.rasterBudget=TILE_RASTERS_PER_FRAME;}
   redrawSoon(){if(!this.redrawPending){this.redrawPending=true;this.schedule(()=>{this.redrawPending=false;this.onChange();},16);}}

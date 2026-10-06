@@ -148,6 +148,39 @@ class V2HydrationTests(unittest.TestCase):
             self.assertEqual((credits / name).read_bytes(), (V1_DIR / name).read_bytes())
         self.assertEqual(final['tracks'], delivery['tracks'])
 
+    def test_the_build_chain_runs_the_worker_reverifies_and_publishes(self):
+        """run() -> hydrate_supervised_v2 -> the worker's CLI path -> verify_stage (no cache allowance) ->
+        publish, as the image build runs it. Only the network transport is replaced: fetch_member serves
+        the synthetic cache and reserves its range like a real attempt; the worker runs in-process."""
+        entries, cache, release = self.synthetic()
+        root = self.temp()
+
+        def fetch_member(entry, budget, session):
+            budget.reserve(entry.range_bytes)
+            return (cache / Path(entry.audio).name).read_bytes()
+
+        def run_bounded_worker(command, *, timeout):
+            self.assertEqual(command[1:3], [str(root / 'scripts/hydrate_release_v2.py'), '--worker-dir'])
+            self.assertGreater(timeout, 0)
+            return hydration_v2.run(self.package, worker_dir=Path(command[3]))
+        output = io.StringIO()
+        with mock.patch.object(hydration_v2, 'ROOT', root), \
+                mock.patch.object(hydration_v2, 'selected_release_v2', return_value=SimpleNamespace(release=release)), \
+                mock.patch.object(hydration_v2, 'load_plan_v2', return_value=(entries, self.sources)), \
+                mock.patch.object(hydration_v2.v1, 'fetch_member', fetch_member), \
+                mock.patch.object(hydration_v2.v1, 'run_bounded_worker', run_bounded_worker), \
+                contextlib.redirect_stdout(output):
+            self.assertEqual(hydration_v2.run(self.package), 0)
+        summary = json.loads(output.getvalue().splitlines()[-1])
+        self.assertEqual((summary['tracks'], summary['available'], summary['localCacheTest'], summary['releaseFormat']),
+                         (2000, 2000, False, 2))
+        self.assertEqual((summary['networkAttempts'], summary['rangeBytesReservedIncludingRetries']),
+                         (2000, sum(entry.range_bytes for entry in entries)))
+        self.assertEqual(sorted(p.name for p in root.iterdir()), sorted(hydration_v2.FINAL_NAMES))
+        delivery = AudioDeliveryV2(root / 'audio-delivery.verified.json', release, enabled=True, directory=root / 'audio-preview')
+        self.assertEqual((delivery.manifest['mode'], delivery.manifest['available']), ('local', 2000))
+        self.assertEqual(json.loads((root / 'audio-delivery.verified.json').read_bytes())['hydration']['networkAttempts'], 2000)
+
     def test_a_changed_file_in_the_stage_publishes_nothing(self):
         entries, cache, release = self.synthetic()
         root, stage = self.temp(), self.temp()

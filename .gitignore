@@ -3894,3 +3894,5 @@ __pycache__/
 !/tests/v2_web_fixture.mjs
 !/scripts/install_release_v2.py
 !/tests/test_install_release_v2.py
+!/scripts/hydrate_release_v2.py
+!/tests/test_hydrate_release_v2.py

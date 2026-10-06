@@ -25,6 +25,8 @@ COPY scripts/install_audio_release.py /app/scripts/install_audio_release.py
 COPY scripts/install_corpus_audio_release.py /app/scripts/install_corpus_audio_release.py
 COPY scripts/hydrate_corpus_audio.py /app/scripts/hydrate_corpus_audio.py
 COPY scripts/install_release_v2.py /app/scripts/install_release_v2.py
+COPY scripts/hydrate_release_v2.py /app/scripts/hydrate_release_v2.py
+COPY scripts/make_audio_delivery_v2.py /app/scripts/make_audio_delivery_v2.py
 COPY audio-hydration.json /app/audio-hydration.json
 COPY active-corpus.json /app/active-corpus.json
 COPY corpus-releases/ /app/corpus-releases/

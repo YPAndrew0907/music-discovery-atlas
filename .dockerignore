@@ -3848,3 +3848,5 @@
 !server/collection_v2.py
 !web/search-studio/src/collection-api.mjs
 !scripts/install_release_v2.py
+!scripts/hydrate_release_v2.py
+!scripts/make_audio_delivery_v2.py

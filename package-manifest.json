@@ -18108,8 +18108,8 @@
     },
     {
       "path": "scripts/hydrate_corpus_audio.py",
-      "bytes": 24595,
-      "sha256": "8e6edf7b4f3136850f2efb2a37605f7f087e06716cc7b9500430b66408d421cb"
+      "bytes": 25684,
+      "sha256": "8d869602af3d0cddeb265f798643527af3ae048cf4cecfb788ae7c0d48bdf5db"
     },
     {
       "path": "scripts/install_audio_release.py",
@@ -18125,6 +18125,16 @@
       "path": "scripts/install_release_v2.py",
       "bytes": 20514,
       "sha256": "fd7a28bf53f719aabc764114ae593338e36cf2c883030f28372afe5fa7a7ddc4"
+    },
+    {
+      "path": "scripts/hydrate_release_v2.py",
+      "bytes": 22520,
+      "sha256": "e4e920c0a32d46b47322f2573343993f61b1cb83db8784f4a7a8c8bf6baa29fc"
+    },
+    {
+      "path": "scripts/make_audio_delivery_v2.py",
+      "bytes": 4066,
+      "sha256": "2645a2b0dca79dcf575e9e9c182c8ecb04f3b2d3eebfac3514ffe2d61604061c"
     },
     {
       "path": "server/active_corpus.py",

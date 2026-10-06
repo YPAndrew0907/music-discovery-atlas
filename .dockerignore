@@ -3850,3 +3850,4 @@
 !scripts/install_release_v2.py
 !scripts/hydrate_release_v2.py
 !scripts/make_audio_delivery_v2.py
+!corpus-releases/quarantine.json

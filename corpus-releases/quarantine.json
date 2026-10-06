@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "kind": "music-corpus-rights-quarantine",
+  "description": "Recordings that no corpus build may include. \"remove\": the evidence rules the row out (wrong recording, or audio under a licence the project does not admit). \"hold\": kept out, not served, until a later reviewed change to this list says otherwise. The builders drop listed rows from their approved inputs and refuse a listed recording's audio bytes under any other ID.",
+  "procedure": "docs/RIGHTS_QUARANTINE.md",
+  "evidenceRoot": "Evidence paths are relative to the project workspace that holds this repository (music_app_2026-10-05/); the research notes and receipts are not part of the repository.",
+  "entries": [
+    {
+      "id": "fma:93518",
+      "action": "remove",
+      "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0 and 4.5, Appendix B.4; rights/research/receipts/fma-dataset-and-automated-screen/id3_audit.json (audio2000 row 93518: MISMATCH); validation/rights-fix-2000/receipts/quarantined-audio-local-check.json",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Mantilla\" by Moon Veil (CC-BY-3.0)",
+      "audioSha256": "66e06274f9642d3895c8ae02cda1aa8cb620e3483bdbb04382d32e89fbecbafb"
+    },
+    {
+      "id": "fma:93519",
+      "action": "remove",
+      "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one. Its bytes are also identical (ZIP CRC-32 and size) to fma:25245 and fma:25246 (BY-NC-ND 3.0) and fma:93507 (BY-NC-SA 3.0 US).",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0 and 4.5, Appendix B.4; rights/research/receipts/fma-dataset-and-automated-screen/id3_audit.json (audio2000 row 93519: MISMATCH); rights/research/receipts/fma-dataset-and-automated-screen/dup_xlic.json (group 25245, 25246, 93507, 93519); validation/rights-fix-2000/receipts/quarantined-audio-local-check.json",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Scorpio\" by Moon Veil (CC-BY-3.0)",
+      "audioSha256": "dbb25c8b7da38003649f0c7f9f123d22ef146e49cb7d29bc938df4bed5b3dd10"
+    },
+    {
+      "id": "fma:93520",
+      "action": "remove",
+      "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0 and 4.5, Appendix B.4; rights/research/receipts/fma-dataset-and-automated-screen/id3_audit.json (audio2000 row 93520: MISMATCH); validation/rights-fix-2000/receipts/quarantined-audio-local-check.json",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Slow Moving\" by Moon Veil (CC-BY-3.0)",
+      "audioSha256": "3fa1800a228edc879e030eb69afccaeae4b13198773d9fa100566d31d865ceb3"
+    },
+    {
+      "id": "fma:93521",
+      "action": "remove",
+      "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Fractured Cogs\" by Blue Prostitutes, tagged Attribution-Noncommercial-Share Alike 3.0 United States; the row is a CC BY 3.0 Moon Veil track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0 and 4.5, Appendix B.4; rights/research/receipts/fma-dataset-and-automated-screen/id3_audit.json (audio2000 row 93521: MISMATCH); validation/rights-fix-2000/receipts/quarantined-audio-local-check.json",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Ivory\" by Moon Veil (CC-BY-3.0)",
+      "audioSha256": "001a7d794b6f5cec6ab5919e22cc5ae29e15a0d2208cecad3a579200199326dd"
+    },
+    {
+      "id": "fma:98077",
+      "action": "remove",
+      "reason": "Audio misbound: the file's embedded ID3 tags name a different recording, \"Разожгли костры\" by Павкашавет бантут, whose metadata row (fma:113583) is BY-NC-SA, and its copyright tag reads BY-NC-ND 3.0; the row is a CC BY 4.0 Чокнутый Пропеллер track. The credit names the wrong recording and the licence of the actual content is not an admitted one.",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0 and 4.5, Appendix B.4; rights/research/receipts/fma-dataset-and-automated-screen/id3_audit.json (audio2000 row 98077: MISMATCH); validation/rights-fix-2000/receipts/quarantined-audio-local-check.json",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Глазами Детей\" by Чокнутый Пропеллер (CC-BY-4.0)",
+      "audioSha256": "28fbb49608246372150be9952cdc9dcea925fd6cad8796ae20168d2abe0d0d98"
+    },
+    {
+      "id": "fma:154569",
+      "action": "remove",
+      "reason": "Cross-licence duplicate: the audio bytes are identical (ZIP CRC-32 and size) to fma:154568, filed under CC BY-NC-ND 4.0 (Mike B. Fort), and the file's copyright tag reads BY-NC-ND 4.0 too.",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0 and 4.5, Appendix B.4; rights/research/receipts/fma-dataset-and-automated-screen/dup_xlic.json (group 154568, 154569); validation/rights-fix-2000/receipts/quarantined-audio-local-check.json",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Shiver\" by Mike B. Fort (CC-BY-4.0)",
+      "audioSha256": "29b5504b0c7999465177edaa11894435495fce9fad8f8b0b68eb0ed98c296009"
+    },
+    {
+      "id": "fma:1382",
+      "action": "hold",
+      "reason": "The licensor's FMA track page shows CC BY-NC today (checked 2026-10-06), against \"Attribution\" in the 2017 metadata and in a Wayback snapshot of 2017-05-04. Held under the conservative rule that a row whose licensor now states a more restrictive licence is not served. It is also a pre-November-2013 upload labelled CC BY 4.0.",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0, 4.3 and 7, Appendix A.28, A.29, B.2 (row 66) and B.4; rights/research/receipts/fma-dataset-and-automated-screen/pages/e3971f1d.txt (live page) and pages/wb1.txt (Wayback 2017-05-04)",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Lady Love\" by Parsley Flakes (CC-BY-4.0)",
+      "audioSha256": "f9a3cfa7a4fddad7c5f74b3856cb650a0879156a64a32633dd770a8b7aa4ff2f"
+    },
+    {
+      "id": "fma:125279",
+      "action": "hold",
+      "reason": "The licensor's FMA track page shows CC BY-NC 4.0 today (checked 2026-10-06), against CC BY 4.0 in the 2017 metadata; the 2017 Wayback lookup returned only FMA's maintenance page, so there is no snapshot of the 2017 page. Held under the conservative rule that a row whose licensor now states a more restrictive licence is not served.",
+      "evidence": "rights/research/fma-dataset-and-automated-screen.md sections 0 and 4.3, Appendix A.29, B.2 (row 9) and B.4; rights/research/receipts/fma-dataset-and-automated-screen/live_sample.json (id 125279) and pages/wb3.txt (Wayback lookup: maintenance page)",
+      "date": "2026-10-06",
+      "reviewer": "rights research 2026-10-06",
+      "catalogRow": "\"Candy Island\" by Tyler Twombly (CC-BY-4.0)",
+      "audioSha256": "2b3caa661ac9e15680c6bd1131f7c985af3e205be84df92156ad471bc517a585"
+    }
+  ]
+}

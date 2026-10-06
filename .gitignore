@@ -3905,3 +3905,6 @@ __pycache__/
 !/scripts/verify_audio_publication.py
 !/tests/test_verify_audio_publication.py
 !/docs/DEPLOY_PLAN_V2.md
+!/corpus-releases/quarantine.json
+!/scripts/rights_quarantine.py
+!/tests/test_rights_quarantine.py

@@ -189,13 +189,18 @@
     },
     {
       "path": "search-studio/src/app.mjs",
-      "bytes": 45462,
-      "sha256": "0ff395de86defcda220ce89d036bacb3ad0ed4f55f0b59b0f9f26d63f698cfac"
+      "bytes": 54348,
+      "sha256": "9ed58ac14b8af36610f9bef5bc2a7cea521af2cf13a82b64bb585debaf8f2554"
     },
     {
       "path": "search-studio/src/audio-delivery.mjs",
       "bytes": 2834,
       "sha256": "e08a4b4150ec3a81a2a862798f7294d2502f5941662df231c46ff968ecad4fe5"
+    },
+    {
+      "path": "search-studio/src/collection-api.mjs",
+      "bytes": 13968,
+      "sha256": "3d4053061121e481bfdcf7301b8a598421334881647e7c1ab878a4705c71ce8f"
     },
     {
       "path": "search-studio/src/contracts.mjs",
@@ -204,8 +209,8 @@
     },
     {
       "path": "search-studio/src/graph.mjs",
-      "bytes": 26433,
-      "sha256": "7eab1920496bac7d5424706308a1fc57ddcbf4ee576c1cf74b2d36cd2ebd5b1b"
+      "bytes": 26785,
+      "sha256": "7daeb4aedde6428f529e46580ed5aa644507d73f0eec211a5fdcc6acf06f9c7f"
     },
     {
       "path": "search-studio/src/hnsw.mjs",

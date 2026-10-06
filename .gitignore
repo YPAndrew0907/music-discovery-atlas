@@ -3890,3 +3890,4 @@ __pycache__/
 !/tests/test_api_v2.py
 !/tests/web_collection_v2.test.mjs
 !/tests/browser_collection_v2.mjs
+!/web/search-studio/src/collection-api.mjs

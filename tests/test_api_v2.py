@@ -252,6 +252,27 @@ console.log(JSON.stringify(out));"""
         client = TestClient(gateway, base_url=ORIGIN)
         self.assertEqual(client.get('/collection/tracks').status_code, 404)
 
+    def test_collection_reads_are_budgeted_and_refused_rather_than_queued(self):
+        from collection_v2 import Budget
+        clock = [0.0]
+        budget = Budget(2, monotonic=lambda: clock[0])
+        self.assertEqual([budget.admit(), budget.admit()], [0, 0])
+        self.assertGreater(budget.admit(), 0)
+        clock[0] = 61.0
+        self.assertEqual(budget.admit(), 0)
+        client = self.client(self.v2_encoder, gateway=True)
+        routes = client.app.collection
+        routes.neighbors_budget = Budget(1)
+        self.assertEqual(client.get('/collection/neighbors?row=3').status_code, 200)
+        refused = client.get('/collection/neighbors?row=4')
+        self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Neighbor exploration budget exhausted'))
+        self.assertGreater(int(refused.headers['retry-after']), 0)
+        routes.pending = routes.max_pending  # simulate a full queue: excess reads are refused, never queued
+        full = client.get('/collection/tracks?limit=12')
+        self.assertEqual((full.status_code, full.json()['error'], full.headers['retry-after']), (429, 'Collection queue full', '1'))
+        routes.pending = 0
+        self.assertEqual(client.get('/collection/tracks?limit=12').status_code, 200)
+
     # ---- audio delivery ------------------------------------------------------------------
     def fake_pack(self, rows=(0, 1, 2)):
         directory = Path(tempfile.mkdtemp())

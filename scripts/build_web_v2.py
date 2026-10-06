@@ -164,9 +164,11 @@ def main():
     parser.add_argument('--audio-mode', choices=('local', 'remote', 'disabled'), default='local')
     parser.add_argument('--audio-origin')
     parser.add_argument('--audio-prefix')
+    parser.add_argument('--limits', type=json.loads, default=None, help='JSON object of v2 limits, as in the selection')
     args = parser.parse_args()
     print(json.dumps(build(args.release_dir, args.expected_manifest_sha256, args.web_root, sample_cap=args.sample_cap,
-                           audio_mode=args.audio_mode, audio_origin=args.audio_origin, audio_prefix=args.audio_prefix),
+                           audio_mode=args.audio_mode, audio_origin=args.audio_origin, audio_prefix=args.audio_prefix,
+                           limits=LimitsV2.from_config(args.limits)),
                      indent=2))
 
 

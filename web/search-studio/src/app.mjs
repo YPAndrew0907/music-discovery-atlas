@@ -251,6 +251,8 @@ function serverViewKey(){const f=refinements();return JSON.stringify([pagedQuery
 async function loadServerView(options){
   if(!Number.isInteger(pageIndex)||pageIndex<0)pageIndex=0;
   const generation=++serverPageGeneration,query=pagedQuery,filter=refinements(),first=serverView?.query!==query;
+  $('#results-region').setAttribute('aria-busy','true');// a server page is loading; settled below
+  const settle=()=>{if(generation===serverPageGeneration&&!searchPending)$('#results-region').setAttribute('aria-busy','false');};
   if(!first&&serverView.text!==filter.text)await new Promise(resolve=>setTimeout(resolve,150));// typing: wait for a pause
   if(generation!==serverPageGeneration||query!==pagedQuery)return;
   try{
@@ -263,8 +265,9 @@ async function loadServerView(options){
     serverView={key:serverViewKey(),query,text:filter.text,baseTotal:page.baseTotal,genres:first?page.genres:serverView.genres,page:{page:pageIndex,pages,total:page.total,start,end:Math.min(start+RESULT_PAGE_SIZE,page.total),rows:page.rows.map(row=>({row,score:null}))}};
     if(first)updateGenreOptions();
     applyDisplayPolicy(options);
+    settle();
     if(first&&query.channel==='lookup')status(page.baseTotal?`Matched recorded names on this server: ${page.baseTotal.toLocaleString()} recording${page.baseTotal===1?'':'s'}.`:'No title or artist matches in this collection.',{quiet:!!page.baseTotal});
-  }catch(e){if(generation===serverPageGeneration)status(`Collection page unavailable: ${e.message}. Previous results remain.`);}
+  }catch(e){if(generation===serverPageGeneration)status(`Collection page unavailable: ${e.message}. Previous results remain.`);settle();}
 }
 async function nearbyOnServer(row){
   const returnFocus=!!captureControl('#results')||!!captureControl('#node-inspector'),generation=++queryGeneration;

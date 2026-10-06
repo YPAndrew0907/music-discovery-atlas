@@ -89,6 +89,24 @@ test('required local HTML links and module dependencies resolve in the public we
   }
 });
 
+test('the page preloads its whole static module graph, so no import adds a round trip before the first paint',async()=>{
+  // Measured on fma2000-v2 (4x CPU, 40 ms per request): without these hints each import depth costs one more
+  // round trip before app.mjs can run, and graph.mjs -> map-lod.mjs had made the graph one level deeper.
+  const html=(await read('search-studio/index.html')).toString(),page=new URL('search-studio/',root),entry=new URL('src/app.mjs',page).href;
+  const closure=new Set(),queue=[entry];
+  while(queue.length){
+    const href=queue.shift(),text=(await readFile(new URL(href))).toString();
+    for(const [,spec] of text.matchAll(/(?:^|[;\n])\s*(?:import|export)\s*(?:[\w$*{}\s,]+?\s*from\s*)?['"](\.{1,2}\/[^'"]+)['"]/g)){
+      const next=new URL(spec,href).href;if(next!==entry&&!closure.has(next)){closure.add(next);queue.push(next);}
+    }
+  }
+  const preloads=[...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map(m=>new URL(m[1],page).href);
+  assert.ok(closure.has(new URL('src/map-lod.mjs',page).href)&&closure.size>=15);
+  assert.equal(new Set(preloads).size,preloads.length,'a module is preloaded twice');
+  assert.deepEqual([...preloads].sort(),[...closure].sort());
+  assert.ok(html.lastIndexOf('rel="modulepreload"')<html.indexOf('</head>'));
+});
+
 test('optional browser encoder never creates a worker until opt-in and unload rejects stale generations',async()=>{
   const workers=[];const encoder=new BrowserEncoder({factory:()=>{const worker={postMessage(m){this.sent=m;},terminate(){this.terminated=true;}};workers.push(worker);return worker;}});
   assert.equal(workers.length,0);assert.equal(encoder.state,'unloaded');

@@ -13,8 +13,14 @@ validated in two places:
   streamed through SHA-256 once (constant memory), and the structural invariants that are
   cheap to vectorise are re-checked. Evidence blobs are verified lazily, row by row, against
   the pins held in the verified catalog database. Nothing parses the whole catalog as JSON.
+
+Minor versions are additive and named in release.json ("minorVersion"; a 2.0 release has no such key and
+is read exactly as before). 2.1 adds an FTS5 trigram index over the folded "title artist album" column of
+catalog.sqlite. It is only a prefilter for name lookups and refinements: the instr() conditions stay the
+final filter, so every page is the same with or without it (see page_query).
 """
 from dataclasses import dataclass, fields
+import functools
 import hashlib
 import json
 import math
@@ -22,9 +28,11 @@ import mmap
 import os
 from pathlib import Path
 import re
+import shutil
 import sqlite3
 import stat
 import struct
+import tempfile
 import threading
 from types import MappingProxyType
 import unicodedata
@@ -64,6 +72,13 @@ CREATE TABLE tracks (
 CREATE INDEX tracks_genre ON tracks (genre, row);
 CREATE TABLE records (row INTEGER PRIMARY KEY, track_json TEXT NOT NULL, rights_json TEXT NOT NULL);
 '''
+# Release format 2.1: the lookup index. External content (no second copy of the text), case-sensitive
+# trigrams over the already folded column, so a quoted phrase matches exactly the rows whose fold_text
+# contains it as a substring: the same test instr() applies, for words of three or more characters.
+LOOKUP_INDEX = 'fts5-trigram-v1'
+LOOKUP_INDEX_SQL = ("CREATE VIRTUAL TABLE tracks_fts USING fts5(fold_text, content='tracks', content_rowid='row', "
+                    "tokenize='trigram case_sensitive 1')")
+MINOR_VERSIONS = MappingProxyType({1: LOOKUP_INDEX})  # minorVersion -> what it adds to 2.0
 EVIDENCE_SCHEMA = '''
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;
 CREATE TABLE evidence (path TEXT NOT NULL UNIQUE, bytes INTEGER NOT NULL, sha256 TEXT NOT NULL, data BLOB NOT NULL);
@@ -144,6 +159,38 @@ def fold(value):
     """Python twin of the page's foldMetadata(): NFKD, drop combining marks, lowercase."""
     text = unicodedata.normalize('NFKD', '' if value is None else str(value))
     return ''.join(c for c in text if not unicodedata.category(c).startswith('M')).lower()
+
+
+def create_lookup_index(connection):
+    """Add the release-2.1 lookup index to a writable catalog connection (converter and upgrader)."""
+    connection.execute(LOOKUP_INDEX_SQL)
+    connection.execute("INSERT INTO tracks_fts(tracks_fts) VALUES('rebuild')")
+    connection.execute('INSERT INTO meta (key, value) VALUES (?, ?)', ('lookupIndex', LOOKUP_INDEX))
+
+
+def check_lookup_index(connection):
+    """FTS5's own integrity check, with rank 1: the index structure and its agreement with every row of
+    the tracks table. It needs a writable connection, so it runs at build time or on a private copy."""
+    try:
+        connection.execute("INSERT INTO tracks_fts(tracks_fts, rank) VALUES('integrity-check', 1)")
+    except sqlite3.Error as error:
+        raise ReleaseError('Lookup index does not match the catalog: ' + str(error)) from error
+
+
+@functools.lru_cache(maxsize=1)
+def lookup_index_supported():
+    """Whether this SQLite build has FTS5 with the trigram tokenizer. Without it a 2.1 release still loads
+    and every lookup scans the narrow table, with the same results."""
+    try:
+        probe = sqlite3.connect(':memory:')
+        try:
+            probe.execute("CREATE VIRTUAL TABLE t USING fts5(x, tokenize='trigram case_sensitive 1')")
+            probe.execute("INSERT INTO t (x) VALUES ('abcdef')")
+            return probe.execute("""SELECT count(*) FROM t WHERE t MATCH '"bcd"'""").fetchone()[0] == 1
+        finally:
+            probe.close()
+    except sqlite3.Error:
+        return False
 
 
 def sha256_file(handle, size, chunk=4 * 1024 * 1024):
@@ -322,6 +369,9 @@ class ReleaseV2:
         self.directory, self.manifest_sha256, self.manifest, self.limits = Path(directory), manifest_sha256, manifest, limits
         self.catalog_id, self.graph_id, self.count = manifest['catalogId'], manifest['graphId'], manifest['count']
         self.dimensions = manifest['dimensions']
+        self.minor_version = manifest.get('minorVersion', 0)
+        self.lookup_index = None  # set by _load for a 2.1 release on a runtime with FTS5 trigrams
+        self.lookup_stats = {'indexed': 0, 'scanned': 0}
         self.assets = MappingProxyType({key: dict(value) for key, value in manifest['assets'].items()})
         self.catalog_sha256 = self.assets['catalog']['sha256']
         self.graph_sha256 = self.assets['graph']['sha256']
@@ -390,6 +440,13 @@ class ReleaseV2:
         check_graph_manifest(graph_manifest, manifest, ids, graph)
         self.graph_manifest = graph_manifest
         self.genres = tuple(genre_counts(connection.execute('SELECT genre, count(*) FROM tracks GROUP BY genre')))
+        if self.minor_version >= 1:
+            # Content is covered by catalogSha256 like every other table; this pins the declaration the
+            # queries rely on. The index's agreement with the rows is proved at build time (validate_rows).
+            declared = connection.execute("SELECT sql FROM sqlite_master WHERE name = 'tracks_fts'").fetchone()
+            require(meta.get('lookupIndex') == LOOKUP_INDEX and declared is not None and declared[0] == LOOKUP_INDEX_SQL,
+                    'Catalog database lacks the release 2.1 lookup index')
+            self.lookup_index = LOOKUP_INDEX if lookup_index_supported() else None
         self.artist_count = connection.execute('SELECT count(DISTINCT artist_id) FROM tracks').fetchone()[0]
         self.close()  # the maps hold their own descriptors; SQLite reopens the verified path by identity
         return self
@@ -473,7 +530,8 @@ class ReleaseV2:
         return self.connection().execute('SELECT row, id, audio_bytes, audio_sha256 FROM tracks ORDER BY row').fetchall()
 
     def summary(self):
-        return {'schemaVersion': 2, 'releaseFormat': FORMAT, 'releaseId': 'corpus-release-v2:' + self.manifest_sha256,
+        return {'schemaVersion': 2, 'releaseFormat': FORMAT, 'formatVersion': '2.%d' % self.minor_version,
+                'lookupIndex': self.lookup_index, 'releaseId': 'corpus-release-v2:' + self.manifest_sha256,
                 'catalogId': self.catalog_id, 'graphId': self.graph_id, 'count': self.count, 'dimensions': self.dimensions,
                 'catalogSha256': self.catalog_sha256, 'graphSha256': self.graph_sha256, 'vectorsSha256': self.vectors_sha256,
                 'source': self.manifest['source'], 'limits': self.limits.as_config()}
@@ -486,8 +544,11 @@ class ReleaseV2:
 
 def parse_manifest(data, limits):
     manifest = strict_json(data, 'v2 release manifest', 262_144)
-    require(isinstance(manifest, dict) and set(manifest) == MANIFEST_KEYS and integer(manifest['schemaVersion'], 2, 2)
-            and manifest['kind'] == FORMAT, 'Unknown v2 release contract')
+    require(isinstance(manifest, dict) and set(manifest) in (MANIFEST_KEYS, MANIFEST_KEYS | {'minorVersion'})
+            and integer(manifest['schemaVersion'], 2, 2) and manifest['kind'] == FORMAT, 'Unknown v2 release contract')
+    require('minorVersion' not in manifest or (type(manifest['minorVersion']) is int
+                                               and manifest['minorVersion'] in MINOR_VERSIONS),
+            'Unknown v2 release minor version')
     count = manifest['count']
     require(integer(count, 32, limits.max_tracks), 'Track count exceeds the configured v2 limit')
     require(type(manifest['dimensions']) is int and manifest['dimensions'] == DIMENSIONS
@@ -599,12 +660,43 @@ def selected_release_v2(root, package):
     return SelectionV2(directory, release, parsed.config)
 
 
-def page_query(release, *, offset=0, limit=12, query='', text='', genre='', rows_filter=None, facets=False):
+LOOKUP_INDEX_SHARE = 10  # use the index while a phrase matches under 1/10 of the catalog; scan above that
+
+
+def lookup_phrase(words):
+    """The FTS5 query for a word list: one quoted phrase per word of three or more characters (a trigram
+    index cannot narrow shorter words), with quotes doubled, so no word is read as query syntax."""
+    return ' '.join('"' + word.replace('"', '""') + '"' for word in words if len(word) >= 3)
+
+
+def lookup_prefilter(release, connection, words, use_index=True):
+    """(conditions, params) that narrow a lookup through the 2.1 index, or ([], []) to scan.
+
+    The index matches every row whose fold_text contains each phrase. Lookup words are tested against
+    fold_title_artist, a prefix of fold_text, and refinement words against fold_text itself, so the
+    prefilter keeps every row the instr() conditions accept; those conditions still decide the result.
+    A phrase that matches a tenth of the catalog or more scans faster than it filters, so a bounded probe
+    picks the plan. Either plan returns the same rows in the same order."""
+    phrase = lookup_phrase(words) if use_index and getattr(release, 'lookup_index', None) else ''
+    if phrase:
+        bound = max(64, release.count // LOOKUP_INDEX_SHARE)
+        matched = connection.execute('SELECT count(*) FROM (SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ? LIMIT ?)',
+                                     (phrase, bound)).fetchone()[0]
+        if matched < bound:
+            release.lookup_stats['indexed'] += 1
+            return ['row IN (SELECT rowid FROM tracks_fts WHERE tracks_fts MATCH ?)'], [phrase]
+    if words and hasattr(release, 'lookup_stats'):
+        release.lookup_stats['scanned'] += 1
+    return [], []
+
+
+def page_query(release, *, offset=0, limit=12, query='', text='', genre='', rows_filter=None, facets=False, use_index=True):
     """Server-side twin of the page's browse/lookup + refinement rules (results-view.mjs and
     listen-lab retrieval.mjs): browse is catalog order; a lookup scores an exact folded title 100
     and every folded word inside "title artist" 10, ordered by score then row; refinement keeps
     rows whose folded "title artist album" contains every word and whose genre matches exactly.
-    rows_filter, when given, is a callable row -> bool (verified-preview filter)."""
+    rows_filter, when given, is a callable row -> bool (verified-preview filter). On a release-2.1 catalog the
+    lookup index narrows the rows first (lookup_prefilter; use_index=False forces the scan, for proofs)."""
     require(integer(offset, 0, 10_000_000) and integer(limit, 1, 48), 'Invalid page window')
     for value in (query, text, genre):
         require(isinstance(value, str) and len(value) <= 512, 'Invalid page filter')
@@ -612,17 +704,21 @@ def page_query(release, *, offset=0, limit=12, query='', text='', genre='', rows
     where, params, order = [], [], 'row'
     lookup = fold(query).strip()
     channel = 'lookup' if query.strip() else 'browse'
+    words = lookup.split() if channel == 'lookup' else []
+    for word in words:
+        where.append('instr(fold_title_artist, ?) > 0')
+        params.append(word)
     if channel == 'lookup':
-        words = lookup.split()
-        for word in words:
-            where.append('instr(fold_title_artist, ?) > 0')
-            params.append(word)
         order = '(fold_title = ?) DESC, row'
-    base_where, base_params = list(where), list(params)
+    base_index, base_index_params = lookup_prefilter(release, connection, words, use_index)
+    base_where, base_params = base_index + where, base_index_params + params
     refine = fold(text).strip().split()
     for word in refine:
         where.append('instr(fold_text, ?) > 0')
         params.append(word)
+    index, index_params = ((base_index, base_index_params) if not refine else
+                           lookup_prefilter(release, connection, words + refine, use_index))
+    where, params = index + where, index_params + params
     if genre:
         where.append('genre = ?')
         params.append(genre)
@@ -653,13 +749,32 @@ def genre_counts(records):
     return [(genre, count) for genre, count in records if isinstance(genre, str) and genre.strip()]
 
 
-def validate_rows(release, *, evidence_budget=None):
+def validate_lookup_index(release, *, scratch_dir=None):
+    """Run check_lookup_index on a private copy of the verified catalog (the release stays read-only)."""
+    spec = release.assets['catalog']
+    with tempfile.TemporaryDirectory(prefix='.lookup-index-check-', dir=scratch_dir) as temporary:
+        copy = Path(temporary) / 'catalog.sqlite'
+        with open_confined(release.directory, spec['path']) as source, open(copy, 'wb') as target:
+            shutil.copyfileobj(source, target, 4 * 1024 * 1024)
+        with open(copy, 'rb') as handle:
+            require(os.fstat(handle.fileno()).st_size == spec['bytes'] and sha256_file(handle, spec['bytes']) == spec['sha256'],
+                    'Catalog database changed after verification')
+        connection = sqlite3.connect(copy)
+        try:
+            check_lookup_index(connection)
+        finally:
+            connection.close()
+    return LOOKUP_INDEX
+
+
+def validate_rows(release, *, evidence_budget=None, scratch_dir=None):
     """Offline semantic validation of every catalog/rights/evidence row of a loaded release.
 
     The per-row rules are a line-by-line mirror of corpus_release.validate_rights (and the
     catalog row checks of validate_release); tests run both on the same rows, including
     tampered ones, and require identical verdicts. Startup does not run this: it relies on
-    the pinned digests of the files this function accepted at build time."""
+    the pinned digests of the files this function accepted at build time. For a 2.1 release it
+    also proves the lookup index (validate_lookup_index), on a copy made in scratch_dir."""
     from datetime import datetime
     from corpus_release import LICENSES, nonempty, public_source_url
     budget = evidence_budget or release.limits.evidence_bytes
@@ -691,6 +806,8 @@ def validate_rows(release, *, evidence_budget=None):
                 and fold_title == fold(track.get('title')) and fold_title_artist == fold(f"{track.get('title')} {track.get('artist')}")
                 and fold_text == fold(f"{track.get('title')} {track.get('artist')} {'' if track.get('album') is None else track.get('album')}"),
                 'Catalog display columns disagree with the source row')
+        # The 2.1 lookup index covers fold_text only; lookups rely on fold_title_artist being its prefix.
+        require(release.minor_version < 1 or fold_text.startswith(fold_title_artist), 'Lookup columns are not nested')
         # ---- mirror of corpus_release.validate_rights, per row ----
         require(isinstance(row, dict) and row.get('id') == track['id'], 'Rights row-order mismatch')
         license_id = track.get('license')
@@ -733,7 +850,8 @@ def validate_rows(release, *, evidence_budget=None):
     require(seen == release.count, 'Incomplete rights coverage')
     stored = release.evidence_connection().execute('SELECT count(*), coalesce(sum(bytes), 0) FROM evidence').fetchone()
     require(stored == (len(evidence), evidence_bytes), 'Evidence database holds unpinned rows')
-    return {'rows': seen, 'evidenceFiles': len(evidence), 'evidenceBytes': evidence_bytes}
+    lookup = validate_lookup_index(release, scratch_dir=scratch_dir) if release.minor_version >= 1 else None
+    return {'rows': seen, 'evidenceFiles': len(evidence), 'evidenceBytes': evidence_bytes, 'lookupIndex': lookup}
 
 
 def reconstruct_sources(release):

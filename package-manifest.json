@@ -18143,8 +18143,8 @@
     },
     {
       "path": "server/release_v2.py",
-      "bytes": 44466,
-      "sha256": "65c5a67e11c0bdf94058f936eaf6bfb7fdfba7989318bd885c518bca456541d5"
+      "bytes": 51900,
+      "sha256": "5607d80f4287a91a118c5b9af8a5fc9da47258fe8cfc9b898256d159c319dd33"
     },
     {
       "path": "server/search_v2.py",
@@ -18153,13 +18153,13 @@
     },
     {
       "path": "server/collection_v2.py",
-      "bytes": 17403,
-      "sha256": "b541d475690ed9fca24fad08be871deeb89555c804b45db59f01ef435b9aae31"
+      "bytes": 33204,
+      "sha256": "145b47b76143f52102c256f474d0adf452f05d1bbf4e268c60d99db1ab9b613e"
     },
     {
       "path": "web-manifest.json",
-      "bytes": 8757,
-      "sha256": "4cbfd2b287ba80cef23b0c904ec8c86531c17d4ae6e53a4e17f82dcceeef8815"
+      "bytes": 8922,
+      "sha256": "f0a46e6e6217dd6c9688511e2973f671dfa79108694eebcd12dd7ea9cf53dc40"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18343,13 +18343,13 @@
     },
     {
       "path": "web/search-studio/index.html",
-      "bytes": 13232,
-      "sha256": "81e4db37ce14d69d2918b74bf30a3ca39d98e62f35a784d0323c4ad9b6c671ea"
+      "bytes": 14077,
+      "sha256": "ab0cf526b209a8b632356445b5be7dc270247cbe00375881fbf4f12f6fa81182"
     },
     {
       "path": "web/search-studio/src/app.mjs",
-      "bytes": 54601,
-      "sha256": "07ac64178e2b5088199836d1f41c50f074fdd1dbbc1ac2a03eb1a46c15831ff9"
+      "bytes": 57018,
+      "sha256": "a7fadc1d54b79fe8ae6240b8a219217bdd1611ec3a1f5aeb02b8a62299a61b7b"
     },
     {
       "path": "web/search-studio/src/audio-delivery.mjs",
@@ -18358,8 +18358,8 @@
     },
     {
       "path": "web/search-studio/src/collection-api.mjs",
-      "bytes": 13968,
-      "sha256": "3d4053061121e481bfdcf7301b8a598421334881647e7c1ab878a4705c71ce8f"
+      "bytes": 19109,
+      "sha256": "fefd94d9e3f3cf14eb26499b9abc2bd364b5d51613701f62d4f27608785efe1a"
     },
     {
       "path": "web/search-studio/src/contracts.mjs",
@@ -18368,8 +18368,8 @@
     },
     {
       "path": "web/search-studio/src/graph.mjs",
-      "bytes": 26785,
-      "sha256": "7daeb4aedde6428f529e46580ed5aa644507d73f0eec211a5fdcc6acf06f9c7f"
+      "bytes": 33381,
+      "sha256": "c3d9db81c9dbf9ed0294c656654d6becb3e4623888f9105ed78c5f0a036076c9"
     },
     {
       "path": "web/search-studio/src/hnsw.mjs",
@@ -18405,6 +18405,11 @@
       "path": "web/search-studio/src/studio-release.mjs",
       "bytes": 195,
       "sha256": "1d05a2cb3aa9390cd389cdb6c620c87c97e4e50cb1073d8b8e5f2a7b21f1efa2"
+    },
+    {
+      "path": "web/search-studio/src/map-lod.mjs",
+      "bytes": 10788,
+      "sha256": "65d362d54134dc0ec0bdad62e7c4f51dcc9ea170daf2673f9e55ab4b23e8a30f"
     },
     {
       "path": "web/search-studio/style.css",

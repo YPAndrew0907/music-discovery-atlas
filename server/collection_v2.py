@@ -13,11 +13,22 @@ rows are "Preview unavailable") with two v2 modes:
   (device, inode, size, mtime) identity changes. Nothing re-hashes the pack at startup.
 * remote: content-addressed objects on one pinned HTTPS origin, verified at publish time by
   the operator's verifier. The server never fetches or serves them.
+
+The map's level of detail is read the same way: /collection/tiles serves the layout as a quadtree of
+point tiles (every row of a tile when it holds at most TILE_CAP, otherwise a weighted stratified
+sample), and /collection/links serves the stored index links of one recording, so the page draws
+links only around the recording in focus.
+
+Track credits are served the same way: /collection/credits renders the static credit page's
+articles fifty at a time as plain HTML (no script needed), so a v2 package does not ship a
+credits file that grows with the catalog (10 MB at 5,777 rows).
 """
 import asyncio
 import base64
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+import html
 import json
 import os
 from pathlib import Path
@@ -26,7 +37,9 @@ import threading
 import time
 from urllib.parse import parse_qsl
 
-from corpus_release import ReleaseError, require, strict_json, valid_sha
+import numpy as np
+
+from corpus_release import TRACK_ID, ReleaseError, require, strict_json, valid_sha
 from release_v2 import exact_https_origin, page_query
 
 LOCAL_ROUTE = re.compile(r'/audio/([0-9]{6})\.mp3\Z')
@@ -149,6 +162,192 @@ class AudioDeliveryV2:
         return path
 
 
+# ---- map tiles -------------------------------------------------------------------------------
+TILE_BITS = 16       # positions are ordered along a Morton curve over a 65,536 x 65,536 grid
+TILE_CAP = 1024      # points per tile: every row when the tile holds at most this many
+TILE_MAX_LEVEL = 12  # 4,096 x 4,096 tiles at the deepest level
+
+
+def tile_domain(bounds):
+    """The square the tile pyramid covers: centred on the layout bounds [x0, y0, x1, y1], with the larger
+    side plus a 1/512 margin. build_web_v2.py pins this in layout.json; every tile reply repeats it."""
+    x0, y0, x1, y1 = (float(v) for v in bounds)
+    side = max(x1 - x0, y1 - y0, 1e-6) * (1 + 1 / 512)
+    return [(x0 + x1) / 2 - side / 2, (y0 + y1) / 2 - side / 2, side]
+
+
+def spread_bits(values):
+    """Interleave zeros between the low 16 bits of each value (one axis of a Morton code)."""
+    v = np.asarray(values, dtype=np.uint64) & np.uint64(0xFFFF)
+    for shift, mask in ((8, 0x00FF00FF), (4, 0x0F0F0F0F), (2, 0x33333333), (1, 0x55555555)):
+        v = (v | (v << np.uint64(shift))) & np.uint64(mask)
+    return v
+
+
+def b64(array, dtype):
+    return base64.b64encode(np.ascontiguousarray(array, dtype=dtype).tobytes()).decode('ascii')
+
+
+class TileIndex:
+    """A quadtree of point tiles over the release layout, from one Morton ordering of the rows.
+
+    Tile (z, x, y) covers the z-level cell (x, y) of tile_domain(); its rows are one contiguous run of the
+    Morton order. A tile with at most `cap` rows is complete (every row). A fuller tile is a stratified
+    sample, as build_web_v2.sample_layout draws the overview: the lowest row of each occupied cell at the
+    finest sub-level whose occupied cells number at most `cap`, weighted by the rows that cell holds.
+    Display only: tiles never decide a search result."""
+
+    def __init__(self, layout, bounds, *, cap=TILE_CAP, max_level=TILE_MAX_LEVEL, cache=512):
+        self.layout, self.cap, self.max_level = layout, cap, max_level
+        self.domain = tile_domain(bounds)
+        x0, y0, side = self.domain
+        xy = np.asarray(layout, dtype=np.float64)
+        scale = (1 << TILE_BITS) / side
+        top = (1 << TILE_BITS) - 1
+        qx = np.clip(np.floor((xy[:, 0] - x0) * scale), 0, top)
+        qy = np.clip(np.floor((xy[:, 1] - y0) * scale), 0, top)
+        codes = spread_bits(qx) | (spread_bits(qy) << np.uint64(1))
+        self.order = np.argsort(codes, kind='stable')  # rows along the curve; equal codes keep catalog order
+        self.codes = codes[self.order]
+        self._cache, self._lock, self._size = OrderedDict(), threading.Lock(), cache
+
+    def tile(self, z, x, y):
+        require(0 <= z <= self.max_level and 0 <= x < (1 << z) and 0 <= y < (1 << z), 'Tile outside the map')
+        key = (z, x, y)
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return self._cache[key]
+        shift = np.uint64(2 * (TILE_BITS - z))
+        prefix = int(spread_bits(x) | (spread_bits(y) << np.uint64(1)))
+        lo = int(np.searchsorted(self.codes, np.uint64(prefix) << shift, 'left'))
+        hi = int(np.searchsorted(self.codes, np.uint64(prefix + 1) << shift, 'left'))
+        rows, codes, total = self.order[lo:hi], self.codes[lo:hi], hi - lo
+        weights = None
+        if total <= self.cap:
+            chosen = np.sort(rows)
+        else:
+            starts = None
+            for depth in range(1, TILE_BITS - z + 1):
+                cells = codes >> np.uint64(2 * (TILE_BITS - z - depth))
+                found = np.flatnonzero(np.r_[True, cells[1:] != cells[:-1]])
+                if len(found) > self.cap:
+                    break
+                starts = found
+            lowest, counts = np.minimum.reduceat(rows, starts), np.diff(np.r_[starts, total])
+            ranked = np.argsort(lowest)
+            chosen, weights = lowest[ranked], counts[ranked]
+        payload = {'z': z, 'x': x, 'y': y, 'domain': self.domain, 'cap': self.cap, 'total': total,
+                   'complete': weights is None, 'count': len(chosen),
+                   'rows': b64(chosen, '<u4'), 'xy': b64(np.asarray(self.layout)[chosen], '<f4'),
+                   'weights': None if weights is None else b64(weights, '<u4')}
+        with self._lock:
+            self._cache[key] = payload
+            if len(self._cache) > self._size:
+                self._cache.popitem(last=False)
+        return payload
+
+
+# ---- track credits ---------------------------------------------------------------------------
+CREDITS_PAGE_SIZE = 50
+CREDITS_STYLE = ('body{max-width:75ch;margin:2rem auto;padding:0 1rem;font:16px/1.6 system-ui}'
+                 'article{border-top:1px solid #bbb;padding:1rem 0}pre{white-space:pre-wrap;overflow-wrap:anywhere}')
+PAGED_CREDITS_STYLE = (CREDITS_STYLE + 'nav{margin:1rem 0;padding:.75rem 0;border-top:1px solid #bbb}'
+                       'nav p{margin:0 0 .5rem}nav ul{list-style:none;margin:0 0 .5rem;padding:0;display:flex;flex-wrap:wrap;gap:.25rem 1.25rem}'
+                       'nav .unavailable{color:#666}nav form{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}'
+                       'nav input{width:7ch;font:inherit;padding:.15rem .3rem}nav button{font:inherit;padding:.15rem .6rem}'
+                       '.skip{position:absolute;left:-999px}.skip:focus{position:static}'
+                       # Source URLs run to 220 characters (median 96): without this a credit page scrolls sideways
+                       # at 390 px and even at 1440 px (tests/browser_credits_v2.mjs measures it).
+                       'article{overflow-wrap:anywhere}')
+
+
+# The last sentence of the credits introduction. Since the rights quarantine of 2026-10-06 every release is built
+# with corpus-releases/quarantine.json applied, and scripts/build_corpus_credits.py writes the static page with this
+# same sentence (its QUARANTINE_EXCLUSION; tests/test_api_v2.py keeps the two equal). The server never reads the list.
+CREDITS_EXCLUSIONS = ('Conflicted legacy recording 30702 is excluded, and so are the recordings on the rights '
+                      'quarantine list (removed or held after a rights review).')
+
+
+def credits_head(count, title_suffix='', style=CREDITS_STYLE):
+    """The static credit page's head, heading and introduction (scripts/build_corpus_credits.py, generalised from
+    prepare-local2000.py --phase credits), for a catalog of `count` recordings."""
+    total = f'{count:,}'
+    return ['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+            f'<title>Music Discovery Atlas: {total} track credits{title_suffix}</title><style>{style}</style>',
+            f'<h1>Track credits and licenses</h1><p>{total} screened FMA recordings. Source metadata and license notices are '
+            f'reproduced for attribution. This collection does not imply endorsement. {CREDITS_EXCLUSIONS}</p>']
+
+
+def credit_article(track):
+    """One recording's credit, byte for byte as the static credit page writes it."""
+    escape = lambda value: html.escape(str(value), quote=True)  # noqa: E731
+    parts = ['<article id="' + escape(track['id'].replace(':', '-')) + '"><h2>' + escape(track['title']) + '</h2><p>'
+             + escape(track['artist']) + '</p>']
+    for label, value in (('Source', track['sourceUrl']), ('License', track['licenseUrl'])):
+        require(isinstance(value, str) and value.startswith(('https://', 'http://')), 'Unexpected credit URL scheme')
+        parts.append('<p>' + label + ': <a href="' + escape(value) + '">' + escape(value) + '</a></p>')
+    for label, value in (('Attribution', track['attribution']), ('Modifications', track['modifications']),
+                         ('Supplied notices', track['suppliedNotices'])):
+        rendered = json.dumps(value, ensure_ascii=False, indent=2) if isinstance(value, (dict, list)) else str(value)
+        parts.append('<h3>' + label + '</h3><pre>' + escape(rendered) + '</pre>')
+    parts.append('</article>')
+    return '\n'.join(parts)
+
+
+def credits_pages(count, size=CREDITS_PAGE_SIZE):
+    return max(1, -(-count // size))
+
+
+def credits_page(release, page, *, size=CREDITS_PAGE_SIZE):
+    """Page `page` (1-based, clamped) of the track credits: the static page's heading and introduction, the
+    credit articles of `size` consecutive catalog rows, and plain-link navigation with a page-jump form."""
+    pages = credits_pages(release.count, size)
+    page = min(max(1, page), pages)
+    start, stop = (page - 1) * size, min(page * size, release.count)
+    records = release.connection().execute('SELECT row, track_json FROM records WHERE row >= ? AND row < ? ORDER BY row',
+                                           (start, stop)).fetchall()
+    require([row for row, _ in records] == list(range(start, stop)), 'Credit rows are incomplete')
+    articles = [credit_article(json.loads(track)) for _, track in records]
+    position = f'Page {page:,} of {pages:,} · recordings {start + 1:,}–{stop:,} of {release.count:,}'
+
+    def nav(label, suffix):
+        links = []
+        for text, target, rel in (('First page', 1, ''), ('Previous page', page - 1, ' rel="prev"'),
+                                  ('Next page', page + 1, ' rel="next"'), ('Last page', pages, '')):
+            usable = 1 <= target <= pages and target != page
+            links.append(f'<li><a href="?page={target}"{rel}>{text}</a></li>' if usable else
+                         f'<li><span class="unavailable">{text}</span></li>')
+        return (f'<nav aria-label="{label}"><p>{position}</p><ul>{"".join(links)}</ul>'
+                f'<form method="get" action="/collection/credits"><label for="credit-page-{suffix}">Go to page</label>'
+                f'<input id="credit-page-{suffix}" name="page" type="number" min="1" max="{pages}" value="{page}" inputmode="numeric" required>'
+                '<button type="submit">Go</button></form></nav>')
+    head = credits_head(release.count, f', page {page:,} of {pages:,}', PAGED_CREDITS_STYLE)
+    body = [head[0], head[1], '<a class="skip" href="#credits">Skip to the credits</a>', head[2],
+            '<p><a href="/search-studio/">Back to the music map</a></p>', nav('Credit pages', 'top'),
+            f'<main id="credits" tabindex="-1" aria-label="Credits, {position}">', *articles, '</main>',
+            nav('Credit pages, end of list', 'end')]
+    return ('\n'.join(body) + '\n').encode(), page
+
+
+def credits_index_page(count):
+    """The small static page a v2 web package carries at /notices/track-attribution.html instead of every
+    credit: the same heading and introduction, a link to the paged credits, and a forward for old
+    #fma-N links to the page that holds that recording."""
+    lines = credits_head(count)
+    lines.append('<p>The credits for every recording are listed fifty at a time: '
+                 '<a href="/collection/credits">read the track credits and licenses</a>.</p>')
+    lines.append('<script>const m=/^#fma-([0-9]{1,6})$/.exec(location.hash);'
+                 "if(m)location.replace('/collection/credits?id=fma%3A'+m[1]+'#fma-'+m[1]);</script>")
+    return ('\n'.join(lines) + '\n').encode()
+
+
+def credits_error(message):
+    return ('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+            f'<title>Track credits</title><style>{CREDITS_STYLE}</style><h1>Track credits</h1><p>{html.escape(message)}</p>'
+            '<p><a href="/collection/credits">First page of the track credits</a> · <a href="/search-studio/">Back to the music map</a></p>\n')
+
+
 class Budget:
     """A per-process sliding-minute allowance for CPU-bound collection reads."""
 
@@ -168,12 +367,15 @@ class Budget:
 class CollectionRoutes:
     """GET /collection/tracks and /collection/neighbors over a verified ReleaseV2."""
 
-    def __init__(self, release, graph, *, audio, headers, neighbors_per_minute=60, pending=8,
-                 trace_limit=2048, page_limit=48, rows_limit=64):
+    def __init__(self, release, graph, *, audio, headers, neighbors_per_minute=60, credits_per_minute=300,
+                 tiles_per_minute=2400, links_per_minute=600, pending=8, trace_limit=2048, page_limit=48, rows_limit=64):
         # trace_limit 2048 is the v1 page's local default; ef 32 traces hold about 50 events.
         self.release, self.graph, self.audio, self.headers = release, graph, audio, headers
         self._bits = base64.b64decode(audio.manifest['availableRows']) if audio.manifest.get('enabled') else b''
         self.neighbors_budget = Budget(neighbors_per_minute)
+        self.credits_budget = Budget(credits_per_minute)
+        self.tiles_budget, self.links_budget = Budget(tiles_per_minute), Budget(links_per_minute)
+        self._tiles, self._tiles_lock = None, threading.Lock()
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix='music-collection')
         self.pending, self.max_pending, self.lock = 0, pending, threading.Lock()
         self.trace_limit, self.page_limit, self.rows_limit = trace_limit, page_limit, rows_limit
@@ -244,26 +446,77 @@ class CollectionRoutes:
                 'layout': self.release.positions(trace_rows(traced['trace'], exact) | {row}),
                 'timingMs': {'exactSearch': (exact_at - started) * 1000, 'graphTrace': (finished - exact_at) * 1000}}
 
+    def tile_index(self):
+        with self._tiles_lock:  # built on first use: one sort of the layout (about 20 ms at 200K rows)
+            if self._tiles is None:
+                self._tiles = TileIndex(self.release.layout, self.release.manifest['layout']['bounds'])
+            return self._tiles
+
+    def tiles(self, values):
+        require(set(values) == {'z', 'x', 'y'}, 'Expected z, x and y')
+        z = self.number(values, 'z', None, 0, TILE_MAX_LEVEL)
+        return self.tile_index().tile(z, self.number(values, 'x', None, 0, (1 << z) - 1),
+                                      self.number(values, 'y', None, 0, (1 << z) - 1))
+
+    def links(self, values):
+        """The stored index links of one recording, level by level in stored order, with the positions of
+        the recording and every linked row. Display only: the page draws them around the focus."""
+        require(set(values) == {'row'}, 'Expected row')
+        release = self.release
+        row = self.number(values, 'row', None, 0, release.count - 1)
+        first, last = int(release.node_layers[row]), int(release.node_layers[row + 1])
+        levels = [release.neighbors[int(release.layer_offsets[layer]):int(release.layer_offsets[layer + 1])].tolist()
+                  for layer in range(first, last)]
+        return {'schemaVersion': 1, 'kind': 'stored-index-links', 'row': row, 'graphId': release.graph_id,
+                'indexSha256': release.graph_sha256, 'levels': levels,
+                'layout': release.positions({row, *(target for level in levels for target in level)})}
+
+    def credits(self, values):
+        """An HTML page of track credits, or a redirect from a recording ID to the page that holds it."""
+        from starlette.responses import HTMLResponse, RedirectResponse
+        require(len(values) <= 1, 'Use either page or id')
+        headers = {**self.headers, 'Cache-Control': 'no-cache'}
+        if 'id' in values:
+            ident = values['id']
+            require(TRACK_ID.fullmatch(ident) is not None, 'Invalid recording ID')
+            row = self.release.row_of.get(ident)
+            if row is None:
+                return HTMLResponse(credits_error('No recording with this ID is in the collection.'), status_code=404,
+                                    headers=headers)
+            page = row // CREDITS_PAGE_SIZE + 1
+            return RedirectResponse(f'/collection/credits?page={page}#' + ident.replace(':', '-'), status_code=303,
+                                    headers=headers)
+        body, _ = credits_page(self.release, self.number(values, 'page', 1, 0, 10_000_000))
+        return HTMLResponse(body, headers=headers)
+
     async def __call__(self, scope, receive, send):
-        from starlette.responses import JSONResponse
+        from starlette.responses import HTMLResponse, JSONResponse, Response
         path = scope['path']
-        routes = {'/collection/tracks': (self.tracks, {'rows', 'offset', 'limit', 'q', 'text', 'genre', 'preview', 'facets'}),
-                  '/collection/neighbors': (self.neighbors, {'row'})}
+        routes = {'/collection/tracks': (self.tracks, {'rows', 'offset', 'limit', 'q', 'text', 'genre', 'preview', 'facets'}, None,
+                                         'Collection'),
+                  '/collection/neighbors': (self.neighbors, {'row'}, self.neighbors_budget, 'Neighbor exploration'),
+                  '/collection/tiles': (self.tiles, {'z', 'x', 'y'}, self.tiles_budget, 'Map tile'),
+                  '/collection/links': (self.links, {'row'}, self.links_budget, 'Map link'),
+                  '/collection/credits': (self.credits, {'page', 'id'}, self.credits_budget, 'Credit page')}
         headers = {**self.headers, 'Cache-Control': 'no-store'}
+
+        def failure(message, status, extra=None):
+            if path == '/collection/credits':  # a page people read: its errors are pages too
+                return HTMLResponse(credits_error(message), status_code=status, headers={**headers, **(extra or {})})
+            return JSONResponse({'error': message}, status_code=status, headers={**headers, **(extra or {})})
         if path not in routes:
-            await JSONResponse({'error': 'Not found'}, status_code=404, headers=headers)(scope, receive, send)
+            await failure('Not found', 404)(scope, receive, send)
             return
-        handler, allowed = routes[path]
+        handler, allowed, budget, name = routes[path]
         try:
             values = self.params(scope.get('query_string', b''), allowed)
         except ReleaseError as error:
-            await JSONResponse({'error': str(error)}, status_code=400, headers=headers)(scope, receive, send)
+            await failure(str(error), 400)(scope, receive, send)
             return
-        if handler == self.neighbors:
-            retry = self.neighbors_budget.admit()
+        if budget is not None:
+            retry = budget.admit()
             if retry:
-                await JSONResponse({'error': 'Neighbor exploration budget exhausted'}, status_code=429,
-                                   headers={**headers, 'Retry-After': str(retry)})(scope, receive, send)
+                await failure(name + ' budget exhausted', 429, {'Retry-After': str(retry)})(scope, receive, send)
                 return
         with self.lock:
             if self.pending >= self.max_pending:
@@ -271,20 +524,19 @@ class CollectionRoutes:
             else:
                 full, self.pending = False, self.pending + 1
         if full:
-            await JSONResponse({'error': 'Collection queue full'}, status_code=429,
-                               headers={**headers, 'Retry-After': '1'})(scope, receive, send)
+            await failure('Collection queue full', 429, {'Retry-After': '1'})(scope, receive, send)
             return
         try:
             body = await asyncio.get_running_loop().run_in_executor(self.executor, handler, values)
-            status = 200
+            response = body if isinstance(body, Response) else JSONResponse(body, status_code=200, headers=headers)
         except ReleaseError as error:
-            body, status = {'error': str(error)}, 400
+            response = failure(str(error), 400)
         except Exception:
-            body, status = {'error': 'Collection read failed'}, 500
+            response = failure('Collection read failed', 500)
         finally:
             with self.lock:
                 self.pending -= 1
-        await JSONResponse(body, status_code=status, headers=headers)(scope, receive, send)
+        await response(scope, receive, send)
 
     def close(self):
         self.executor.shutdown(wait=False, cancel_futures=True)

@@ -1,4 +1,5 @@
 import {searchBeats,motionAt,beatEdges,indexConnections,interpolateView} from './search-motion.mjs';
+import {TileField,tileLevel,tilesInView,regionAlpha,TILE_MIN_LEVEL} from './map-lod.mjs';
 export const DEFAULT_INSETS=Object.freeze({top:70,bottom:125});
 export function placeLabel(point,textWidth,boxes,anchors,width,height,insets=DEFAULT_INSETS){
   const candidates=[];
@@ -21,18 +22,22 @@ function boundsFor(positions,ids=null){
 // A display budget, never a change to the graph or catalog. Every retained
 // point is an actual row and every retained edge is an existing index link.
 export const LINKS_PER_VISIBLE_POINT=0.6,MAX_VISIBLE_LINKS=160;
-export function visibleGraphContext(points,connections,{width,height,detail=1,important=[],top=DEFAULT_INSETS.top,bottom=DEFAULT_INSETS.bottom}={}){
-  const nodeBudget=detail<1.6?320:600,cell=detail<1.6?14:9;
+// With `order` (release format v2 level of detail) only those candidate ids are considered, in that order,
+// and `pointOf(id)` projects each one on demand, so a frame costs O(candidates), not O(catalog).
+export function visibleGraphContext(points,connections,{width,height,detail=1,important=[],top=DEFAULT_INSETS.top,bottom=DEFAULT_INSETS.bottom,order=null,pointOf=null}={}){
+  const nodeBudget=detail<1.6?320:600,cell=detail<1.6?14:9,at=pointOf??(id=>points[id]);
   const ids=[],seen=new Set(),cells=new Set(),priority=new Set(important.filter(Number.isInteger));
   const add=id=>{
-    if(seen.has(id)||ids.length>=nodeBudget||!points[id])return;
-    const [x,y]=points[id];if(x<0||x>width||y<top||y>height-bottom)return;
+    if(seen.has(id)||ids.length>=nodeBudget)return;
+    const p=at(id);if(!p)return;
+    const [x,y]=p;if(x<0||x>width||y<top||y>height-bottom)return;
     const key=Math.floor(x/cell)*1e6+Math.floor(y/cell);
     if(!priority.has(id)&&cells.has(key))return;
     cells.add(key);seen.add(id);ids.push(id);
   };
   for(const id of priority)add(id);
-  for(let id=0;id<points.length&&ids.length<nodeBudget;id++)add(id);
+  if(order){for(const id of order){if(ids.length>=nodeBudget)break;add(id);}}
+  else for(let id=0;id<points.length&&ids.length<nodeBudget;id++)add(id);
   // Links are budgeted against the points actually shown, so a tight Matches view is not
   // covered by the full 160-link allowance; links touching results, the selection, the
   // hover or the frontier are kept first.
@@ -40,7 +45,7 @@ export function visibleGraphContext(points,connections,{width,height,detail=1,im
   const preferred=[],other=[];
   if(edgeBudget)for(const edge of connections){
     if(!seen.has(edge.from)||!seen.has(edge.to))continue;
-    const p=points[edge.from],q=points[edge.to];if(Math.hypot(p[0]-q[0],p[1]-q[1])<2)continue;
+    const p=at(edge.from),q=at(edge.to);if(Math.hypot(p[0]-q[0],p[1]-q[1])<2)continue;
     const target=priority.has(edge.from)||priority.has(edge.to)?preferred:other;
     if(target.length<edgeBudget)target.push(edge);
   }
@@ -82,7 +87,8 @@ export function rasterizeDensity(positions,bounds,{overviewSize,dpr=1,zoom=1,col
   return {canvas,x0,y0,spanX:width/res,spanY:height/res,res,zoom,points:positions.length};
 }
 export class AudioMap {
-  constructor(canvas,{positions,tracks,connections=[],colors,onSelect,onHover,onTrace,onDensity=()=>{},insets=DEFAULT_INSETS,createLayer=defaultLayerFactory,density=null,bounds=null}){this.readInsets=typeof insets==='function'?insets:()=>insets;this.insets=this.measureInsets();this.createLayer=createLayer;this._density=new Map();this.canvas=canvas;this.ctx=canvas.getContext('2d');this.positions=positions;this.density=density;this.allBounds=bounds?{...bounds}:boundsFor(positions);this.resultBounds=null;this.tracks=tracks;this.connections=connections;this.colors=colors;this.onSelect=onSelect;this.onHover=onHover;this.onTrace=onTrace;this.onDensity=onDensity;this._visibleIds=[];this._hitPoints=[];this.scale=1;this.offset=[0,0];this.focus='results';this.selected=0;this.inspected=null;this.results=[];this.resultRanks=new Map();this.events=[];this.visited=new Set();this.visitedCursor=0;this.cursor=0;this.elapsed=0;this.duration=1;this.beats=[];this.reveal=1;this.playing=false;this.raf=0;this.motionGeneration=0;this.camera=null;this.cameraTransition=null;this.hover=null;this.pointer=null;this.motion=matchMedia('(prefers-reduced-motion: reduce)');this.abort=new AbortController();const opt={signal:this.abort.signal};this.resize=new ResizeObserver(()=>{this.insets=this.measureInsets();this._density.clear();this.cancelWarm();this.camera=null;this.cameraTransition=null;this.draw();});this.resize.observe(canvas);canvas.addEventListener('pointerdown',e=>{if(this.pointer)return;this.cameraTransition=null;this.pointer={id:e.pointerId,x:e.clientX,y:e.clientY,offset:[...this.offset],moved:false};canvas.setPointerCapture(e.pointerId);},opt);canvas.addEventListener('pointermove',e=>{if(this.pointer){if(e.pointerId!==this.pointer.id)return;const dx=e.clientX-this.pointer.x,dy=e.clientY-this.pointer.y;if(Math.hypot(dx,dy)>5)this.pointer.moved=true;if(this.pointer.moved){this.offset=[this.pointer.offset[0]+dx,this.pointer.offset[1]+dy];this.draw();}return;}const id=this.hit(e);if(id!==this.hover){this.hover=id;this.onHover(id,e);this.draw();}},opt);canvas.addEventListener('pointerup',e=>{const p=this.pointer;if(!p||e.pointerId!==p.id)return;this.pointer=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(!p.moved){const id=this.hit(e);if(id!==null)this.onSelect(id);}},opt);for(const event of ['pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{this.pointer=null;},opt);canvas.addEventListener('pointerleave',()=>{this.hover=null;this.onHover(null);this.draw();},opt);canvas.addEventListener('keydown',e=>{if(e.key==='Home'){e.preventDefault();this.fit('all');}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();this.cameraTransition=null;this.offset[0]+=e.key==='ArrowLeft'?35:e.key==='ArrowRight'?-35:0;this.offset[1]+=e.key==='ArrowUp'?35:e.key==='ArrowDown'?-35:0;this.draw();}if(e.key==='+'||e.key==='='){e.preventDefault();this.zoom(1.2);}if(e.key==='-'){e.preventDefault();this.zoom(1/1.2);}if(e.key==='Escape'){this.hover=null;this.onHover(null);this.draw();}},opt);document.addEventListener('visibilitychange',()=>{if(document.hidden&&this.playing)this.pause();},opt);this.motion.addEventListener('change',()=>{if(this.motion.matches)this.finish();},opt);this.draw();}
+  // lod (release format v2): {sampleRows, regions, tiles:{domain,cap,maxLevel,fetchTile}|null, links:{get,request}|null}.
+  constructor(canvas,{positions,tracks,connections=[],colors,onSelect,onHover,onTrace,onDensity=()=>{},insets=DEFAULT_INSETS,createLayer=defaultLayerFactory,density=null,bounds=null,lod=null}){this.lod=lod;this.tileField=lod?.tiles?new TileField({...lod.tiles,createLayer,color:colors?.node||'#999',onChange:()=>this.requestDraw()}):null;this._textWidths=new Map();this.readInsets=typeof insets==='function'?insets:()=>insets;this.insets=this.measureInsets();this.createLayer=createLayer;this._density=new Map();this.canvas=canvas;this.ctx=canvas.getContext('2d');this.positions=positions;this.density=density;this.allBounds=bounds?{...bounds}:boundsFor(positions);this.resultBounds=null;this.tracks=tracks;this.connections=connections;this.colors=colors;this.onSelect=onSelect;this.onHover=onHover;this.onTrace=onTrace;this.onDensity=onDensity;this._visibleIds=[];this._hitPoints=[];this.scale=1;this.offset=[0,0];this.focus='results';this.selected=0;this.inspected=null;this.results=[];this.resultRanks=new Map();this.events=[];this.visited=new Set();this.visitedCursor=0;this.cursor=0;this.elapsed=0;this.duration=1;this.beats=[];this.reveal=1;this.playing=false;this.raf=0;this.motionGeneration=0;this.camera=null;this.cameraTransition=null;this.hover=null;this.pointer=null;this.motion=matchMedia('(prefers-reduced-motion: reduce)');this.abort=new AbortController();const opt={signal:this.abort.signal};this.resize=new ResizeObserver(()=>{this.insets=this.measureInsets();this._density.clear();this.cancelWarm();this.camera=null;this.cameraTransition=null;this.draw();});this.resize.observe(canvas);canvas.addEventListener('pointerdown',e=>{if(this.pointer)return;this.cameraTransition=null;this.pointer={id:e.pointerId,x:e.clientX,y:e.clientY,offset:[...this.offset],moved:false};canvas.setPointerCapture(e.pointerId);},opt);canvas.addEventListener('pointermove',e=>{if(this.pointer){if(e.pointerId!==this.pointer.id)return;const dx=e.clientX-this.pointer.x,dy=e.clientY-this.pointer.y;if(Math.hypot(dx,dy)>5)this.pointer.moved=true;if(this.pointer.moved){this.offset=[this.pointer.offset[0]+dx,this.pointer.offset[1]+dy];this.draw();}return;}const id=this.hit(e);if(id!==this.hover){this.hover=id;this.onHover(id,e);this.draw();}},opt);canvas.addEventListener('pointerup',e=>{const p=this.pointer;if(!p||e.pointerId!==p.id)return;this.pointer=null;if(canvas.hasPointerCapture(e.pointerId))canvas.releasePointerCapture(e.pointerId);if(!p.moved){const id=this.hit(e);if(id!==null)this.onSelect(id);}else if(this.lod)this.draw();},opt);for(const event of ['pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{this.pointer=null;},opt);canvas.addEventListener('pointerleave',()=>{this.hover=null;this.onHover(null);this.draw();},opt);canvas.addEventListener('keydown',e=>{if(e.key==='Home'){e.preventDefault();this.fit('all');}if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();this.cameraTransition=null;this.offset[0]+=e.key==='ArrowLeft'?35:e.key==='ArrowRight'?-35:0;this.offset[1]+=e.key==='ArrowUp'?35:e.key==='ArrowDown'?-35:0;this.draw();}if(e.key==='+'||e.key==='='){e.preventDefault();this.zoom(1.2);}if(e.key==='-'){e.preventDefault();this.zoom(1/1.2);}if(e.key==='Escape'){this.hover=null;this.onHover(null);this.draw();}},opt);document.addEventListener('visibilitychange',()=>{if(document.hidden&&this.playing)this.pause();},opt);this.motion.addEventListener('change',()=>{if(this.motion.matches)this.finish();},opt);this.draw();}
   geometry(mode=this.focus){
     let bounds=mode==='results'&&this.resultBounds?this.resultBounds:this.allBounds;
     if(mode==='selected'&&Number.isInteger(this.selected)){const p=this.positions[this.selected],radius=Math.max(this.allBounds.x1-this.allBounds.x0,this.allBounds.y1-this.allBounds.y0)/8;bounds={x0:p[0]-radius,x1:p[0]+radius,y0:p[1]-radius,y1:p[1]+radius};}
@@ -144,6 +150,8 @@ export class AudioMap {
     this.cursor=this.events.length;this.elapsed=this.duration;this.reveal=1;
     this.selected=rows[0]?.row??null;this.inspected=null;
     this.focus='results';this.scale=1;this.offset=[0,0];this.camera=this.searchView();this.cameraTransition=null;
+    // Level of detail: the tiles where this search will land are requested now, while it animates.
+    if(this.tileField&&this.width){const dest=this.lodView(this.camera);if(dest.tiles)this.tileField.want(dest.z,dest.list,{immediate:true});}
     if(animate&&this.events.length&&!this.motion.matches){
       this.prepareCamera(previous);this.elapsed=0;this.cursor=0;this.reveal=0;this.replay();
     }else{this.draw();this.notify();}
@@ -195,6 +203,56 @@ export class AudioMap {
   finish(){this.pause();this.cursor=this.events.length;this.elapsed=this.duration;this.reveal=1;this.camera=this.searchView();this.cameraTransition=null;this.draw();this.notify();}
   fit(mode='results'){this.pause();this.cursor=this.events.length;this.elapsed=this.duration;this.reveal=1;this.camera=null;this.cameraTransition=null;this.focus=mode;this.scale=1;this.offset=[0,0];this.draw();this.notify();}
   zoom(f){this.pause();this.cameraTransition=null;this.scale=Math.max(.6,Math.min(8,this.scale*f));this.draw();}
+  // Level of detail: the tile level and the tiles in view (with a 10% margin) for a camera.
+  lodView(g){
+    const f=this.tileField;if(!f||!this.width)return{tiles:false};
+    const k=g.size*this.scale,z=tileLevel(f.domain,k,f.maxLevel);
+    if(z<TILE_MIN_LEVEL)return{tiles:false,z};
+    const inv=(sx,sy)=>[g.cx+(sx-g.screenX-this.offset[0])/k,g.cy+(sy-g.screenY-this.offset[1])/k];
+    const [ax,ay]=inv(0,this.insets.top),[bx,by]=inv(this.width,this.height-this.insets.bottom),mx=(bx-ax)*.1,my=(by-ay)*.1;
+    return{tiles:true,z,list:tilesInView(f.domain,z,{x0:ax-mx,y0:ay-my,x1:bx+mx,y1:by+my})};
+  }
+  // Each tile in view replaces the overview cloud under it with its own raster (or its loaded ancestor's);
+  // tile edges are snapped to device pixels so neighbouring tiles meet without seams. The overview is drawn
+  // (and cleared under the tiles) only while some tile in view has nothing to show yet.
+  drawTiles(ctx,g,dpr,view,alpha,drawOverview){
+    const f=this.tileField,k=g.size*this.scale,s=f.domain[2]/2**view.z;f.beginFrame();
+    const sx=i=>Math.round((g.screenX+(f.domain[0]+i*s-g.cx)*k+this.offset[0])*dpr)/dpr,sy=j=>Math.round((g.screenY+(f.domain[1]+j*s-g.cy)*k+this.offset[1])*dpr)/dpr;
+    const sources=view.list.map(([x,y])=>[x,y,f.source(view.z,x,y)]),partial=sources.some(([,,src])=>!src);
+    if(partial)drawOverview();
+    ctx.globalAlpha=alpha;
+    for(const [x,y,src] of sources){
+      if(!src)continue;
+      const x0=sx(x),x1=sx(x+1),y0=sy(y),y1=sy(y+1);
+      if(partial)ctx.clearRect(x0,y0,x1-x0,y1-y0);
+      ctx.drawImage(src.canvas,src.sx,src.sy,src.size,src.size,x0,y0,x1-x0,y1-y0);
+    }
+    ctx.globalAlpha=1;
+    return partial;
+  }
+  textWidth(ctx,text){let w=this._textWidths.get(text);if(w===undefined){w=ctx.measureText(text).width;this._textWidths.set(text,w);}return w;}
+  // Region labels: the most common source genre of an area, shown only within its level's zoom range,
+  // never over a track label or a match, and not repeated nearby. Dimmed while a search replays.
+  drawRegions(ctx,g,detail,boxes,anchors,replaying){
+    const regions=this.lod?.regions;if(!regions?.length)return;
+    const k=g.size*this.scale,low=this.height-this.insets.bottom,placed=[];
+    ctx.font='600 11px Arial';ctx.textAlign='center';ctx.textBaseline='middle';ctx.lineJoin='round';
+    for(const level of regions){
+      const alpha=regionAlpha(detail,level.from,level.to)*(replaying?.55:1);if(alpha<.02)continue;
+      for(const item of level.items){
+        const x=g.screenX+(item.x-g.cx)*k+this.offset[0],y=g.screenY+(item.y-g.cy)*k+this.offset[1];
+        if(x<0||x>this.width||y<this.insets.top+10||y>low-10)continue;
+        const text=item.label.toUpperCase(),w=this.textWidth(ctx,text),r={x:x-w/2-4,y:y-9,w:w+8,h:18};
+        if(r.x<2||r.x+r.w>this.width-2||placed.some(p=>p.text===text&&Math.hypot(p.x-x,p.y-y)<160))continue;
+        if(boxes.some(b=>r.x<b.x+b.w&&r.x+r.w>b.x&&r.y<b.y+b.h&&r.y+r.h>b.y)||anchors.some(([px,py])=>px>r.x-6&&px<r.x+r.w+6&&py>r.y-6&&py<r.y+r.h+6))continue;
+        boxes.push(r);placed.push({text,x,y});
+        ctx.globalAlpha=alpha*.9;ctx.strokeStyle=this.colors.paper;ctx.lineWidth=3;ctx.strokeText(text,x,y);
+        ctx.globalAlpha=alpha;ctx.fillStyle=this.colors.muted;ctx.fillText(text,x,y);
+      }
+    }
+    ctx.globalAlpha=1;ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  }
+  requestDraw(){if(this.playing||this._redraw||this.abort.signal.aborted)return;this._redraw=requestAnimationFrame(()=>{this._redraw=0;this.draw();});}
   draw(){
     const rect=this.canvas.getBoundingClientRect();this.width=rect.width;this.height=rect.height;
     if(!this.width||!this.height)return;
@@ -204,7 +262,8 @@ export class AudioMap {
     if(this.canvas.height!==pixelHeight)this.canvas.height=pixelHeight;
     const ctx=this.ctx,colors=this.colors,{top,bottom}=this.insets,low=this.height-bottom;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,this.width,this.height);
     this._drawingGeometry=this.camera??this.geometry();
-    this._drawingPoints=this.positions.map((_,id)=>this.project(id,this._drawingGeometry));
+    const lod=this.lod;
+    if(!lod)this._drawingPoints=this.positions.map((_,id)=>this.project(id,this._drawingGeometry));
     ctx.save();ctx.beginPath();ctx.rect(0,top,this.width,Math.max(0,low-top));ctx.clip();
     const beat=motionAt(this.beats,this.elapsed),done=this.elapsed>=this.duration;
     const event=beat?this.events[beat.eventIndex]:null;
@@ -214,18 +273,36 @@ export class AudioMap {
     // Offscreen links and subpixel segments are omitted only as level-of-detail.
     const g=this._drawingGeometry,overviewSize=this.geometry('all').size,detail=(g.size*this.scale)/overviewSize;
     const currentId=!done?(event?.type==='expand'?event.id:event?.entryIds?.[0]):null;
-    const context=visibleGraphContext(this._drawingPoints,this.connections,{width:this.width,height:this.height,detail,top,bottom,important:[...this.results,this.selected,this.hover,currentId,...frontier]});
+    const important=[...this.results,this.selected,this.hover,currentId,...frontier];
+    let context,view=null,focus=null;
+    if(lod){
+      // Release format v2: candidates are the trace's visited rows, then the overview sample or the rows of the
+      // tiles in view; each is projected only when considered. Links are drawn only around the selection.
+      const projected=[],pointOf=id=>{let p=projected[id];if(p===undefined&&this.positions[id]){p=this.project(id,g);projected[id]=p;}return p;};
+      view=this.lodView(g);
+      focus=done&&Number.isInteger(this.selected)?lod.links?.get(this.selected)??null:null;
+      const order=view.tiles?[...visited,...this.tileField.candidates(view.z,view.list)]:[...visited,...lod.sampleRows];
+      context=visibleGraphContext(projected,[],{width:this.width,height:this.height,detail,top,bottom,important:[...important,...(focus?focus.levels.flat():[])],order,pointOf});
+      this._drawingPoints=projected;
+    }else context=visibleGraphContext(this._drawingPoints,this.connections,{width:this.width,height:this.height,detail,top,bottom,important});
     this._visibleIds=context.ids;this._hitPoints=this._drawingPoints;this._context=context;
     // The collection cloud: every position, cached, faded as the budgeted points take over when zoomed in.
-    const layer=this.densityLayer(dpr,detail);
-    if(layer){this.warmDensity(dpr);
-      const k=g.size*this.scale;ctx.globalAlpha=detail<=1.6?1:Math.max(.4,1-(detail-1.6)*.25);
+    const layer=this.densityLayer(dpr,detail),cloudAlpha=detail<=1.6?1:Math.max(.4,1-(detail-1.6)*.25);
+    const drawOverview=()=>{if(!layer)return;
+      const k=g.size*this.scale;ctx.globalAlpha=cloudAlpha;
       ctx.drawImage(layer.canvas,g.screenX+(layer.x0-g.cx)*k+this.offset[0],g.screenY+(layer.y0-g.cy)*k+this.offset[1],layer.spanX*k,layer.spanY*k);
-    }
+    };
+    if(layer)this.warmDensity(dpr);
+    if(view?.tiles)this.drawTiles(ctx,g,dpr,view,cloudAlpha,drawOverview);else drawOverview();
     // During replay only the trace's own accepted edges and the result anchors are drawn;
     // stored context links return once the replay is done, and only when zoomed in.
     const contextEdges=done?context.edges:[];
-    this.onDensity({visible:context.ids.length,edges:contextEdges.length,total:this.tracks.length,replaying:!done,cloud:!!layer});
+    const focusEdges=focus&&detail>=1.6?focus.levels.flatMap((level,n)=>level.map(to=>({from:focus.row,to,level:n}))):[];
+    this.onDensity({visible:context.ids.length,edges:lod?focusEdges.length:contextEdges.length,total:this.tracks.length,replaying:!done,cloud:!!layer,...(lod?{tileLevel:view.tiles?view.z:null}:{})});
+    if(lod&&!this.playing&&!this.cameraTransition&&!this.pointer){
+      this.tileField?.want(view.tiles?view.z:0,view.tiles?view.list:[]);
+      if(done&&Number.isInteger(this.selected)&&!focus)lod.links?.request(this.selected);
+    }
     const strokeGroup=(edges,style)=>{
       if(!edges.length)return;ctx.beginPath();
       for(const edge of edges){
@@ -238,6 +315,9 @@ export class AudioMap {
     // One path per style: the same pixels as per-edge strokes, at a fraction of the draw calls.
     strokeGroup(contextEdges.filter(e=>e.level>0),{color:colors.node,alpha:.11+detail*.035,width:1});
     strokeGroup(contextEdges.filter(e=>!(e.level>0)),{color:colors.node,alpha:.11+detail*.035,width:.7});
+    // v2: the stored links of the selected recording only, a little stronger than the old context mesh.
+    strokeGroup(focusEdges.filter(e=>e.level>0),{color:colors.node,alpha:.42,width:1.2});
+    strokeGroup(focusEdges.filter(e=>!(e.level>0)),{color:colors.node,alpha:.34,width:.8});
     // Keep the context quiet. Only recent real accepted branches form the trail.
     const trail=this.beats.slice(Math.max(0,(beat?.index??0)-3),beat?.index??0);
     ctx.strokeStyle=colors.visited;ctx.lineWidth=1;
@@ -306,7 +386,8 @@ export class AudioMap {
       ctx.textAlign='left';ctx.textBaseline='alphabetic';ctx.fillStyle=isActive?colors.frontier:id===this.selected?colors.ink:colors.muted;ctx.fillText(title,x,y+3);
       ctx.strokeStyle=colors.rule;ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p[0]+7,p[1]);ctx.lineTo(x-4,y);ctx.stroke();
     }
+    if(lod)this.drawRegions(ctx,g,detail,boxes,[...new Set([this.selected,activeId,...this.results])].filter(i=>Number.isInteger(i)&&this.positions[i]).map(i=>this.point(i)),!done);
     ctx.restore();this._drawingGeometry=null;this._drawingPoints=null;
   }
-  destroy(){this.pause();this.abort.abort();this.resize.disconnect();this.cancelWarm();}
+  destroy(){this.pause();this.abort.abort();this.resize.disconnect();this.cancelWarm();this.tileField?.destroy();if(this._redraw)cancelAnimationFrame(this._redraw);}
 }

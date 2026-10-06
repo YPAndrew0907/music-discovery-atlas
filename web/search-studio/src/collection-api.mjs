@@ -7,6 +7,18 @@ const HEX64 = /^[a-f0-9]{64}$/;
 export const COLLECTION_TIMEOUT_MS = 15_000;
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const text = (value, max = 4096) => typeof value === 'string' && value.length <= max;
+// Little-endian typed values from base64 (the tile payloads), independent of the platform's byte order.
+const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
+function decode(base64, kind, length) {
+  if (typeof base64 !== 'string' || base64.length > 4 * 1024 * 1024) throw new Error('Invalid map tile');
+  const binary = atob(base64), bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  if (bytes.length !== length * 4) throw new Error('Invalid map tile');
+  if (LITTLE_ENDIAN) return kind === 'f32' ? new Float32Array(bytes.buffer) : new Uint32Array(bytes.buffer);
+  const view = new DataView(bytes.buffer), out = kind === 'f32' ? new Float32Array(length) : new Uint32Array(length);
+  for (let i = 0; i < length; i++) out[i] = kind === 'f32' ? view.getFloat32(4 * i, true) : view.getUint32(4 * i, true);
+  return out;
+}
 
 export function validateCollectionManifest(manifest, pageOrigin) {
   const fail = message => { throw new Error('Collection manifest: ' + message); };
@@ -93,13 +105,14 @@ export class Collection {
     return results.map(r => ({row: r.row, score: r.cosineSimilarity}));
   }
 
-  async get(path, params = {}) {
+  async get(path, params = {}, {signal = null} = {}) {
     const url = new URL(path, this.api);
     for (const [key, value] of Object.entries(params)) if (value !== '' && value !== null && value !== undefined) url.searchParams.set(key, String(value));
     if (url.origin !== this.api.origin || !url.pathname.startsWith('/collection/')) throw new Error('Collection reads stay on this origin');
     this.requests++;
+    const timeout = AbortSignal.timeout(COLLECTION_TIMEOUT_MS);
     const response = await this.fetcher(url, {credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', redirect: 'error',
-      signal: AbortSignal.timeout(COLLECTION_TIMEOUT_MS)});
+      signal: signal && AbortSignal.any ? AbortSignal.any([signal, timeout]) : signal ?? timeout});
     let body = null;
     try { body = await response.json(); } catch { /* not JSON */ }
     if (!response.ok) {
@@ -139,24 +152,75 @@ export class Collection {
     return {ranked: this.absorbPacket(body, {k: 16}), trace: body.trace, timingMs: body.timingMs};
   }
 
-  // The pinned density-cloud sample: sampled rows, optional weights and the stored index links between them.
+  // The pinned map overview (layout schema 3): the density-cloud sample (rows, positions, optional weights),
+  // region labels per zoom level and, when the sample is not every row, the tile pyramid that
+  // /collection/tiles serves. Stored index links are read per recording from /collection/links.
   loadLayout(layout) {
     const m = this.manifest;
-    if (!layout || layout.releaseSha256 !== m.releaseSha256 || layout.graphId !== m.graphId || layout.count !== this.count ||
-        !Array.isArray(layout.rows) || layout.rows.length !== layout.sampleCount || layout.xy?.length !== layout.rows.length * 2 ||
-        (layout.weights && layout.weights.length !== layout.rows.length) || !Array.isArray(layout.edges) || layout.edges.length % 3 ||
+    if (!layout || layout.schemaVersion !== 3 || layout.kind !== 'music-layout-lod-v2' || layout.releaseSha256 !== m.releaseSha256 ||
+        layout.graphId !== m.graphId || layout.count !== this.count || !Array.isArray(layout.rows) || layout.rows.length !== layout.sampleCount ||
+        layout.xy?.length !== layout.rows.length * 2 || (layout.weights && layout.weights.length !== layout.rows.length) ||
+        new Set(layout.rows).size !== layout.rows.length || layout.links !== '/collection/links' ||
         !Array.isArray(layout.bounds) || layout.bounds.length !== 4 || !layout.bounds.every(finite)) throw new Error('Invalid layout sample');
     this.absorbLayout(layout);
     const points = layout.rows.map(row => this.positions[row]);
     const weights = layout.weights ? layout.weights.map(w => (Number.isSafeInteger(w) && w > 0 ? w : 1)) : null;
-    const sampled = new Set(layout.rows), connections = [];
-    for (let i = 0; i < layout.edges.length; i += 3) {
-      const [from, to, level] = layout.edges.slice(i, i + 3);
-      if (!sampled.has(from) || !sampled.has(to) || from >= to || !Number.isInteger(level) || level < 0) throw new Error('Invalid layout links');
-      connections.push({from, to, level});
+    const levels = layout.regions?.levels;
+    if (!Array.isArray(levels) || levels.length > 4) throw new Error('Invalid map regions');
+    const regions = levels.map(level => {
+      if (!finite(level?.fromDetail) || !finite(level.toDetail) || level.fromDetail < 0 || level.toDetail <= level.fromDetail ||
+          !Array.isArray(level.items) || level.items.length > 256) throw new Error('Invalid map regions');
+      const items = level.items.filter(item => {
+        if (!finite(item?.x) || !finite(item.y) || !Number.isSafeInteger(item.count) || item.count < 1 ||
+            (item.label !== null && !text(item.label, 64))) throw new Error('Invalid map regions');
+        return item.label !== null;
+      }).map(({x, y, count, label}) => ({x, y, count, label}));
+      return {from: level.fromDetail, to: level.toDetail, items};
+    });
+    let tiles = null;
+    if (layout.tiles !== null) {
+      const t = layout.tiles;
+      if (layout.sampleCount >= this.count || t?.api !== '/collection/tiles' || !Array.isArray(t.domain) || t.domain.length !== 3 ||
+          !t.domain.every(finite) || !(t.domain[2] > 0) || !Number.isSafeInteger(t.cap) || t.cap < 1 || t.cap > 65536 ||
+          !Number.isSafeInteger(t.maxLevel) || t.maxLevel < 0 || t.maxLevel > 16) throw new Error('Invalid map tiles');
+      tiles = {domain: [...t.domain], cap: t.cap, maxLevel: t.maxLevel};
     }
+    this.tileSpec = tiles;
     const [x0, y0, x1, y1] = layout.bounds;
-    return {points, weights, connections, bounds: {x0, y0, x1, y1}, description: layout.description};
+    return {points, rows: [...layout.rows], weights, connections: [], regions, tiles, bounds: {x0, y0, x1, y1}, description: layout.description};
+  }
+
+  // One map tile: every row of its square when it is complete, else a weighted stratified sample. Rows and
+  // positions are checked, and positions must agree with any the page already holds.
+  async tile(z, x, y, {signal} = {}) {
+    const spec = this.tileSpec;
+    if (!spec || !Number.isInteger(z) || z < 0 || z > spec.maxLevel || !Number.isInteger(x) || !Number.isInteger(y) ||
+        x < 0 || y < 0 || x >= 2 ** z || y >= 2 ** z) throw new Error('Invalid map tile request');
+    const body = await this.get('tiles', {z, x, y}, {signal});
+    const count = body?.count;
+    if (!body || body.z !== z || body.x !== x || body.y !== y || !Array.isArray(body.domain) || body.domain.some((v, i) => v !== spec.domain[i]) ||
+        body.cap !== spec.cap || !Number.isSafeInteger(count) || count < 0 || count > spec.cap || !Number.isSafeInteger(body.total) ||
+        body.total < count || body.total > this.count || typeof body.complete !== 'boolean' || (body.complete && body.total !== count) ||
+        (body.complete !== (body.weights === null))) throw new Error('Invalid map tile');
+    const rows = decode(body.rows, 'u32', count), xy = decode(body.xy, 'f32', 2 * count), weights = body.weights === null ? null : decode(body.weights, 'u32', count);
+    for (let i = 0; i < count; i++) {
+      const row = rows[i], px = xy[2 * i], py = xy[2 * i + 1], known = this.positions[row];
+      if (row >= this.count || (i && row <= rows[i - 1]) || !Number.isFinite(px) || !Number.isFinite(py) || (weights && weights[i] < 1)) throw new Error('Invalid map tile');
+      if (known && (known[0] !== px || known[1] !== py)) throw new Error('Map tile position changed');
+    }
+    for (let i = 0; i < count; i++) if (!this.positions[rows[i]]) this.positions[rows[i]] = [xy[2 * i], xy[2 * i + 1]];
+    return {z, x, y, total: body.total, complete: body.complete, rows, xy, weights};
+  }
+
+  // The stored index links of one recording, level by level, with positions for it and every linked row.
+  async links(row, {signal} = {}) {
+    const body = await this.get('links', {row}, {signal}), m = this.manifest;
+    if (!body || body.row !== row || body.graphId !== m.graphId || body.indexSha256 !== m.indexSha256 || !Array.isArray(body.levels) ||
+        body.levels.length > 32 || body.levels.some(level => !Array.isArray(level) || level.length > 256 ||
+          level.some(n => !Number.isInteger(n) || n < 0 || n >= this.count || n === row))) throw new Error('Invalid stored links');
+    this.absorbLayout(body.layout);
+    if (!this.positions[row] || body.levels.some(level => level.some(n => !this.positions[n]))) throw new Error('Stored links lack positions');
+    return {row, levels: body.levels.map(level => [...level])};
   }
 
   loadExamples(examples) {

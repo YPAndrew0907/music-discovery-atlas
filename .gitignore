@@ -3875,6 +3875,7 @@ __pycache__/
 !/scripts/verify_release_v2.py
 !/scripts/build_web_v2.py
 !/scripts/make_audio_delivery_v2.py
+!/scripts/upgrade_release_v2.py
 !/docs/
 !/docs/PLATFORM_V2.md
 !/tests/v2_fixtures.py
@@ -3906,3 +3907,6 @@ __pycache__/
 !/scripts/derive_hydration_plan.py
 !/tests/test_corpus_rebuild_tools.py
 !/docs/RIGHTS_QUARANTINE.md
+!/web/search-studio/src/map-lod.mjs
+!/tests/web_map_lod.test.mjs
+!/tests/browser_credits_v2.mjs

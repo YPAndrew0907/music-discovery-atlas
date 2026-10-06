@@ -100,19 +100,20 @@ class InstallerTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         return Path(directory.name).resolve()
 
-    def root(self, source=None, *, bundle=True, tamper=None, **changes):
+    def root(self, source=None, *, bundle=True, tamper=None, release=None, **changes):
+        src, sha = release or (self.src, self.sha)
         root = self.temp()
         (root / 'corpus-releases').mkdir()
         if bundle:
             # Hard links keep fixture copies cheap; tampered files are replaced, never edited in place.
-            shutil.copytree(self.src, root / 'corpus-releases' / NAME, copy_function=os.link)
+            shutil.copytree(src, root / 'corpus-releases' / NAME, copy_function=os.link)
             for name, change in (tamper or {}).items():
                 path = root / 'corpus-releases' / NAME / name
                 data = path.read_bytes()
                 path.unlink()
                 path.write_bytes(change(data))
         config = {'schemaVersion': 2, 'enabled': True, 'format': 'music-corpus-release-v2',
-                  'directory': 'corpus-releases/' + NAME, 'manifestSha256': self.sha,
+                  'directory': 'corpus-releases/' + NAME, 'manifestSha256': sha,
                   **({'source': source} if source else {}), **changes}
         data = (json.dumps(config, indent=2) + '\n').encode()
         (root / 'active-corpus.json').write_bytes(data)
@@ -173,12 +174,18 @@ class InstallerTests(unittest.TestCase):
 
     # ---- bundled ----------------------------------------------------------------------------------
     def test_bundled_release_is_verified_in_place_with_every_row(self):
-        root = self.root()
-        parsed = installer.read_selection(root)
-        summary = installer.verify_directory(installer.checked_directory(parsed), parsed)
-        self.assertEqual((summary['count'], summary['assets'], summary['releaseSha256']), (V1_COUNT, 7, self.sha))
-        self.assertEqual(summary['rowValidation'], {'rows': V1_COUNT, 'evidenceFiles': V1_COUNT, 'evidenceBytes': V1_EVIDENCE_BYTES})
-        self.assertEqual(sorted(os.listdir(root / 'corpus-releases' / NAME)), sorted(self.blobs))
+        rows = {'rows': V1_COUNT, 'evidenceFiles': V1_COUNT, 'evidenceBytes': V1_EVIDENCE_BYTES}
+        # Release format 2.1 (the converter's default) also proves its lookup index; 2.0 (no index) is the
+        # format the fma2000 deploy pins (279cd21b...).
+        for (src, sha), expected in [((self.src, self.sha), {**rows, 'lookupIndex': 'fts5-trigram-v1'}),
+                                     (converted_fma2000(lookup_index=False), {**rows, 'lookupIndex': None})]:
+            with self.subTest(release=sha):
+                root = self.root(release=(src, sha))
+                parsed = installer.read_selection(root)
+                summary = installer.verify_directory(installer.checked_directory(parsed), parsed)
+                self.assertEqual((summary['count'], summary['assets'], summary['releaseSha256']), (V1_COUNT, 7, sha))
+                self.assertEqual(summary['rowValidation'], expected)
+                self.assertEqual(sorted(os.listdir(root / 'corpus-releases' / NAME)), sorted(self.blobs))
 
     def test_bundled_tampering_inventory_and_symlinks_fail_closed(self):
         flip = lambda data: data[:-1] + bytes([data[-1] ^ 1])  # noqa: E731

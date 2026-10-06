@@ -211,16 +211,27 @@ console.log(JSON.stringify(out));"""
         for name in ('catalog.json', 'vectors.f32', 'index.json', 'ids.json', 'artist-records.json'):
             self.assertFalse((self.web / 'search-studio/data' / name).exists(), name)
         layout = json.loads((self.web / 'search-studio/data/layout.json').read_bytes())
+        self.assertEqual((layout['schemaVersion'], layout['kind'], layout['links']), (3, 'music-layout-lod-v2', '/collection/links'))
         self.assertEqual((layout['sampleCount'], layout['rows']), (V1_COUNT, list(range(V1_COUNT))))
         self.assertNotIn('weights', layout)
-        index = json.loads((V1_DIR / 'index.json').read_bytes())
-        pairs = {}
-        for source, layers in enumerate(index['links']):  # indexConnections() from search-motion.mjs
-            for level, neighbors in enumerate(layers):
-                for target in neighbors:
-                    key = (min(source, target), max(source, target))
-                    pairs[key] = max(pairs.get(key, level), level)
-        self.assertEqual(layout['edges'], [v for (a, b), level in pairs.items() for v in (a, b, level)])
+        self.assertNotIn('edges', layout)  # stored links are read per recording from /collection/links
+        self.assertIsNone(layout['tiles'])  # every position is pinned at this size
+        # Region labels: honest majorities of source genres, two zoom levels, every recording in one area per level.
+        genres = [t.get('genre') for t in self.catalog['tracks']]
+        self.assertEqual([(lv['clusters'], lv['fromDetail'], lv['toDetail']) for lv in layout['regions']['levels']], [(12, 0, 2), (48, 2, 10)])
+        for level in layout['regions']['levels']:
+            self.assertEqual(sum(item['count'] for item in level['items']), V1_COUNT)
+            for item in level['items']:
+                top, top_count = item['genres'][0] if item['genres'] else (None, 0)
+                self.assertAlmostEqual(item['share'], round(top_count / item['count'], 3))
+                if item['label'] is not None:
+                    self.assertEqual(item['label'], top)
+                    self.assertGreaterEqual(top_count / item['count'], 0.4)
+                    self.assertNotEqual(item['label'], 'Unknown')
+                    self.assertIn(item['label'], genres)
+                else:
+                    self.assertTrue(top_count / item['count'] < 0.4 or top == 'Unknown')
+        self.assertGreater(sum(item['label'] is not None for item in layout['regions']['levels'][0]['items']), 3)
         examples = json.loads((self.web / 'search-studio/data/examples.json').read_bytes())
         v1 = validate_release(V1_DIR, expected_manifest_sha256=V1_SHA, limits=ReleaseLimits(max_tracks=V1_COUNT))
         reference = HNSW(json.loads(v1.assets['index']), v1.assets['vectors'])
@@ -231,6 +242,157 @@ console.log(JSON.stringify(out));"""
             self.assertEqual(item['trace'], reference.search(query, k=16, ef=32, trace=True, trace_limit=2048)['trace'])
         sizes = self.web_receipt['webDataBytes']
         self.assertLess(sizes, 2_000_000)
+
+    def test_credits_are_read_page_by_page_with_the_static_page_content(self):
+        import re
+        client = self.client(self.v2_encoder, gateway=True)
+        # The checked-in static page. notices/ keeps it in every tree; web/notices/ holds the small v2 page
+        # once a v2 release is activated (scripts/activate_release_v2.py).
+        static = (ROOT / 'notices/track-attribution.html').read_text()
+        expected = re.findall(r'<article id=.*?</article>', static, flags=re.S)
+        intro = re.search(r'<h1>.*?</p>', static, flags=re.S).group(0)
+        # The paged credits and the static generator state the same exclusions (the rights quarantine list).
+        from build_corpus_credits import QUARANTINE_EXCLUSION
+        from collection_v2 import CREDITS_EXCLUSIONS
+        self.assertEqual(CREDITS_EXCLUSIONS, QUARANTINE_EXCLUSION)
+        self.assertIn(QUARANTINE_EXCLUSION, intro)
+        self.assertEqual(len(expected), V1_COUNT)
+        pages = -(-V1_COUNT // 50)
+        self.assertEqual(pages, 40)
+        articles = []
+        for page in range(1, pages + 1):
+            reply = client.get(f'/collection/credits?page={page}')
+            self.assertEqual(reply.status_code, 200)
+            self.assertTrue(reply.headers['content-type'].startswith('text/html'))
+            self.assertIn(intro, reply.text)
+            self.assertIn(f'Page {page} of {pages} · recordings {(page - 1) * 50 + 1:,}–{min(page * 50, V1_COUNT):,} of {V1_COUNT:,}',
+                          reply.text)
+            articles += re.findall(r'<article id=.*?</article>', reply.text, flags=re.S)
+        self.assertEqual(articles, expected)  # every credit, in catalog order, byte for byte
+        first = client.get('/collection/credits').text
+        for part in ('<a href="?page=2" rel="next">Next page</a>', '<span class="unavailable">Previous page</span>',
+                     '<nav aria-label="Credit pages">', '<label for="credit-page-top">Go to page</label>', '<main id="credits"',
+                     '<a class="skip" href="#credits">', '<html lang="en">', '<a href="/search-studio/">',
+                     'article{overflow-wrap:anywhere}'):  # long source URLs wrap instead of scrolling the page sideways
+            self.assertIn(part, first)
+        self.assertIn('Page 40 of 40', client.get('/collection/credits?page=999').text)  # a page jump clamps
+        self.assertIn('Page 1 of 40', client.get('/collection/credits?page=0').text)
+        first_id = self.catalog['tracks'][0]['id']
+        moved = client.get('/collection/credits', params={'id': first_id}, follow_redirects=False)
+        self.assertEqual((moved.status_code, moved.headers['location']),
+                         (303, '/collection/credits?page=1#' + first_id.replace(':', '-')))
+        # Recordings on the rights quarantine list are not in the release, so they have no credit page.
+        quarantined = [entry['id'] for entry in json.loads((ROOT / 'corpus-releases/quarantine.json').read_bytes())['entries']]
+        self.assertEqual(len(quarantined), 8)
+        for ident in quarantined:
+            self.assertEqual(client.get('/collection/credits', params={'id': ident}, follow_redirects=False).status_code, 404, ident)
+        row = 1234
+        ident = self.catalog['tracks'][row]['id']
+        moved = client.get('/collection/credits', params={'id': ident}, follow_redirects=False)
+        self.assertEqual(moved.headers['location'], f'/collection/credits?page={row // 50 + 1}#' + ident.replace(':', '-'))
+        self.assertIn('<article id="' + ident.replace(':', '-') + '">', client.get(moved.headers['location']).text)
+        for bad, status in (('id=fma:999999999', 404), ('id=../x', 400), ('page=x', 400), ('page=1&id=fma:1382', 400),
+                            ('other=1', 400)):
+            with self.subTest(bad=bad):
+                reply = client.get('/collection/credits?' + bad)
+                self.assertEqual(reply.status_code, status)
+                self.assertTrue(reply.headers['content-type'].startswith('text/html'))
+        # The v2 package carries a small page that links to the paged credits instead of every credit.
+        small = (self.web / 'notices/track-attribution.html').read_bytes()
+        self.assertLess(len(small), 4096)
+        self.assertIn(b'href="/collection/credits"', small)
+        self.assertIn(intro.encode(), small)
+        self.assertEqual(self.web_receipt['credits']['pagedAt'], '/collection/credits')
+
+    def test_a_sampled_overview_pins_the_tile_pyramid_and_builds_deterministically(self):
+        from build_web_v2 import build
+        from collection_v2 import TILE_CAP, TILE_MAX_LEVEL, tile_domain
+        outputs = []
+        for name in ('one', 'two'):
+            root = Path(self.temp.name) / ('sampled-' + name)
+            (root / 'search-studio/src').mkdir(parents=True)
+            receipt = build(self.dir, self.sha, root, sample_cap=500)
+            outputs.append((root / 'search-studio/data/layout.json').read_bytes())
+        layout = json.loads(outputs[0])
+        self.assertEqual(outputs[0], outputs[1])
+        self.assertLessEqual(layout['sampleCount'], 500)
+        self.assertEqual(sum(layout['weights']), V1_COUNT)
+        self.assertEqual(layout['tiles'], {'api': '/collection/tiles', 'domain': tile_domain(self.release.manifest['layout']['bounds']),
+                                           'cap': TILE_CAP, 'maxLevel': TILE_MAX_LEVEL})
+        self.assertTrue(receipt['tiles'])
+
+    def tile(self, client, z, x, y):
+        reply = client.get(f'/collection/tiles?z={z}&x={x}&y={y}')
+        self.assertEqual(reply.status_code, 200)
+        body = reply.json()
+        rows = np.frombuffer(base64.b64decode(body['rows']), dtype='<u4')
+        xy = np.frombuffer(base64.b64decode(body['xy']), dtype='<f4').reshape(-1, 2)
+        weights = None if body['weights'] is None else np.frombuffer(base64.b64decode(body['weights']), dtype='<u4')
+        return body, rows, xy, weights
+
+    def test_map_tiles_partition_the_layout_and_sample_fuller_tiles(self):
+        from collection_v2 import tile_domain
+        client = self.client(self.v2_encoder, gateway=True)
+        layout = np.asarray(self.release.layout)
+        leaves, stack, payloads = [], [(0, 0, 0)], {}
+        while stack:
+            z, x, y = stack.pop()
+            body, rows, xy, weights = self.tile(client, z, x, y)
+            payloads[f'{z}/{x}/{y}'] = body
+            self.assertEqual(body['domain'], tile_domain(self.release.manifest['layout']['bounds']))
+            self.assertEqual((len(rows), body['count']), (len(xy), len(rows)))
+            self.assertTrue(np.array_equal(xy, layout[rows]), 'tile positions are the release layout')
+            self.assertTrue(np.all(np.diff(rows.astype(np.int64)) > 0), 'rows in catalog order')
+            if body['complete']:
+                self.assertEqual(body['total'], len(rows))
+                leaves.append(rows)
+            else:
+                self.assertLessEqual(len(rows), body['cap'])
+                self.assertEqual(int(weights.sum()), body['total'])
+                stack.extend((z + 1, 2 * x + i, 2 * y + j) for i in (0, 1) for j in (0, 1))
+        every = np.sort(np.concatenate(leaves))
+        self.assertTrue(np.array_equal(every, np.arange(V1_COUNT)), 'complete tiles partition the catalog')
+        for bad in ('z=13&x=0&y=0', 'z=1&x=2&y=0', 'z=1&x=0', 'z=0&x=0&y=0&row=1', 'z=-1&x=0&y=0'):
+            with self.subTest(bad=bad):
+                self.assertEqual(client.get('/collection/tiles?' + bad).status_code, 400)
+        # The page's emulation (tests/v2_web_fixture.mjs) cuts every tile exactly as the server does; the page's
+        # TileField children of complete tiles are checked against that emulation in web_map_lod.test.mjs.
+        node = shutil.which('node')
+        if node:
+            keys = json.dumps(sorted(payloads))
+            script = ("import {tiles} from './tests/v2_web_fixture.mjs';"
+                      "console.log(JSON.stringify(Object.fromEntries(JSON.parse(process.argv[1]).map(k=>[k,tiles.tile(...k.split('/').map(Number))]))));")
+            emulated = json.loads(subprocess.run([node, '--input-type=module', '-e', script, keys], cwd=ROOT, capture_output=True,
+                                                 text=True, check=True).stdout)
+            self.assertEqual(emulated, payloads)
+
+    def test_stored_links_are_the_graph_links_of_one_recording(self):
+        client = self.client(self.v2_encoder, gateway=True)
+        index = json.loads((V1_DIR / 'index.json').read_bytes())
+        for row in (0, 5, 777, V1_COUNT - 1):
+            body = client.get(f'/collection/links?row={row}').json()
+            self.assertEqual((body['row'], body['levels']), (row, index['links'][row]))
+            self.assertEqual((body['graphId'], body['indexSha256']), (self.release.graph_id, self.release.graph_sha256))
+            linked = sorted({row, *(n for level in index['links'][row] for n in level)})
+            self.assertEqual(body['layout']['rows'], linked)
+            self.assertEqual(body['layout']['xy'], [float(v) for v in np.asarray(self.release.layout)[linked].reshape(-1)])
+        for bad in (f'row={V1_COUNT}', 'row=x', 'row=1&z=0', ''):
+            with self.subTest(bad=bad):
+                self.assertEqual(client.get('/collection/links?' + bad).status_code, 400)
+
+    def test_map_tiles_links_and_credits_have_their_own_budgets(self):
+        from collection_v2 import CollectionRoutes
+        from web_gateway import SECURITY_HEADERS
+        routes = CollectionRoutes(self.release, None, audio=AudioDeliveryV2(None, self.release), headers=SECURITY_HEADERS,
+                                  tiles_per_minute=2, links_per_minute=1, credits_per_minute=1)
+        self.addCleanup(routes.close)
+        client = TestClient(routes, base_url=ORIGIN)
+        self.assertEqual([client.get('/collection/tiles?z=0&x=0&y=0').status_code for _ in range(3)], [200, 200, 429])
+        refused = client.get('/collection/tiles?z=1&x=0&y=0')
+        self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Map tile budget exhausted'))
+        self.assertEqual([client.get('/collection/links?row=1').status_code for _ in range(2)], [200, 429])
+        self.assertEqual([client.get('/collection/credits?page=1').status_code for _ in range(2)], [200, 429])
+        self.assertTrue(client.get('/collection/credits?page=1').headers['content-type'].startswith('text/html'))
 
     def test_gateway_refuses_a_web_package_built_for_another_release(self):
         broken = Path(self.temp.name) / 'broken'

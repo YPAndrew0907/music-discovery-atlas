@@ -1,5 +1,6 @@
 """The deploy's activation step (scripts/activate_release_v2.py) on a temporary copy of this tree,
 with the converted fma2000 fixture release. Nothing in the repository itself changes."""
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -15,8 +16,12 @@ import activate_release_v2 as activation  # noqa: E402
 from corpus_release import ReleaseError  # noqa: E402
 from release_v2 import selected_release_v2  # noqa: E402
 
-# Files the activation rewrites are copied; everything else is hard-linked read-only input.
-WRITTEN = {'active-corpus.json', 'web-manifest.json', 'package-manifest.json', '.gitignore', '.dockerignore'}
+# Files the activation rewrites are copied; everything else is hard-linked input that must stay unchanged.
+# A hard-linked file written in place would change the repository's own copy, so the page data and studio pin
+# (web/search-studio/) and the credits page that build_web_v2 replaces are copied too, and the test checks the
+# repository's web pins afterwards.
+WRITTEN = {'active-corpus.json', 'web-manifest.json', 'package-manifest.json', '.gitignore', '.dockerignore',
+           'web/notices/track-attribution.html'}
 
 
 def tree_copy(destination):
@@ -65,6 +70,12 @@ class ActivationTests(unittest.TestCase):
             self.assertIn(line, (root / '.dockerignore').read_text().splitlines())
         if (ROOT / 'web/search-studio/data/catalog.json').exists():  # this tree serves the v1 page
             self.assertIn('web/search-studio/data/catalog.json (removed)', result['changed'])
+            self.assertIn('web/notices/track-attribution.html', result['changed'])  # becomes the paged-credits link
+        self.assertIn(b'href="/collection/credits"', (root / 'web/notices/track-attribution.html').read_bytes())
+        web = json.loads((ROOT / 'web-manifest.json').read_bytes())
+        for row in web['files']:  # nothing reached the repository's own files through a hard link
+            data = (ROOT / 'web' / row['path']).read_bytes()
+            self.assertEqual((len(data), hashlib.sha256(data).hexdigest()), (row['bytes'], row['sha256']), row['path'])
         checked = activation.check(root)
         self.assertEqual((checked['ok'], checked['release']['count']), (True, V1_COUNT))
         package = json.loads((root / 'package-manifest.json').read_bytes())

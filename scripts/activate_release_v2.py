@@ -10,7 +10,8 @@ the result. It never pushes, deploys, downloads or touches a running server. Ste
    already be identical). object-store: copy nothing; the image build fetches it by digest.
 3. Write active-corpus.json as a schemaVersion 2 selection with an explicit "source" block.
 4. Rebuild the page data for the release (scripts/build_web_v2.py): manifest.json, layout.json,
-   examples.json and studio-release.mjs; the whole-catalog v1 page files are removed.
+   examples.json and studio-release.mjs; the whole-catalog v1 page files are removed, and
+   web/notices/track-attribution.html becomes the small page that links to /collection/credits.
 5. Re-pin web-manifest.json and package-manifest.json (changed rows refreshed, deleted rows dropped;
    the release files themselves are pinned by the selection, not the package manifest).
 6. bundled: allowlist the release files in .gitignore and .dockerignore (both default-deny).
@@ -38,6 +39,7 @@ from release_v2 import FORMAT, LimitsV2, install_source, load_release_v2, select
 NAME = r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}'
 WEB_DATA = 'web/search-studio/data/'
 STUDIO = 'web/search-studio/src/studio-release.mjs'
+CREDITS = 'web/notices/track-attribution.html'  # rewritten by build_web_v2 for a v2 package
 
 
 def sha256(data):
@@ -158,12 +160,12 @@ def activate(root, release_dir, manifest_sha256, *, name, source, limits=None, a
     selection = selection_for(name, manifest_sha256, source, limits)
     if write_if_changed(root / 'active-corpus.json', dump(selection)):
         changed.append('active-corpus.json')
-    before = {p: (root / p).read_bytes() for p in [WEB_DATA + n for n in ('manifest.json', 'layout.json', 'examples.json')] + [STUDIO]
-              if (root / p).exists()}
+    rebuilt = [WEB_DATA + n for n in ('manifest.json', 'layout.json', 'examples.json')] + [STUDIO, CREDITS]
+    before = {p: (root / p).read_bytes() for p in rebuilt if (root / p).exists()}
     web = build_web(web_release, manifest_sha256, root / 'web', audio_mode=audio_mode, audio_origin=audio_origin,
                     audio_prefix=audio_prefix, limits=limits_v2)
     removed = {WEB_DATA + n for n in V1_DATA_FILES}
-    for path in [WEB_DATA + n for n in ('manifest.json', 'layout.json', 'examples.json')] + [STUDIO]:
+    for path in rebuilt:
         if before.get(path) != (root / path).read_bytes():
             changed.append(path)
     changed += [WEB_DATA + n + ' (removed)' for n in web['removedV1DataFiles']]

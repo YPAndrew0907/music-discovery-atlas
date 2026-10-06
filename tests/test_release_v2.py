@@ -17,8 +17,8 @@ from v2_fixtures import ROOT, V1_COUNT, V1_DIR, V1_EVIDENCE_BYTES, V1_SHA, conve
 from active_corpus import selected_corpus  # noqa: E402
 from corpus_release import ReleaseError, ReleaseLimits, sha256, validate_release, validate_rights  # noqa: E402
 from hnsw_trace import HNSW, cosine_distance  # noqa: E402
-from release_v2 import (LimitsV2, check_csr, load_release_v2, reconstruct_sources, selected_release_v2,  # noqa: E402
-                        validate_rows)
+from release_v2 import (LOOKUP_INDEX, LimitsV2, check_csr, load_release_v2, page_query, reconstruct_sources,  # noqa: E402
+                        selected_release_v2, validate_rows)
 import search_v2  # noqa: E402
 from search_v2 import GraphV2, exact_rescore  # noqa: E402
 
@@ -70,7 +70,8 @@ class ConversionTests(V2Fixture):
         for row in (0, 1, 999, V1_COUNT - 1):
             pin = rights['tracks'][row]['evidence']['asset']
             self.assertEqual(self.release.evidence_for_row(row), (V1_DIR / pin['path']).read_bytes())
-        self.assertEqual(validate_rows(self.release), {'rows': V1_COUNT, 'evidenceFiles': V1_COUNT, 'evidenceBytes': V1_EVIDENCE_BYTES})
+        self.assertEqual(validate_rows(self.release), {'rows': V1_COUNT, 'evidenceFiles': V1_COUNT, 'evidenceBytes': V1_EVIDENCE_BYTES,
+                                                       'lookupIndex': LOOKUP_INDEX})
 
     def test_csr_graph_and_layout_decode_to_the_v1_index_and_positions(self):
         from convert_release_v1_to_v2 import decode_links
@@ -246,6 +247,120 @@ class SelectionTests(V2Fixture):
         root, package = self.root_with({'schemaVersion': 1, 'enabled': False}, link=False)
         self.assertIsNone(selected_release_v2(root, package))
         self.assertIsNone(selected_corpus(root, package))
+
+
+class LookupIndexTests(V2Fixture):
+    """Release format 2.1: the FTS5 trigram prefilter changes how fast a lookup is, never what it returns."""
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.dir20, cls.sha20 = converted_fma2000(lookup_index=False)
+        cls.release20 = load_release_v2(cls.dir20, expected_manifest_sha256=cls.sha20)
+
+    def cases(self):
+        texts = [t for (t,) in self.release.connection().execute('SELECT fold_text FROM tracks ORDER BY row')]
+        rng = np.random.default_rng(31)
+        cases = [(q, '', '', None) for q in ('love', 'lady love', 'the', 'the night', 'a', 'of', 'Électro', 'électro', 'ü',
+                                              'straße', '"', 'a"b', "o'b", '-', '...', '(live)', 'zzzz not here', '  ', '́')]
+        cases += [('', t, '', None) for t in ('piano', 'love', 'ü', 'xx yy', '"quoted"')]
+        cases += [('a', 'e', 'Electronic', None), ('', '', 'Folk', None), ('love', '', '', lambda row: row % 3 == 0),
+                  ('the', 'night', '', lambda row: row % 2 == 0)]
+        for row in sorted(rng.choice(len(texts), size=40, replace=False).tolist()):
+            words = texts[row].split()
+            longest = max(words, key=len)
+            start = int(rng.integers(max(1, len(longest) - 3)))
+            cases += [(longest, '', '', None), (longest[start:start + 3], '', '', None), (longest[start:start + 4], '', '', None),
+                      (' '.join(words[:2]), '', '', None), ('', longest, '', None), (words[0], longest[-3:], '', None)]
+        return cases
+
+    def page(self, release, case, **extra):
+        query, text, genre, rows_filter = case
+        return page_query(release, query=query, text=text, genre=genre, rows_filter=rows_filter, limit=48, facets=True, **extra)
+
+    def test_format_2_1_declares_loads_and_reports_the_lookup_index(self):
+        manifest = json.loads((self.dir / 'release.json').read_bytes())
+        self.assertEqual(manifest['minorVersion'], 1)
+        self.assertEqual((self.release.minor_version, self.release.lookup_index), (1, LOOKUP_INDEX))
+        self.assertEqual(self.release.catalog_meta['lookupIndex'], LOOKUP_INDEX)
+        self.assertEqual((self.release.summary()['formatVersion'], self.release.summary()['lookupIndex']), ('2.1', LOOKUP_INDEX))
+        # A 2.0 release has no minorVersion and no index, and is read exactly as before.
+        self.assertNotIn('minorVersion', json.loads((self.dir20 / 'release.json').read_bytes()))
+        self.assertEqual((self.release20.minor_version, self.release20.lookup_index), (0, None))
+        self.assertEqual(self.release20.summary()['formatVersion'], '2.0')
+        self.assertEqual(validate_rows(self.release20)['lookupIndex'], None)
+        for name in ('evidence.sqlite', 'vectors.f32', 'graph.bin', 'layout.f32', 'graph-manifest.json', 'examples.json'):
+            self.assertEqual((self.dir / name).read_bytes(), (self.dir20 / name).read_bytes(), name)
+
+    def test_index_and_scan_return_identical_pages_and_the_index_serves_rare_words(self):
+        stats = self.release.lookup_stats
+        before = dict(stats)
+        for case in self.cases():
+            with self.subTest(case=case[:3]):
+                for offset in (0, 48):
+                    indexed = self.page(self.release, case, offset=offset)
+                    self.assertEqual(indexed, self.page(self.release, case, offset=offset, use_index=False))
+                    self.assertEqual(indexed, self.page(self.release20, case, offset=offset))
+        self.assertGreater(stats['indexed'] - before['indexed'], 100)  # rare words and fragments use the index
+        self.assertGreater(stats['scanned'] - before['scanned'], 10)   # short and very common words scan
+        self.assertEqual(self.release20.lookup_stats['indexed'], 0)
+
+    def test_upgrading_2_0_gives_the_same_catalog_bytes_as_converting_to_2_1(self):
+        from upgrade_release_v2 import upgrade
+        output = self.temp() / 'upgraded'
+        receipt = upgrade(self.dir20, self.sha20, output, samples=4)
+        self.assertEqual((output / 'catalog.sqlite').read_bytes(), (self.dir / 'catalog.sqlite').read_bytes())
+        for name in ('evidence.sqlite', 'vectors.f32', 'graph.bin', 'layout.f32', 'graph-manifest.json', 'examples.json'):
+            self.assertEqual((output / name).read_bytes(), (self.dir20 / name).read_bytes(), name)
+        self.assertEqual(receipt['proofs']['rowsUnchanged'], {'tracks': V1_COUNT, 'records': V1_COUNT})
+        upgraded = load_release_v2(output, expected_manifest_sha256=receipt['releaseSha256'])
+        self.assertEqual((upgraded.minor_version, upgraded.lookup_index), (1, LOOKUP_INDEX))
+        with self.assertRaisesRegex(ReleaseError, 'Only a release-format 2.0 directory can be upgraded'):
+            upgrade(self.dir, self.sha, self.temp() / 'again', samples=1)
+
+    def repinned(self, target, change=None):
+        manifest = json.loads((target / 'release.json').read_bytes())
+        data = (target / 'catalog.sqlite').read_bytes()
+        manifest['assets']['catalog'].update(bytes=len(data), sha256=sha256(data))
+        if change:
+            change(manifest)
+        payload = (json.dumps(manifest, indent=2, ensure_ascii=False) + '\n').encode()
+        (target / 'release.json').write_bytes(payload)
+        return sha256(payload)
+
+    def test_unknown_minor_versions_and_a_missing_index_are_refused(self):
+        for value in (2, True, '1'):
+            with self.subTest(minorVersion=value):
+                target = copy_release(self.dir, self.temp() / 'minor')
+                digest = self.repinned(target, lambda m: m.update(minorVersion=value))
+                with self.assertRaisesRegex(ReleaseError, 'Unknown v2 release minor version'):
+                    load_release_v2(target, expected_manifest_sha256=digest)
+        target = copy_release(self.dir, self.temp() / 'no-index')
+        shutil.copyfile(self.dir20 / 'catalog.sqlite', target / 'catalog.sqlite')
+        digest = self.repinned(target)
+        with self.assertRaisesRegex(ReleaseError, 'lacks the release 2.1 lookup index'):
+            load_release_v2(target, expected_manifest_sha256=digest)
+
+    def test_the_verifier_proves_the_index_against_every_row(self):
+        texts = [t for (t,) in self.release.connection().execute('SELECT fold_text FROM tracks ORDER BY row')]
+        titles = [t for (t,) in self.release.connection().execute('SELECT fold_title_artist FROM tracks ORDER BY row')]
+
+        def unique_part(title):  # a word fragment of 3-11 characters that only this recording's text holds
+            return next((title[i:i + n] for n in range(3, 12) for i in range(len(title) - n + 1)
+                         if ' ' not in title[i:i + n] and sum(title[i:i + n] in t for t in texts) == 1), None)
+        # The first recording from row 7 on that has such a fragment (rows move when a release is rebuilt).
+        row, unique = next((r, part) for r in range(7, len(titles)) if (part := unique_part(titles[r])) is not None)
+        target = copy_release(self.dir, self.temp() / 'drift')
+        connection = sqlite3.connect(target / 'catalog.sqlite')
+        connection.execute("INSERT INTO tracks_fts(tracks_fts, rowid, fold_text) VALUES('delete', ?, ?)", (row, texts[row]))
+        connection.commit()
+        connection.close()
+        release = load_release_v2(target, expected_manifest_sha256=self.repinned(target))  # the declaration is intact
+        found = page_query(release, query=unique)
+        self.assertEqual([t['row'] for t in page_query(release, query=unique, use_index=False)['rows']], [row])
+        self.assertEqual(found['rows'], [], 'an index that drifted from its rows would hide them')
+        with self.assertRaisesRegex(ReleaseError, 'Lookup index does not match the catalog'):
+            validate_rows(release)
 
 
 class SearchParityTests(V2Fixture):

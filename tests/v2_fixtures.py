@@ -21,7 +21,7 @@ V1_SHA = '32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42'
 V1_COUNT = 1992
 V1_EVIDENCE_BYTES = 6_997_754
 CODE = ['server/release_v2.py', 'server/search_v2.py', 'server/corpus_release.py', 'server/hnsw_trace.py',
-        'scripts/convert_release_v1_to_v2.py', 'scripts/build_web_v2.py']
+        'scripts/convert_release_v1_to_v2.py', 'scripts/upgrade_release_v2.py', 'scripts/build_web_v2.py']
 
 
 def code_key():
@@ -37,15 +37,16 @@ def cache_root():
     return root
 
 
-def converted_fma2000():
-    """(directory, manifest sha) of fma2000 converted to v2 by the real converter."""
+def converted_fma2000(*, lookup_index=True):
+    """(directory, manifest sha) of fma2000 converted by the real converter: release format 2.1 by
+    default, 2.0 (no lookup index) with lookup_index=False."""
     from convert_release_v1_to_v2 import convert
     from corpus_release import ReleaseLimits
-    output = cache_root() / 'fma2000-v2'
+    output = cache_root() / ('fma2000-v2' if lookup_index else 'fma2000-v2.0')
     if not (output / 'release.json').is_file():
         if output.exists():
             shutil.rmtree(output)
-        convert(V1_DIR, V1_SHA, output, v1_limits=ReleaseLimits(max_tracks=2000), samples=8)
+        convert(V1_DIR, V1_SHA, output, v1_limits=ReleaseLimits(max_tracks=2000), samples=8, lookup_index=lookup_index)
     return output, hashlib.sha256((output / 'release.json').read_bytes()).hexdigest()
 
 

@@ -74,6 +74,8 @@ A `schemaVersion: 1` file still goes through the unchanged v1 code, and the v1 c
 
 Vector and layout sizes are exact functions of the track count. The defaults admit fma2000 and fma5777 without configuration; anything larger has to be configured explicitly and reviewed.
 
+**Minor versions.** A minor version is additive and named in `release.json` (`"minorVersion"`). A 2.0 release has no such key and is read exactly as before; an unknown minor version is refused. Release format 2.1, on `v2-scale-ui`, adds only an FTS5 trigram lookup index to `catalog.sqlite` (section 10.2).
+
 ## 3. Where each check runs
 
 | When | What | Code |
@@ -140,6 +142,7 @@ In every oracle and benchmark query the first proposal was accepted (no widening
   - `limit` is at most 48.
 - `GET /collection/tracks?rows=…` returns up to 64 explicit rows.
 - `GET /collection/neighbors?row=R` is the v1 page's neighbor computation on the server: exact top 16 excluding R, plus the trace at k 17, ef 32, trace limit 2,048. It is limited to 60 per minute per process.
+- On `v2-scale-ui`, `GET /collection/tiles` and `/collection/links` serve the map's level of detail, and `GET /collection/credits` serves the track credits page by page. Each has its own per-minute budget (section 10).
 - Every route rejects unknown or oversized parameters with 400 and runs on a two-thread executor with at most 8 pending reads; beyond that it returns 429.
 - A test checks lookup, refinement and facets against the page's own JS on nine queries, including accented and empty-result cases.
 
@@ -163,7 +166,7 @@ In every oracle and benchmark query the first proposal was accepted (no widening
 **What a v2 page downloads.** When the pinned `data/manifest.json` (still checked against `MANIFEST_SHA`) declares `format: 2`, the page loads only three files, built by `scripts/build_web_v2.py` (each also pinned in the manifest):
 
 - **`manifest.json`:** identities, counts, genre summary, the audio policy and the file pins.
-- **`layout.json`:** the density-cloud sample and the stored index links between sampled rows, in the order `indexConnections()` produces them.
+- **`layout.json`:** the density-cloud sample and the stored index links between sampled rows, in the order `indexConnections()` produces them. On `v2-scale-ui` it is schema 3: the same sample, region labels and the tile pyramid, without the links (section 10.1).
   - At or below 8,192 recordings it is every position, so the map draws exactly what v1 drew.
   - Above that, it keeps the lowest row of each occupied cell of a stratified grid, weighted by the rows it stands for.
 - **`examples.json`:** the six recorded queries as complete search packets: exact ranking, trace, display rows and positions, computed by the v2 server code.
@@ -185,6 +188,8 @@ In every oracle and benchmark query the first proposal was accepted (no widening
 |---|---|---|
 | v1 data (catalog, vectors, index, layout, examples, artists) | 10.3 MB | 26.9 MB |
 | v2 data (manifest, layout sample with links, example packets) | 0.83 MB | 1.40 MB |
+
+On `v2-scale-ui` the layout carries no links, so fma2000's v2 data is 0.68 MB (section 10.1).
 
 After that, a browse page is about 5 KB and a search reply about 105 KB, most of it the trace. For a live search that trace is the one the v1 server already sent; for neighbors and recorded examples it replaces the trace the v1 page computed locally.
 
@@ -362,16 +367,311 @@ Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
    - Starting the budget at readiness is a one-line change. It would change v1 behaviour, so it is left for review.
    - v2 startup costs 1.4–1.9 CPU-seconds warm (v1: 3.8–9.8 at 2,000, 9.5–22 at 5,777).
    - Neighbor exploration now costs server CPU (about 10–20 ms each) and counts against the same hourly budget.
-   - `/collection/tracks` has a concurrency bound (8 pending, then 429) but no per-minute budget; only neighbors has one.
+   - `/collection/tracks` has a concurrency bound (8 pending, then 429) but no per-minute budget. Neighbors has one, and on `v2-scale-ui` so do tiles, links and credits.
      - At 5,777 a lookup costs 3–10 ms.
      - At 200K a rare-word lookup costs 0.34–0.41 s of CPU. In anonymous mode that would drain the same 30 CPU-seconds per hour that live search needs.
-     - Add a per-minute read budget (or the FTS5 prefilter) before serving 200K anonymously.
-4. **200K page features not built.**
-   - Region labels, neighbourhood centroids and quadtree point tiles (the level-of-detail plan in SOURCES_AND_PLAN 6.6). The single weighted sample is in place.
-   - A paged credits page: the static `track-attribution.html` is 10 MB at 5,777.
-   - FTS5 or trigram acceleration for lookups. Lookup today scans the narrow `tracks` table: 3–10 ms at 5,777, but 0.34–0.41 s at 200K (section 7). The plan:
-     - an FTS5 `trigram` index over the folded columns, used only as a prefilter for words of three or more characters, keeping the existing `instr` conditions so results stay identical;
-     - it changes `catalog.sqlite`, and therefore release identities.
+     - Add a per-minute read budget before serving 200K anonymously. Release format 2.1's FTS5 prefilter (section 10.2) takes rare-word lookups to milliseconds, but a word in every row, or one of one or two letters, still scans.
+4. **200K page features.** Built on `v2-scale-ui` (section 10); `platform-v2` alone has none of them:
+   - Region labels and quadtree point tiles, with stored links drawn only around the recording in focus (10.1). Neighbourhood centroids are not built.
+   - The paged credits page (10.3). The static `track-attribution.html` is 10 MB at 5,777.
+   - The FTS5 trigram prefilter for lookups, as release format 2.1 (10.2): used only for words of three or more characters, with the `instr` conditions kept, so results stay identical. It changes `catalog.sqlite`, and therefore release identities; `--no-lookup-index` still writes 2.0.
    - Graph connectivity at scale. The repo's JS builder left 75 of 200,000 synthetic nodes unreachable on layer 0. v1 and v2 both reject that, so a 200K build needs a reviewed orphan-repair step pinned with the builder.
 5. **Measurement caveat.** Section 7's timings were taken on a shared machine (load 70–560 on 16 cores) and an external-drive APFS volume. Bytes, CPU-seconds, RSS and parity are the reliable figures. Render's single shared CPU will be slower per query; its hosted RSS, cold start and playback remain the deployment's own acceptance checks.
 6. **Commit trailer.** The workflow asked for a "Claude Fable 5.1" trailer. The session ran as Claude Opus 5.5, and the commits say so.
+
+## 10. Scale UI and release format 2.1 (branch `v2-scale-ui`)
+
+Status, 2026-10-06: implemented on the local branch `v2-scale-ui`, which builds on `platform-v2`, and tested and measured on this Mac. Not pushed or deployed. `v2-integrate` was merging this branch at `da1ef62` while this was written. For this branch, this section supersedes what sections 2, 4, 5 and 9 say about the map overview, name lookups, the credits page and the open page features.
+
+| Commit | What it adds |
+|---|---|
+| `b0cc12e` | The page jump keeps a typed number when a server page lands meanwhile (10.4) |
+| `da97c3c` | Release format 2.1: an FTS5 trigram prefilter for name lookups; converter, upgrader and verifier (10.2) |
+| `68dcd6c` | Track credits served page by page from `/collection/credits` (10.3) |
+| `b88ab98` | `/collection/tiles` and `/collection/links` for the map's level of detail (10.1) |
+| `4eda892` | Level of detail on the page: region labels, streamed tiles, links around the focus; `layout.json` schema 3 (10.1) |
+| `da1ef62` | Cheaper zoomed-in frames at 200K: larger tiles, pixel splats, no hidden overview (10.1) |
+| `e038654` | Module preloads, so the new map module costs the first paint no round trip (10.5) |
+| `ca3b5c8` | Credit pages wrap long source URLs; a real-browser check of the credit pages (10.3) |
+| (this commit) | This section, and pointers to it from sections 2, 4, 5 and 9 |
+
+### 10.1 Map level of detail
+
+The graph-first Atlas keeps its design. Every change below sits behind the v2-only `lod` option of `AudioMap`, so a v1 data manifest takes the unchanged code.
+
+**Overview (`layout.json` schema 3, `music-layout-lod-v2`).**
+
+- The pinned density sample is unchanged: every position up to 8,192 rows, otherwise the weighted stratified sample.
+- It now carries region labels, and the tile pyramid when the sample is not every row.
+- The stored links between sampled rows are no longer shipped. They were 505 KB of fma5777's 764 KB layout.
+- fma2000 page data: 825,502 → 684,420 bytes per visit (`layout.json` 239,719 → 98,607).
+
+**Region labels (`build_web_v2.py`).**
+
+- A seeded k-means of every layout position runs at two levels: 12 areas from the whole-collection view up to 2× detail, and 48 areas from 2× to 10×.
+- An area is named by its most common source genre when that genre holds at least 40% of its recordings. "Unknown" never names an area.
+- On the page, labels fade in and out over ±15% of their zoom range. They never cover a track label or a match, are not repeated within 160 px, and dim while a search replays.
+- The About text and the map's accessible label say these are catalog labels, not learned genres.
+- Labelled areas: fma2000 7 and 39; the synthetic 100K release (10.6) 7 and 37.
+
+**Tiles (`GET /collection/tiles?z&x&y`, `collection_v2.TileIndex`).**
+
+- A quadtree over the layout, cut from one Morton ordering of the rows. It is built on first use, in about 20 ms at 200K.
+- A tile with at most 1,024 rows is complete. A fuller tile is a weighted stratified sample: the lowest row of each occupied cell at the finest sub-level with at most 1,024 cells.
+- Rows, positions and weights travel as little-endian base64: about 7 KB per tile at 200K, at most 21 KB. Replies sit in a bounded LRU.
+- Tests walk the whole pyramid of fma2000. Complete tiles partition the catalog exactly once, and sample weights add up to each tile's row count.
+
+**Tiles on the page (`map-lod.mjs`).**
+
+- When the overview is a sample, zooming in picks the level whose tiles span at most 512 CSS pixels and streams the tiles of the settled view.
+- Requests wait for a 90 ms settle, run at most three at a time, abort when a tile leaves the view, and retry after a refusal.
+- Children of a complete tile are cut locally with the server's own quantisation, so deep zoom needs no request.
+- Each tile is rasterised once, into 256 × 256 pixels of accumulated soft dots (alpha 1 − (1 − a)^n per pixel, the look of stacked canvas fills), at most three per frame. It replaces the overview cloud under it.
+- A tile that has not arrived shows its loaded ancestor or the overview.
+- A search requests the tiles where its camera will land while it animates.
+
+**Per-frame cost.**
+
+- A frame considers the trace's visited rows, then the overview sample or the rows of the tiles in view (round-robin across tiles, at most 2,048).
+- It projects each row only when it considers it, so a frame costs O(candidates), not O(catalog).
+- At or below 8,192 rows the candidates are every row in row order, as before.
+
+**Links around the focus (`GET /collection/links?row=R`).**
+
+- The reply holds one recording's stored index links, level by level in stored order, with the positions of every linked row.
+- The page reads the selected recording's links once (it keeps 64) and draws them only around it.
+- They appear once the view is zoomed to 1.6× detail, and never during a replay.
+
+**Budgets.** Tiles 2,400 and links 600 per minute per process. Both share the collection routes' queue bound.
+
+### 10.2 Release format 2.1: the lookup prefilter
+
+At 200K rows a title/artist lookup scanned the narrow `tracks` table with `instr()` for every word (section 7: 0.34–0.41 s for a rare word).
+
+**What 2.1 adds.** One thing in `catalog.sqlite`: an external-content FTS5 index with case-sensitive trigrams over the folded "title artist album" column (`tracks_fts`). `release.json` names `"minorVersion": 1`.
+
+**The index only narrows; `instr()` still decides.**
+
+- `page_query` uses it as a prefilter, `row IN` the index's matches.
+- The `instr()` conditions, the ordering and the facets are unchanged, so every page is identical with or without it. Lookup words are tested on "title artist", a prefix of the indexed column; the verifier checks that prefix property row by row.
+- Words shorter than three characters cannot use a trigram index and still scan.
+- A bounded probe scans instead when a phrase matches a tenth of the catalog or more, where the scan is the faster plan.
+
+**Compatibility.**
+
+- A 2.0 release has no `minorVersion` key and loads and scans exactly as before. Unknown minor versions are refused.
+- At startup a 2.1 catalog must declare the exact index and its meta row. Its content is covered by `catalogSha256`, like every other table.
+- A runtime without FTS5 trigrams still serves 2.1, by scanning.
+
+**Tools.**
+
+- **Converter.** `convert_release_v1_to_v2.py` writes 2.1 by default. `--no-lookup-index` writes 2.0, byte-identical to the reviewed fma2000-v2 release (`806b19ed…`).
+- **Upgrader.** `scripts/upgrade_release_v2.py` turns a verified 2.0 directory into 2.1 without re-reading v1. A converted and an upgraded 2.1 catalog are byte-identical.
+- **Proofs.** Both run FTS5's integrity check against every row and a sampled lookup oracle, comparing index and scan pages, before publishing.
+- **Verifier.** `verify_release_v2.py` (`validate_rows`) re-runs the integrity check on a private copy, since the check needs a writable database.
+
+**Size and cost.**
+
+| Release | catalog.sqlite 2.0 → 2.1 | Upgrade | Oracle |
+|---|---|---|---|
+| fma2000 | 9.70 → 10.08 MB | converted directly: 5.6 s, 191 MB peak RSS | 148 cases, 0 mismatches |
+| fma5777 | 27.55 → 28.55 MB | 2.2 s | 148 cases, 0 mismatches |
+| SYNTHETIC 100K (10.6) | 184.5 → 203.5 MB | 27.9 s, 363 MB peak RSS | 148 cases, 0 mismatches; verifier 4.8 s, 336 MB |
+| SYNTHETIC 200K (round 1) | 903.9 → 940.3 MB | 121 s | 76 cases, 0 mismatches |
+
+**Lookups through the real `/collection/tracks` route, SYNTHETIC 100K.** p50 of 7 calls over HTTP, ms. 2.0 scan versus 2.1 index; both helpers had to return identical rows, totals and facets.
+
+| Case | Matches | 2.0 scan p50 (ms) | 2.1 index p50 (ms) |
+|---|---|---|---|
+| browse page 1 | 100,000 | 1.77 | 2.77 |
+| browse last page | 100,000 | 21.5 | 31.89 |
+| rare title number | 1 | 82.47 | 2.11 |
+| an artist name and a number ("artist 0042") | 119 | 123.93 | 13.1 |
+| common real word | 1,174 | 208.82 | 5.94 |
+| two real words | 2 | 114.08 | 1.69 |
+| medium real word | 847 | 83.07 | 4.03 |
+| two-letter word (no trigram) | 0 | 82.65 | 58.93 |
+| word + refinement + genre | 129 | 55.45 | 24.22 |
+| refinement only, rare | 13 | 53.43 | 1.58 |
+| 12 explicit rows | 12 | 0.75 | 0.75 |
+
+The 1-minute load was 150 during the run, and every case returned identical pages from both releases. Browse never uses the index; its two releases differ only by run-to-run noise and file layout.
+
+**In-process at 200K (round 1, `page_query`).**
+
+- Rare and narrow phrases: 0.35–7.6 ms with the index, against 56–589 ms by scan.
+- A word in every row, a two-letter word or a single letter still scan, at 0.40–0.51 s. That is why section 9.3's per-minute budget for `/collection/tracks` is still wanted before serving 200K anonymously.
+
+### 10.3 Track credits, page by page
+
+The static `track-attribution.html` carries every credit in one file: 3.8 MB at 2,000 recordings, 10 MB at 5,777, hundreds of MB at 200K.
+
+**What a v2 server serves (`GET /collection/credits?page=N`).** A plain HTML page with no script. It holds:
+
+- the static page's heading and introduction;
+- the credit articles of fifty consecutive catalog rows, byte for byte as the static generator writes them;
+- navigation at the top and at the end: the position, First/Previous/Next/Last links (`rel` prev and next) and a labelled page-jump form.
+
+Out-of-range pages clamp. The page has a skip link and a `main` landmark labelled with its position.
+
+**Redirects and errors.**
+
+- `?id=fma:N` redirects (303) to the page that holds the recording, at its `#fma-N` anchor.
+- An unknown ID gets a 404 page; bad parameters get a 400 page.
+- Credit pages have their own budget (300 per minute) and share the collection queue bound.
+
+**In the page and the package.**
+
+- `build_web_v2.py` replaces `notices/track-attribution.html` in a v2 package with a 0.9 KB page. It links to the paged credits and forwards old `#fma-N` links there.
+- On a v2 collection, the result list's Credit & license links, the player's credit link and the About link go to the paged credits.
+- The checked-in v1 page is unchanged.
+
+**Same content.** A test reads all 40 pages of fma2000 through the gateway and requires the concatenated articles to equal the static page's 2,000 articles exactly.
+
+**Accessible.** `tests/browser_credits_v2.mjs` checks the real route in Chromium at 1440 × 1000 and 390 × 844:
+
+- one h1, heading order, one h2 per credit;
+- one labelled `main` and two distinctly labelled navigations;
+- labelled page jumps;
+- the first Tab shows the skip link, and Enter moves focus to the credits;
+- keyboard order;
+- no horizontal scroll on the first, a middle and the last page;
+- clamping and the page jump;
+- an ID redirect landing on its article;
+- the 404 page;
+- the small page forwarding an old `#fma-N` link.
+
+**What the check found.**
+
+- The first run failed reflow. Source URLs run to 220 characters (median 96) as link text, and pages 1, 20 and 40 overflowed by 58–198 px at 1440 px and by 782–922 px at 390 px.
+- The paged style now wraps article text anywhere (`ca3b5c8`). Afterwards: 24 of 24 checks.
+- The checked-in v1 static page has the same overflow and is left unchanged.
+- Run it against any v2 server: `node tests/browser_credits_v2.mjs ORIGIN [small-page file]`. The forward of old `#fma-N` links is checked only when the file is given.
+
+**Cost.** fma2000's 40 pages are 74–218 KB each (median 93 KB) and render in 1.2 ms at the median (3.7 ms at most), in-process on this Mac. Pages of the lean synthetic rows (10.6) are 26–27 KB and take 1.3–1.6 ms over HTTP at 100K rows.
+
+### 10.4 Page jump: a typed number survives a landing page
+
+A v2 browse or lookup page arrives asynchronously, and every render wrote the current page into the page box. A page that landed while someone typed there replaced the number they had typed.
+
+A number typed into the box is now a draft:
+
+- Renders update everything else and leave the draft alone until it is submitted.
+- Any navigation clears it: the page buttons, a submitted jump, a new result set, a refinement or the display policy.
+- Escape restores the current page.
+
+**Tests.**
+
+- A Node test types into the box while the next page is in flight.
+- The v2 browser fixture runs at 1440 and 390 px. It delays a server page by 700 ms, types 15 meanwhile, checks that the box still reads 15 when the page lands, then submits it.
+- Both fail on the previous `app.mjs`.
+
+### 10.5 First paint: module preloads
+
+`graph.mjs` imports `map-lod.mjs`, which made the page's module graph one level deeper for v1 and v2 alike: one more serial request before `app.mjs` can run. On a link with 40 ms per request that cost more than the 141 KB the schema-3 layout saves. First paint on broadband had regressed by 7–21 ms against `platform-v2`.
+
+`index.html` now names all 15 modules of the static import closure of `app.mjs` with `<link rel="modulepreload">`, so they load in parallel with the entry. A test derives the closure from the sources and requires the preload list to equal it.
+
+**Measured on fma2000-v2** (5 interleaved runs per cell, medians; 1-minute load 177–332; the table is in 10.6):
+
+- Broadband, with both widths and both CPU rates: data ready 85–114 ms sooner and first map frame 85–120 ms sooner than `platform-v2`. Preloading only `map-lod.mjs` gave 35–64 ms.
+- Local: unchanged, to 6–17 ms sooner.
+
+### 10.6 Measurements
+
+**Fixture.** `platform_v2/scale_ui/tools/measure_ui.mjs`, the `tests/browser_collection_v2.mjs` pattern:
+
+- **What is served.** Chromium (Playwright 1.63) loads a built web root through route interception. `/collection/*` is proxied to the real routes: `collection_v2.CollectionRoutes` of this branch, over a real release, started by `tools/collection_helper.py`. Its light mode maps no vectors and kept 10–49 MB RSS.
+- **Throttling.** The CPU is throttled through CDP. Broadband adds 40 ms per request plus 20 Mbit/s.
+- **Viewports.** Desktop is 1440 × 1000. Mobile is 390 × 844 at device scale 2, with touch.
+- **Sides.** "Before" is `platform-v2` (`540f20f`): its page, and its `build_web_v2.py` over the same catalog.
+- **Interleaving.** Runs alternate ABAB/BAAB, and each run records the 1-minute load average.
+- **Measures.**
+  - First paint: FCP, data ready (`body[data-ready]`) and the first map frame after it.
+  - fps: requestAnimationFrame intervals through three recorded-example replays (search animations, about 4.7 s each), then an explore sequence: from the overview, 8 zoom steps, a 1.2 s drag-pan, 4 more zoom steps.
+- **Medians.** fps is reported as the median of the per-sequence averages. The p50 frame is 16.7 ms (vsync) except under heavy load, so the averages, the p95 frame and the counts of frames over 50 ms carry the information.
+- **Tools and receipts.** `platform_v2/scale_ui/` holds `tools/`, `receipts/` (round 1, the cut-off run) and `round2/` (configs, run scripts, receipts and screenshots).
+
+**The synthetic release (SYNTHETIC, measurement only, deleted afterwards).**
+
+- `round2/tools/synthetic_release_lean.py` generated 100,000 rows in the scratchpad: rows 0–1,999 take fma2000's display text, vectors and positions; the rest are jittered copies (σ 0.02) of a seeded random fma2000 parent, inheriting its genre and licence, with titles of 1–4 words from the fma2000 title vocabulary.
+- The graph is seeded random with a layer-0 ring, so it is structurally valid but its traces are not representative. Every row shares one small evidence blob.
+- It was built in 7.7 s (645 MB peak RSS, most of it the loader's pass over the mapped vectors).
+- `upgrade_release_v2.py` made it 2.1, and `verify_release_v2.py` accepted every row.
+- `build_web_v2.py` built its page data: 1,306,865 bytes per visit, 4,991 sampled cells, tiles on; `platform-v2` builds 1,356,040 bytes.
+- The release and both web roots were deleted after the round, as was the 200K lookup catalog that the cut-off run left in `platform_v2/scale_ui/releases/` (209 MB).
+
+**fps at 4× CPU, all runs** (desktop and mobile; 3 interleaved runs per cell; "1-min load" is the load average at each run):
+
+| Release | Viewport | Page | Replays: fps median (min) | Replay frames > 50 ms | Explore: fps median (min) | Explore frames > 50 ms | Tiles per explore | Runs | 1-min load |
+|---|---|---|---|---|---|---|---|---|---|
+| fma2000-v2 (round 1) | desktop | platform-v2 | 55.5 (52.2) | 5 of 2438 | 59.8 (59.5) | 0 of 1163 | 0 | 3 | 120–164 |
+| fma2000-v2 (round 1) | desktop | v2-scale-ui | 57.1 (52.7) | 5 of 2497 | 59.2 (58.4) | 2 of 1121 | 0 | 3 | 136–176 |
+| fma2000-v2 (round 1) | mobile | platform-v2 | 58.8 (55.4) | 4 of 2583 | 59.5 (58.7) | 0 of 1169 | 0 | 3 | 102–166 |
+| fma2000-v2 (round 1) | mobile | v2-scale-ui | 59.2 (54.9) | 4 of 2577 | 60 (59.8) | 0 of 1095 | 0 | 3 | 106–166 |
+| SYNTHETIC 100K, real release (round 2) | desktop | platform-v2 | 46.3 (32.8) | 34 of 2118 | 55.3 (54) | 8 of 1449 | 0 | 3 | 28–86 |
+| SYNTHETIC 100K, real release (round 2) | desktop | v2-scale-ui | 59 (37.6) | 27 of 2578 | 58.4 (49.3) | 17 of 1346 | 57 | 3 | 15–155 |
+| SYNTHETIC 100K, real release (round 2) | mobile | platform-v2 | 31.9 (28.1) | 40 of 1796 | 47.1 (47.1) | 56 of 1272 | 0 | 3 | 16–337 |
+| SYNTHETIC 100K, real release (round 2) | mobile | v2-scale-ui | 50.6 (42) | 12 of 2318 | 59.7 (58) | 0 of 1168 | 2 | 3 | 14–346 |
+| SYNTHETIC 200K, emulated (round 1) | desktop | platform-v2 | 49 (43.6) | 23 of 2202 | 58.6 (58.4) | 0 of 1173 | 0 | 3 | 43–86 |
+| SYNTHETIC 200K, emulated (round 1) | desktop | v2-scale-ui | 54.8 (50.6) | 9 of 2409 | 56.8 (51.1) | 14 of 1125 | 54 | 3 | 32–85 |
+| SYNTHETIC 200K, emulated (round 1) | mobile | platform-v2 | 31 (26.9) | 55 of 1475 | 54.3 (54) | 8 of 1202 | 0 | 3 | 36–83 |
+| SYNTHETIC 200K, emulated (round 1) | mobile | v2-scale-ui | 56.3 (53.7) | 10 of 2481 | 59.8 (59.4) | 0 of 1122 | 2 | 3 | 48–108 |
+
+**The same, only the runs taken at a 1-minute load below 60** (SYNTHETIC 100K, real release):
+
+| Release | Viewport | Page | Replays: fps median (min) | Replay frames > 50 ms | Explore: fps median (min) | Explore frames > 50 ms | Tiles per explore | Runs | 1-min load |
+|---|---|---|---|---|---|---|---|---|---|
+| SYNTHETIC 100K, real release (round 2) | desktop | platform-v2 | 56.5 (43.4) | 7 of 1577 | 57.6 (55.3) | 2 of 775 | 0 | 2 | 28–46 |
+| SYNTHETIC 100K, real release (round 2) | desktop | v2-scale-ui | 59.2 (59) | 4 of 1733 | 59.0 (58.4) | 0 of 705 | 57 | 2 | 15–21 |
+| SYNTHETIC 100K, real release (round 2) | mobile | platform-v2 | 59.4 (57.5) | 1 of 861 | 59.8 (59.8) | 0 of 382 | 0 | 1 | 16–16 |
+| SYNTHETIC 100K, real release (round 2) | mobile | v2-scale-ui | 56.0 (47.8) | 4 of 1617 | 58.9 (58) | 0 of 792 | 2 | 2 | 14–52 |
+
+**What the fps numbers say.**
+
+- **fma2000: no cost.** The scale UI costs nothing on fma2000. Replays and explore run at 55–60 fps at 4× on both widths, as on `platform-v2`; the overview is every row, so no tiles are drawn.
+- **100K and 200K: the gap.** At 100K and 200K rows, `platform-v2`'s replays fall to 46–49 fps on desktop and 31–32 fps on a phone. This branch keeps 55–59 and 51–56, with fewer frames over 50 ms, while streaming 54–57 tiles per desktop explore sequence.
+- **At low load: 60 fps on desktop.** At a load below 60 on the 100K release, this branch replays at 59.0–59.8 fps and explores at 58.4–59.7 fps on desktop, which is vsync-limited 60 Hz. The phone runs explore at 58–59.7. Phone replays reached 59.4–60 at load 14 and 47.8–52.6 at load 52.
+- **At low load, both pages are close.** In the same conditions `platform-v2` replays at 57.5–59.8 fps at loads 16–28, and at 43–55 at load 46. The gap between the pages grows with contention.
+- **Not done: a gated repeat.** A repeat on the final commit, with each run gated on a load below 60, was prepared twice (`round2/run_gated_round.sh`, `round2/tools/measure_ui_gated.mjs`, `round2/configs/gated-*`). The machine's load rose to 570–930 and no gated run started.
+- **The page code measured.** Round 2 measured `e038654`'s page and round 1 `da1ef62`'s; the map code is the same. `ca3b5c8` changed only the credits page.
+
+**First paint, fma2000-v2** (medians of 5 interleaved runs, ms; this branch with the committed set of 15 module preloads, measured in a different order):
+
+| Viewport | CPU | Network | platform-v2: ready / map frame | v2-scale-ui: ready / map frame | Δ map frame | 1-min load |
+|---|---|---|---|---|---|---|
+| desktop | 1× | local | 72.6 / 70.4 | 66.4 / 70.3 | -0.1 | 178–332 |
+| desktop | 1× | broadband | 578.1 / 583.2 | 479.7 / 483.3 | -99.9 | 177–332 |
+| desktop | 4× | local | 253.5 / 308.5 | 245.1 / 291.8 | -16.7 | 177–332 |
+| desktop | 4× | broadband | 737 / 788.4 | 622.7 / 671.9 | -116.5 | 177–326 |
+| mobile | 1× | local | 69.9 / 70.5 | 63.9 / 70.4 | -0.1 | 188–326 |
+| mobile | 1× | broadband | 572.1 / 568.8 | 481.4 / 483.5 | -85.3 | 188–326 |
+| mobile | 4× | local | 241 / 275.5 | 231.2 / 258.6 | -16.9 | 188–323 |
+| mobile | 4× | broadband | 725.5 / 772 | 621.4 / 651.9 | -120.1 | 178–332 |
+
+**First paint, SYNTHETIC 100K** (medians of 3 interleaved runs, ms, under heavy load):
+
+| Viewport | CPU | Network | platform-v2: ready / map frame | v2-scale-ui: ready / map frame | Δ map frame | 1-min load |
+|---|---|---|---|---|---|---|
+| desktop | 1× | local | 242.8 / 259.9 | 174.6 / 192.9 | -67.0 | 291–369 |
+| desktop | 1× | broadband | 901 / 934.7 | 848.8 / 1009.2 | +74.5 | 291–345 |
+| desktop | 4× | local | 716.3 / 885.5 | 602.4 / 717.7 | -167.8 | 291–345 |
+| desktop | 4× | broadband | 1472.3 / 1571.8 | 1345 / 1438.6 | -133.2 | 292–345 |
+| mobile | 1× | local | 175.7 / 193.7 | 206.4 / 209.5 | +15.8 | 294–331 |
+| mobile | 1× | broadband | 1001.7 / 1010.6 | 781.9 / 804 | -206.6 | 294–331 |
+| mobile | 4× | local | 573.2 / 728.7 | 609.4 / 708.7 | -20.0 | 289–331 |
+| mobile | 4× | broadband | 1379 / 1486.1 | 1119.4 / 1184.8 | -301.3 | 289–325 |
+
+### 10.7 For the integration with `v2-deploy`
+
+- **The release digest.** The converter now writes 2.1 by default, so `DEPLOY_PLAN_V2.md` 3.2's convert command run in a tree that includes this branch produces `aa54e992…`, not the reviewed `806b19ed…`. The activation's `--expected-manifest-sha256` then fails closed. Either add `--no-lookup-index` to that command, which reproduces `806b19ed…` byte for byte (checked 2026-10-06 with the server runtime), or review and pin the 2.1 release `aa54e992…`. At fma2000 the index buys little: lookups take 1–2 ms either way.
+- **The page data.** `layout.json` schema 3 changes the page-data manifest digest the plan quotes (`7e837997…`). `build_web_v2.py` now also writes `notices/track-attribution.html`, so the activation's list of changed files grows by one. `repin_web` already refreshes every listed web file.
+- **The tests to run.** Both browser fixtures and the Python and Node suites. Neither live check reads the credits pages, so also run `node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web/notices/track-attribution.html` after stage 2, from the activated tree.
+- **The commits.** `v2-integrate` was merging this branch at `da1ef62` (uncommitted) while this was written. `e038654`, `ca3b5c8` and this document came later.
+
+### 10.8 Still open
+
+- **The tracks budget.** `/collection/tracks` still has no per-minute budget. The 2.1 index takes rare and medium lookups from hundreds of milliseconds to a few at 100K–200K, but a word in every row, or one of one or two letters, still scans: 0.40–0.51 s at 200K in-process. A browse page near the end costs an OFFSET walk: 22–32 ms over HTTP at 100K.
+- **Measurement conditions.** fps and first paint were measured on a shared Mac whose load swung between 14 and 930 within minutes. The interleaved before/after pairs are the comparable figures; Render's single CPU will be slower per frame of server work, though the page's frame cost is the browser's own.
+- **Synthetic graphs.** The synthetic graphs are random (100K) or JS-built with a test-only orphan repair (200K, round 1). A real 200K build still needs the reviewed connectivity repair (9.4).
+- **The v1 credits page.** The checked-in v1 page still overflows on phones; it is v1 and left unchanged.

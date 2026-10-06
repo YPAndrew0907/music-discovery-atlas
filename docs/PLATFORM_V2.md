@@ -186,7 +186,7 @@ In every oracle and benchmark query the first proposal was accepted (no widening
 | v1 data (catalog, vectors, index, layout, examples, artists) | 10.3 MB | 26.9 MB |
 | v2 data (manifest, layout sample with links, example packets) | 0.83 MB | 1.40 MB |
 
-After that, a browse page is about 5 KB and a search reply about 105 KB, most of it the trace. The trace is the same one the v1 page computed locally.
+After that, a browse page is about 5 KB and a search reply about 105 KB, most of it the trace. For a live search that trace is the one the v1 server already sent; for neighbors and recorded examples it replaces the trace the v1 page computed locally.
 
 ## 6. Parity
 
@@ -338,7 +338,7 @@ Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
 4. **Dockerfile ordering.**
    - Move the release and audio install steps before `COPY server/` and `COPY web/`, keyed only by `release.json`, the selection and the delivery manifest. Code changes then reuse the cached data layers instead of re-downloading them.
    - Use `PYTHON_BASE` pinned to a digest as today. `requirements.lock` is unchanged (SQLite and numpy are already there).
-   - The Debian trixie base ships SQLite 3.46 with FTS5 compiled in; the v2 server does not need FTS5 today.
+   - The v2 server needs no SQLite extension today. The Debian trixie base is expected to ship SQLite 3.46 with FTS5 (relevant only to the lookup prefilter in section 9); this was not verified in this work.
 5. **Environment.**
    - `MUSIC_AUDIO_MANIFEST_PATH` points at the v2 delivery manifest.
    - `MUSIC_ENABLE_AUDIO_PREVIEWS=1`.
@@ -359,6 +359,10 @@ Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
    - Starting the budget at readiness is a one-line change. It would change v1 behaviour, so it is left for review.
    - v2 startup costs 1.4–1.9 CPU-seconds warm (v1: 3.8–9.8 at 2,000, 9.5–22 at 5,777).
    - Neighbor exploration now costs server CPU (about 10–20 ms each) and counts against the same hourly budget.
+   - `/collection/tracks` has a concurrency bound (8 pending, then 429) but no per-minute budget; only neighbors has one.
+     - At 5,777 a lookup costs 3–10 ms.
+     - At 200K a rare-word lookup costs 0.34–0.41 s of CPU. In anonymous mode that would drain the same 30 CPU-seconds per hour that live search needs.
+     - Add a per-minute read budget (or the FTS5 prefilter) before serving 200K anonymously.
 4. **200K page features not built.**
    - Region labels, neighbourhood centroids and quadtree point tiles (the level-of-detail plan in SOURCES_AND_PLAN 6.6). The single weighted sample is in place.
    - A paged credits page: the static `track-attribution.html` is 10 MB at 5,777.

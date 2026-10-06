@@ -25,9 +25,16 @@ The deploy serves the same 2,000 recordings with the same rankings, scores and s
 | `b9c7afe` | `tests/live_check_v2.mjs`: the post-deploy live check |
 | `72231ac` | `scripts/verify_audio_publication.py`: the remote-audio publication verifier |
 | `ce55c4a` | The activation and gateway tests no longer depend on the tree or volume they run in |
-| (the last commit) | This document, and three status lines in `docs/PLATFORM_V2.md` |
+| `0da3f2a` | An end-to-end test of the v2 hydration build chain, with only the network transport stubbed |
+| `b3365d2` and the last commit | This document, and three status lines in `docs/PLATFORM_V2.md` |
 
 **v1 behaviour is unchanged.** For a v1, disabled or absent selection, the new Docker step prints `{"installed": false, ...}` and exits 0. The hydration entrypoint runs its v1 code exactly as before; the new dispatch only takes a pinned, parseable `schemaVersion: 2` file. The v1 server path is untouched. Stage 1 below was proved locally with the unmodified production live check (section 5).
+
+**What has never run:**
+
+- **A Docker build.** There is no Docker or Podman on this Mac, so the first real image build of this branch is the stage 1 push.
+- **The v2 hydration over the network.** The 1.95 GB of official ranges have not been fetched through the v2 path. That first happens in the stage 2 build. The transport is the unchanged v1 code that built today's image. Everything around it is tested end to end with the network stubbed: the plan binding, the supervised worker, the parent's re-verification and the publication.
+- **Either failure fails closed.** Render keeps the previous deploy.
 
 **The image build, in order** (Dockerfile):
 
@@ -76,10 +83,12 @@ cd $B/repo/.worktrees/v2-deploy                                   # the branch's
 git fetch origin
 git merge-base --is-ancestor origin/main v2-deploy && echo fast-forward   # must print fast-forward
 git status --short                                                # must be empty
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 148 OK
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 149 OK
 node --test tests/web_*.test.mjs                                  # expect 82 pass
 git push origin v2-deploy:main
 ```
+
+**If a UI branch merges first.** `v2-scale-ui` is being worked on in parallel. If it, or any other branch, is merged into `v2-deploy` before stage 1, run both suites and both browser fixtures again. This branch changed the start of six Node test files, `tests/v2_web_fixture.mjs` and `tests/test_api_v2.py`. Any new test of the v1 page must read its data through `tests/v1_page_data.mjs`, or it fails once v2 is active.
 
 **What Render does.** It builds the image with the v1 selection, so the new installer step is a no-op. Expect the usual build-to-live time: the last two deploys were live 230 s and 244 s after their push. Those times include the 1.95 GB hydration, which runs after `COPY web/` and so repeats on every deploy.
 
@@ -94,19 +103,25 @@ curl -s https://music-discovery-atlas.onrender.com/v1/manifest | python3 -c "imp
 
 ### 3.2 Stage 2: activate fma2000-v2 (bundled)
 
-Work in a fresh worktree on `main` after stage 1. The main checkout stays on its own branch, which other work uses. `/Volumes/music20k-apfs` must be mounted, because `fma2000-v2` exists only there.
+Work in a fresh worktree on `main` after stage 1. The main checkout stays on its own branch, which other work uses.
+
+The release is regenerated from Git with the server runtime. The conversion is byte-deterministic: on 2026-10-06 it reproduced `806b19ed…` and every asset digest of the reviewed release, in 9.8 s and 181 MiB. That digest is what the activation pins, so the source of the bytes does not matter. If `/Volumes/music20k-apfs` is mounted, `--release-dir /Volumes/music20k-apfs/releases-v2/fma2000-v2` gives the same result.
 
 ```sh
 B=/Users/yipengandrewwang/SOP_2027/music_app_2026-10-05
 cd $B/repo && git fetch origin
 git worktree add .worktrees/activate-fma2000-v2 -b activate-fma2000-v2 origin/main   # main = the stage 1 head
 cd .worktrees/activate-fma2000-v2
+$B/venv-3.12.14/bin/python scripts/convert_release_v1_to_v2.py --source-dir corpus-releases/fma2000 \
+  --expected-manifest-sha256 af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283 \
+  --output-dir $B/validation/v2-deploy/regen/fma2000-v2 > /dev/null   # the output directory must not exist yet
+shasum -a 256 $B/validation/v2-deploy/regen/fma2000-v2/release.json  # expect 806b19ed…
 $B/venv-3.12.14/bin/python scripts/activate_release_v2.py \
-  --release-dir /Volumes/music20k-apfs/releases-v2/fma2000-v2 \
+  --release-dir $B/validation/v2-deploy/regen/fma2000-v2 \
   --expected-manifest-sha256 806b19ed9a6b2f5766f3c0a7316db20466dbff1537b3eb24792c11518266e16c \
   --name fma2000-v2
 $B/venv-3.12.14/bin/python scripts/activate_release_v2.py --check   # expect "ok": true
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 148 OK
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 149 OK
 node --test tests/web_*.test.mjs                                      # expect 82 pass
 NODE_PATH=$B/tooling/node_modules node tests/browser_search_ui.mjs       # v1 page fixture: passes
 NODE_PATH=$B/tooling/node_modules node tests/browser_collection_v2.mjs   # v2 page fixture: passes
@@ -190,7 +205,7 @@ Then read the service's memory and the deploy's start-to-healthy time from the R
   - The revert restores the v1 selection, page data, manifests and allowlists, and removes the release directory.
   - Render rebuilds the v1 image, including the 1.95 GB hydration (about 4 minutes). The v2 deploy keeps serving until the new one is healthy.
 - **Stage 1:**
-  - Run `git revert --no-edit 35cec9e..<stage 1 head> && git push origin main`. This reverts the 16 commits of `platform-v2` and `v2-deploy`; none of them changes data.
+  - Run `git revert --no-edit 35cec9e..<stage 1 head> && git push origin main`. This reverts every commit of `platform-v2` and `v2-deploy`; none of them changes data.
 - **A failed build** changes nothing live. Render keeps the most recent successful deploy, and the installer, the hydrator and the server's start-up checks all fail closed.
 - **For an emergency only,** the Render dashboard's rollback to the previous deploy is immediate. Follow it with the revert, so that `main` matches what runs.
 
@@ -248,7 +263,7 @@ venv-3.12.14/bin/python scripts/verify_audio_publication.py --release-dir <relea
 
 **Setup.**
 
-- **The external drive.** "My Book" disconnected at about 09:20 local time, after these runs. That unmounted `/Volumes/music20k-apfs`, which holds the converted releases and the staged roots; the receipts are on the internal disk. The activation in section 3.2 needs that volume mounted again: `fma2000-v2` exists only there, and the activation re-verifies its digest.
+- **The external drive.** "My Book" disconnected at about 09:20 local time, after these runs. That unmounted `/Volumes/music20k-apfs` and the staged roots on it; the receipts are on the internal disk. The activation no longer needs that volume, because the release regenerates from Git with the same digest (section 3.2).
 - **Machine and branch.** This Mac (M3 Max, shared, load 15–90 with swap nearly full), branch `v2-deploy` at `62f6744`. The later commits add the live check, the verifier, two test fixes and docs; none of them changes the image.
 - **No Docker or downloads.** The root was built the way the image build would be, by `validation/v2-deploy/build_root.sh`:
   - `git archive`, then the stage 2 activation command and `--check`;
@@ -269,8 +284,8 @@ venv-3.12.14/bin/python scripts/verify_audio_publication.py --release-dir <relea
 | `validation/atlas/live_check_atlas.mjs`, unmodified apart from origin, output folder and accepting the local certificate | **17/17** |
 | `platform_v2/tools/browser_v2_check.mjs` (browse, paging, lookup, refinement, neighbors, playback, animation; desktop and mobile) | **28/28** |
 | Stage 1: v1 selection on this branch, same steps (installer no-op, v1 plan), unmodified production check | **17/17**, `bindingStatus` `verified-corpus-release` |
-| Suites at the branch head, v1 tree | Python 148 OK, Node 82 pass, both browser fixtures pass |
-| Suites at the branch head in an activated tree | Python 148 OK, Node 82 pass, both browser fixtures pass. The external drive had disconnected by then, so this run activated the test suite's own conversion of fma2000 (`9f0f1d58…`, same logical release, other SQLite build). With the real `806b19ed…` release: 140 + 82 at `c1ea00b`; at `72231ac`, 145 of 148 (three activation tests failed on a hard link across volumes, fixed in `ce55c4a` and then passing in that tree) |
+| Suites at the branch head, v1 tree | Python 149 OK, Node 82 pass, both browser fixtures pass |
+| Suites in a tree activated at the branch head with the real release (`806b19ed…`, regenerated from Git) | Python 149 OK, Node 82 pass, both browser fixtures pass, `--check` ok, 36 changes, page manifest `7e837997…` as in the proof root |
 
 **Measurements** (fma2000-v2, bundled, `validation/v2-deploy/receipts/proof-summary.json`):
 

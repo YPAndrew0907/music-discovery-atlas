@@ -265,7 +265,10 @@ PAGED_CREDITS_STYLE = (CREDITS_STYLE + 'nav{margin:1rem 0;padding:.75rem 0;borde
                        'nav p{margin:0 0 .5rem}nav ul{list-style:none;margin:0 0 .5rem;padding:0;display:flex;flex-wrap:wrap;gap:.25rem 1.25rem}'
                        'nav .unavailable{color:#666}nav form{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}'
                        'nav input{width:7ch;font:inherit;padding:.15rem .3rem}nav button{font:inherit;padding:.15rem .6rem}'
-                       '.skip{position:absolute;left:-999px}.skip:focus{position:static}')
+                       '.skip{position:absolute;left:-999px}.skip:focus{position:static}'
+                       # Source URLs run to 220 characters (median 96): without this a credit page scrolls sideways
+                       # at 390 px and even at 1440 px (tests/browser_credits_v2.mjs measures it).
+                       'article{overflow-wrap:anywhere}')
 
 
 def credits_head(count, title_suffix='', style=CREDITS_STYLE):

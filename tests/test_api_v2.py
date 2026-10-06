@@ -261,7 +261,8 @@ console.log(JSON.stringify(out));"""
         first = client.get('/collection/credits').text
         for part in ('<a href="?page=2" rel="next">Next page</a>', '<span class="unavailable">Previous page</span>',
                      '<nav aria-label="Credit pages">', '<label for="credit-page-top">Go to page</label>', '<main id="credits"',
-                     '<a class="skip" href="#credits">', '<html lang="en">', '<a href="/search-studio/">'):
+                     '<a class="skip" href="#credits">', '<html lang="en">', '<a href="/search-studio/">',
+                     'article{overflow-wrap:anywhere}'):  # long source URLs wrap instead of scrolling the page sideways
             self.assertIn(part, first)
         self.assertIn('Page 40 of 40', client.get('/collection/credits?page=999').text)  # a page jump clamps
         self.assertIn('Page 1 of 40', client.get('/collection/credits?page=0').text)

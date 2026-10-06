@@ -18108,8 +18108,8 @@
     },
     {
       "path": "scripts/hydrate_corpus_audio.py",
-      "bytes": 24595,
-      "sha256": "8e6edf7b4f3136850f2efb2a37605f7f087e06716cc7b9500430b66408d421cb"
+      "bytes": 25684,
+      "sha256": "8d869602af3d0cddeb265f798643527af3ae048cf4cecfb788ae7c0d48bdf5db"
     },
     {
       "path": "scripts/install_audio_release.py",
@@ -18120,6 +18120,21 @@
       "path": "scripts/install_corpus_audio_release.py",
       "bytes": 11934,
       "sha256": "d3fde5132a6cee880236edad379a8c8d81e82d1e33bde435118da9c5d6d9ac31"
+    },
+    {
+      "path": "scripts/install_release_v2.py",
+      "bytes": 20514,
+      "sha256": "fd7a28bf53f719aabc764114ae593338e36cf2c883030f28372afe5fa7a7ddc4"
+    },
+    {
+      "path": "scripts/hydrate_release_v2.py",
+      "bytes": 22520,
+      "sha256": "e4e920c0a32d46b47322f2573343993f61b1cb83db8784f4a7a8c8bf6baa29fc"
+    },
+    {
+      "path": "scripts/make_audio_delivery_v2.py",
+      "bytes": 4066,
+      "sha256": "2645a2b0dca79dcf575e9e9c182c8ecb04f3b2d3eebfac3514ffe2d61604061c"
     },
     {
       "path": "server/active_corpus.py",
@@ -18168,8 +18183,8 @@
     },
     {
       "path": "server/release_v2.py",
-      "bytes": 41391,
-      "sha256": "c34c756a41d428d01f40a4f093890fa5831f19931def5ce25c63301d03182d04"
+      "bytes": 44466,
+      "sha256": "65c5a67e11c0bdf94058f936eaf6bfb7fdfba7989318bd885c518bca456541d5"
     },
     {
       "path": "server/search_v2.py",
@@ -18178,8 +18193,8 @@
     },
     {
       "path": "server/collection_v2.py",
-      "bytes": 17876,
-      "sha256": "b4bee0cf9c8f72fab21e1ca3307edb226e36f2cc82eddf460c66affc673c84c1"
+      "bytes": 17403,
+      "sha256": "b541d475690ed9fca24fad08be871deeb89555c804b45db59f01ef435b9aae31"
     },
     {
       "path": "web-manifest.json",

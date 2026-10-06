@@ -44,9 +44,15 @@ class ActualFMA2000Tests(unittest.TestCase):
         manifest = json.loads((ROOT / 'web-manifest.json').read_bytes())
         self.assertLessEqual(sum(row['bytes'] for row in manifest['files']), 30_000_000)
         self.assertTrue(all(row['bytes'] <= 20_000_000 for row in manifest['files']))
+        release_id = json.loads((ROOT / 'corpus-releases/fma2000/catalog.json').read_bytes())['id']
+        page = json.loads((ROOT / 'web/search-studio/data/manifest.json').read_bytes())
+        if page.get('format') == 2:
+            # A release-format-v2 page carries the identity and count; the catalog stays on the server.
+            self.assertEqual((page['count'], page['catalogId']), (2000, release_id))
+            return
         catalog = json.loads((ROOT / 'web/search-studio/data/catalog.json').read_bytes())
         self.assertEqual(len(catalog['tracks']), 2000)
-        self.assertEqual(catalog['id'], json.loads((ROOT / 'corpus-releases/fma2000/catalog.json').read_bytes())['id'])
+        self.assertEqual(catalog['id'], release_id)
 
 
 if __name__ == '__main__':

@@ -56,7 +56,10 @@ class PublicWebTests(unittest.TestCase):
         audio = self.client.get('/audio-delivery.json').json()
         self.assertFalse(audio['enabled'])
         self.assertFalse(audio['publicDeliveryVerified'])
-        self.assertEqual(audio['tracks'], [])
+        if audio.get('schemaVersion') == 2:  # release format v2 serves a compact summary instead of rows
+            self.assertEqual((audio['mode'], audio['available'], audio['availableRows']), ('disabled', 0, ''))
+        else:
+            self.assertEqual(audio['tracks'], [])
         self.assertEqual(self.client.get('/audio/001382.mp3').status_code, 404)
         self.assertEqual(self.client.get('/listen-lab/audio/001382.mp3').status_code, 404)
 

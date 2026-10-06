@@ -7,19 +7,27 @@ import {RELEASE} from '../web/listen-lab/src/release.mjs';
 import {PINS} from '../web/listen-lab/src/pins.mjs';
 import {HNSW,exactSearch} from '../web/search-studio/src/hnsw.mjs';
 import {BrowserEncoder} from '../web/listen-lab/src/controller.mjs';
+import {servesV1,servedManifest,v1Data,V1_MANIFEST_SHA} from './v1_page_data.mjs';
 const root=new URL('../web/',import.meta.url);
 const read=path=>readFile(new URL(path,root));
 const json=async path=>JSON.parse(await read(path));
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
-const manifest=await json('search-studio/data/manifest.json');
-const catalog=await json('search-studio/data/catalog.json');
-const examples=await json('search-studio/data/examples.json');
+const manifest=JSON.parse(await v1Data('manifest.json'));
+const catalog=JSON.parse(await v1Data('catalog.json'));
+const examples=JSON.parse(await v1Data('examples.json'));
 
 test('web manifest pins every collection asset, exact model identities and required browser runtime bytes',async()=>{
+  // The served page pins its own data: the v1 page files, or the v2 manifest, layout sample and example packets.
   assert.equal(hash(await read('search-studio/data/manifest.json')),MANIFEST_SHA);
-  assert.equal(hash(await read('search-studio/data/artist-records.json')),ARTIST_METADATA_SHA);
-  for(const pin of Object.values(manifest.files)){
+  if(servesV1)assert.equal(hash(await read('search-studio/data/artist-records.json')),ARTIST_METADATA_SHA);
+  else assert.equal(ARTIST_METADATA_SHA,servedManifest.catalogSha256);
+  for(const pin of Object.values(servedManifest.files)){
     const bytes=await read('search-studio/data/'+pin.path);assert.equal(bytes.length,pin.bytes);assert.equal(hash(bytes),pin.sha256);
+  }
+  // The v1 page data (served, or the v1 fixture once v2 is active) keeps its own pins.
+  assert.equal(hash(await v1Data('manifest.json')),V1_MANIFEST_SHA);
+  for(const pin of Object.values(manifest.files)){
+    const bytes=await v1Data(pin.path);assert.equal(bytes.length,pin.bytes);assert.equal(hash(bytes),pin.sha256);
   }
   assert.equal(catalog.tracks.length,manifest.count);assert.equal(catalog.id,RELEASE.catalogId);
   assert.deepEqual(PINS.artifacts,RELEASE.textAssets);
@@ -34,8 +42,8 @@ test('six public recorded examples reproduce their exact results and use the sam
   assert.equal(examples.count,6);assert.equal(examples.examples.length,6);
   assert.equal(examples.graphId,manifest.graphId);assert.equal(examples.indexSha256,manifest.indexSha256);
   assert.deepEqual(examples.examples.map(e=>e.id),['dev-01','dev-02','dev-03','dev-04','dev-05','dev-06']);
-  const bytes=await read('search-studio/data/vectors.f32');const vectors=new Float32Array(bytes.buffer,bytes.byteOffset,bytes.byteLength/4);
-  const index=HNSW.load(await json('search-studio/data/index.json'),vectors);
+  const bytes=await v1Data('vectors.f32');const vectors=new Float32Array(bytes.buffer,bytes.byteOffset,bytes.byteLength/4);
+  const index=HNSW.load(JSON.parse(await v1Data('index.json')),vectors);
   for(const item of examples.examples){
     assert.equal(item.mode,'recorded-example');assert.equal(item.queryVector.length,512);
     const q=new Float32Array(item.queryVector);assert.equal(hash(Buffer.from(q.buffer)),item.queryVectorSha256);
@@ -44,9 +52,9 @@ test('six public recorded examples reproduce their exact results and use the sam
     assert.deepEqual(traced.trace.finalResults,item.annResults);assert.ok(traced.trace.events.length>0);
     assert.match(item.source.description,/Public recorded/);assert.equal(item.source.path,undefined);
   }
-  const artists=await json('search-studio/data/artist-records.json');
+  const artists=JSON.parse(await v1Data('artist-records.json'));
   assert.deepEqual(artists.rows.map(r=>r.trackId),catalog.tracks.map(r=>r.id));
-  const layout=await json('search-studio/data/layout.json');assert.equal(layout.positions.length,manifest.count);assert.equal(layout.graphId,manifest.graphId);
+  const layout=JSON.parse(await v1Data('layout.json'));assert.equal(layout.positions.length,manifest.count);assert.equal(layout.graphId,manifest.graphId);
 });
 
 test('public HTML exposes no audio source; result, inspector and shelf buttons share the verified delivery gate',async()=>{

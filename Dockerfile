@@ -24,10 +24,16 @@ COPY scripts/fetch_model.py /app/scripts/fetch_model.py
 COPY scripts/install_audio_release.py /app/scripts/install_audio_release.py
 COPY scripts/install_corpus_audio_release.py /app/scripts/install_corpus_audio_release.py
 COPY scripts/hydrate_corpus_audio.py /app/scripts/hydrate_corpus_audio.py
+COPY scripts/install_release_v2.py /app/scripts/install_release_v2.py
+COPY scripts/hydrate_release_v2.py /app/scripts/hydrate_release_v2.py
+COPY scripts/make_audio_delivery_v2.py /app/scripts/make_audio_delivery_v2.py
 COPY audio-hydration.json /app/audio-hydration.json
 COPY active-corpus.json /app/active-corpus.json
 COPY corpus-releases/ /app/corpus-releases/
 COPY package-manifest.json runtime-assets.json web-manifest.json audio-delivery.json /app/
+# Release format v2 only: verify the bundled release, or fetch it from the selection's pinned
+# content-addressed origin, before any other download. A v1 selection makes this a no-op.
+RUN python scripts/install_release_v2.py
 # Deliberate future network action: exactly one 126,603,263-byte pinned public model.
 RUN python scripts/fetch_model.py --download-model
 # Optional reviewed public Release asset, outside Git. Empty means no audio.

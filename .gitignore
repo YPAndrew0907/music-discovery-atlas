@@ -3892,3 +3892,16 @@ __pycache__/
 !/tests/browser_collection_v2.mjs
 !/web/search-studio/src/collection-api.mjs
 !/tests/v2_web_fixture.mjs
+!/scripts/install_release_v2.py
+!/tests/test_install_release_v2.py
+!/scripts/hydrate_release_v2.py
+!/tests/test_hydrate_release_v2.py
+!/tests/fixtures/fma2000-v1-web-manifest.json
+!/tests/v1_page_data.mjs
+!/tests/web_v1_page_data.test.mjs
+!/scripts/activate_release_v2.py
+!/tests/test_activate_release_v2.py
+!/tests/live_check_v2.mjs
+!/scripts/verify_audio_publication.py
+!/tests/test_verify_audio_publication.py
+!/docs/DEPLOY_PLAN_V2.md

@@ -6,7 +6,7 @@ import {readFile} from 'node:fs/promises';
 import {webcrypto} from 'node:crypto';
 import {reviewQueryLimits} from '../web/search-studio/src/query-limits.mjs';
 import {indexConnections} from '../web/search-studio/src/search-motion.mjs';
-import {MANIFEST_SHA,ARTIST_METADATA_SHA} from '../web/search-studio/src/studio-release.mjs';
+import {v1Data,V1_MANIFEST_SHA as MANIFEST_SHA,V1_ARTIST_METADATA_SHA as ARTIST_METADATA_SHA} from './v1_page_data.mjs';
 import {rankCandidates} from '../web/search-studio/src/rerank.mjs';
 import {ServerSearch,publicCharacterLimit} from '../web/search-studio/src/contracts.mjs';
 import {SERVER_CONFIG,loadDeploymentConfig} from '../web/search-studio/src/server-config.mjs';
@@ -20,12 +20,12 @@ import {metadataSearch} from '../web/listen-lab/src/retrieval.mjs';
 // configuration validator and ServerSearch request/response boundary run offline.
 const root=new URL('../web/',import.meta.url), origin='https://music.example';
 const bytes=path=>readFile(new URL(path,root));
-const manifest=JSON.parse(await bytes('search-studio/data/manifest.json'));
-const catalog=JSON.parse(await bytes('search-studio/data/catalog.json'));
-const examples=JSON.parse(await bytes('search-studio/data/examples.json'));
-const vectorBytes=await bytes('search-studio/data/vectors.f32');
+const manifest=JSON.parse(await v1Data('manifest.json'));
+const catalog=JSON.parse(await v1Data('catalog.json'));
+const examples=JSON.parse(await v1Data('examples.json'));
+const vectorBytes=await v1Data('vectors.f32');
 const vectors=new Float32Array(vectorBytes.buffer,vectorBytes.byteOffset,vectorBytes.byteLength/4);
-const graph=HNSW.load(JSON.parse(await bytes('search-studio/data/index.json')),vectors);
+const graph=HNSW.load(JSON.parse(await v1Data('index.json')),vectors);
 const serverManifest={catalogId:manifest.catalogId,graphId:manifest.graphId,indexSha256:manifest.indexSha256,
   catalogSha256:manifest.files.catalog.sha256,vectorsSha256:manifest.vectorsSha256,
   engineId:manifest.allowedQueryProfiles.find(p=>p.kind==='server-live').id,deploymentGeneration:'fixture-generation',maxQueryUtf8Bytes:2048,
@@ -83,7 +83,7 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
       return api.failSearch?new Response(JSON.stringify({error:api.searchError}),{status:api.searchStatus,headers:api.searchRetryAfter?{'retry-after':String(api.searchRetryAfter)}:{}}):new Response(JSON.stringify(responseFor(body)));
     }
     assert.ok(url.pathname.startsWith('/search-studio/data/'),'Unexpected fetch: '+url.pathname);
-    return new Response(await bytes(url.pathname.slice(1)));
+    return new Response(await v1Data(url.pathname.slice('/search-studio/data/'.length)));
   };
   let encoder,map;
   class Encoder{
@@ -514,7 +514,7 @@ test('the refinement summary counts active refinements and the preview filter ap
 
 test('the About dialog derives its collection facts from the loaded data and labels the selected recording separately',async()=>{
   const h=await harness();
-  const artists=JSON.parse(await bytes('search-studio/data/artist-records.json'));
+  const artists=JSON.parse(await v1Data('artist-records.json'));
   const artistCount=new Set(artists.rows.map(r=>r.artistId)).size,genreCount=sourceGenres(catalog.tracks.map((_,row)=>({row})),catalog.tracks).length;
   assert.equal(h.el('#collection-summary').textContent,`${catalog.tracks.length.toLocaleString()} FMA excerpts · ${artistCount.toLocaleString()} source artist IDs · ${genreCount.toLocaleString()} source genres`);
   assert.equal(artistCount,551);assert.equal(genreCount,14);

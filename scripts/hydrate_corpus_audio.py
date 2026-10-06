@@ -374,6 +374,20 @@ def hydrate_supervised(root, selected):
             'absoluteDeadlineSupervised': True}
 
 
+def selects_release_v2(root, package):
+    """True only for a pinned, parseable schemaVersion 2 selection. Anything else, including an
+    unpinned or malformed file, takes the unchanged v1 path in main() and fails there as before."""
+    path = Path(root) / 'active-corpus.json'
+    pins = [row for row in package.get('files', []) if row.get('path') == 'active-corpus.json']
+    if len(pins) != 1 or path.is_symlink() or not path.is_file():
+        return False
+    try:
+        config = strict_json(verify_spec(root, pins[0], 16_384, 'active-corpus.json'), 'active corpus selection', 16_384)
+    except ReleaseError:
+        return False
+    return isinstance(config, dict) and type(config.get('schemaVersion')) is int and config['schemaVersion'] == 2
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--legacy-url', default='')
@@ -381,6 +395,11 @@ def main():
     parser.add_argument('--worker-dir', type=Path, help=argparse.SUPPRESS)
     args = parser.parse_args()
     package = json.loads((ROOT / 'package-manifest.json').read_bytes())
+    if selects_release_v2(ROOT, package):
+        # Release format v2 has its own build path; every v1 path below is unchanged.
+        import hydrate_release_v2
+        return hydrate_release_v2.run(package, verify_plan=args.verify_plan, worker_dir=args.worker_dir,
+                                      legacy_url=args.legacy_url)
     selected = selected_corpus(ROOT, package)
     if selected is None or selected.audio_archive is not None:
         require(not args.verify_plan and args.worker_dir is None, 'No hydration plan is active')

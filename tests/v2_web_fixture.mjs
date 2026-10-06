@@ -7,16 +7,17 @@ import {sourceGenres,refineCandidates} from '../web/search-studio/src/results-vi
 import {indexConnections} from '../web/search-studio/src/search-motion.mjs';
 import {HNSW,exactSearch} from '../web/search-studio/src/hnsw.mjs';
 import {metadataSearch} from '../web/listen-lab/src/retrieval.mjs';
+import {v1Data} from './v1_page_data.mjs';
 
 const root=new URL('../web/',import.meta.url), origin='https://music.example';
 const bytes=path=>readFile(new URL(path,root));
-const v1=JSON.parse(await bytes('search-studio/data/manifest.json'));
-const catalog=JSON.parse(await bytes('search-studio/data/catalog.json'));
-const v1Examples=JSON.parse(await bytes('search-studio/data/examples.json'));
-const v1Layout=JSON.parse(await bytes('search-studio/data/layout.json'));
-const artists=new Map(JSON.parse(await bytes('search-studio/data/artist-records.json')).rows.map(r=>[r.trackId,r.artistId]));
-const indexJson=JSON.parse(await bytes('search-studio/data/index.json'));
-const vectorBytes=await bytes('search-studio/data/vectors.f32');
+const v1=JSON.parse(await v1Data('manifest.json'));
+const catalog=JSON.parse(await v1Data('catalog.json'));
+const v1Examples=JSON.parse(await v1Data('examples.json'));
+const v1Layout=JSON.parse(await v1Data('layout.json'));
+const artists=new Map(JSON.parse(await v1Data('artist-records.json')).rows.map(r=>[r.trackId,r.artistId]));
+const indexJson=JSON.parse(await v1Data('index.json'));
+const vectorBytes=await v1Data('vectors.f32');
 const vectors=new Float32Array(vectorBytes.buffer,vectorBytes.byteOffset,vectorBytes.byteLength/4);
 const graph=HNSW.load(indexJson,vectors);
 const hex=label=>createHash('sha256').update(label).digest('hex');

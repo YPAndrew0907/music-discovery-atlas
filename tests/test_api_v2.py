@@ -380,13 +380,21 @@ console.log(JSON.stringify(out));"""
             with self.subTest(bad=bad):
                 self.assertEqual(client.get('/collection/links?' + bad).status_code, 400)
 
-    def test_map_tiles_links_and_credits_have_their_own_budgets(self):
+    def test_collection_pages_map_tiles_links_and_credits_have_their_own_budgets(self):
         from collection_v2 import CollectionRoutes
         from web_gateway import SECURITY_HEADERS
         routes = CollectionRoutes(self.release, None, audio=AudioDeliveryV2(None, self.release), headers=SECURITY_HEADERS,
-                                  tiles_per_minute=2, links_per_minute=1, credits_per_minute=1)
+                                  tracks_per_minute=2, tiles_per_minute=2, links_per_minute=1, credits_per_minute=1)
         self.addCleanup(routes.close)
         client = TestClient(routes, base_url=ORIGIN)
+        # Collection pages and lookups spend the CPU that the anonymous search budget counts, so they are capped too.
+        self.assertEqual([client.get('/collection/tracks?limit=12').status_code for _ in range(2)], [200, 200])
+        refused = client.get('/collection/tracks?q=a&preview=1')
+        self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Collection page budget exhausted'))
+        self.assertTrue(1 <= int(refused.headers['retry-after']) <= 61)
+        self.assertEqual(client.get('/collection/tracks?rows=1').status_code, 429)  # explicit rows share the budget
+        self.assertEqual(routes.tracks_budget.per_minute, 2)
+        self.assertEqual(CollectionRoutes.__init__.__kwdefaults__['tracks_per_minute'], 300)
         self.assertEqual([client.get('/collection/tiles?z=0&x=0&y=0').status_code for _ in range(3)], [200, 200, 429])
         refused = client.get('/collection/tiles?z=1&x=0&y=0')
         self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Map tile budget exhausted'))

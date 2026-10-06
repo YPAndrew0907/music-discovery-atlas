@@ -367,11 +367,15 @@ class Budget:
 class CollectionRoutes:
     """GET /collection/tracks and /collection/neighbors over a verified ReleaseV2."""
 
-    def __init__(self, release, graph, *, audio, headers, neighbors_per_minute=60, credits_per_minute=300,
-                 tiles_per_minute=2400, links_per_minute=600, pending=8, trace_limit=2048, page_limit=48, rows_limit=64):
+    def __init__(self, release, graph, *, audio, headers, tracks_per_minute=300, neighbors_per_minute=60,
+                 credits_per_minute=300, tiles_per_minute=2400, links_per_minute=600, pending=8, trace_limit=2048,
+                 page_limit=48, rows_limit=64):
         # trace_limit 2048 is the v1 page's local default; ef 32 traces hold about 50 events.
         self.release, self.graph, self.audio, self.headers = release, graph, audio, headers
         self._bits = base64.b64decode(audio.manifest['availableRows']) if audio.manifest.get('enabled') else b''
+        # Every collection read spends process CPU, which the anonymous search budget (public_boundary.PreviewBudget)
+        # also counts, so each route has a per-minute cap. A browse or lookup session uses about 20 pages.
+        self.tracks_budget = Budget(tracks_per_minute)
         self.neighbors_budget = Budget(neighbors_per_minute)
         self.credits_budget = Budget(credits_per_minute)
         self.tiles_budget, self.links_budget = Budget(tiles_per_minute), Budget(links_per_minute)
@@ -492,8 +496,8 @@ class CollectionRoutes:
     async def __call__(self, scope, receive, send):
         from starlette.responses import HTMLResponse, JSONResponse, Response
         path = scope['path']
-        routes = {'/collection/tracks': (self.tracks, {'rows', 'offset', 'limit', 'q', 'text', 'genre', 'preview', 'facets'}, None,
-                                         'Collection'),
+        routes = {'/collection/tracks': (self.tracks, {'rows', 'offset', 'limit', 'q', 'text', 'genre', 'preview', 'facets'},
+                                         self.tracks_budget, 'Collection page'),
                   '/collection/neighbors': (self.neighbors, {'row'}, self.neighbors_budget, 'Neighbor exploration'),
                   '/collection/tiles': (self.tiles, {'z', 'x', 'y'}, self.tiles_budget, 'Map tile'),
                   '/collection/links': (self.links, {'row'}, self.links_budget, 'Map link'),

@@ -18153,8 +18153,8 @@
     },
     {
       "path": "server/collection_v2.py",
-      "bytes": 33204,
-      "sha256": "145b47b76143f52102c256f474d0adf452f05d1bbf4e268c60d99db1ab9b613e"
+      "bytes": 33543,
+      "sha256": "7e76849c98cc2f3ff32aa60c3b9041f4344395a3e46b1c7ff76b699574f43c54"
     },
     {
       "path": "web-manifest.json",

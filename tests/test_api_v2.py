@@ -274,6 +274,79 @@ console.log(JSON.stringify(out));"""
         self.assertIn(intro.encode(), small)
         self.assertEqual(self.web_receipt['credits']['pagedAt'], '/collection/credits')
 
+    def tile(self, client, z, x, y):
+        reply = client.get(f'/collection/tiles?z={z}&x={x}&y={y}')
+        self.assertEqual(reply.status_code, 200)
+        body = reply.json()
+        rows = np.frombuffer(base64.b64decode(body['rows']), dtype='<u4')
+        xy = np.frombuffer(base64.b64decode(body['xy']), dtype='<f4').reshape(-1, 2)
+        weights = None if body['weights'] is None else np.frombuffer(base64.b64decode(body['weights']), dtype='<u4')
+        return body, rows, xy, weights
+
+    def test_map_tiles_partition_the_layout_and_sample_fuller_tiles(self):
+        from collection_v2 import tile_domain
+        client = self.client(self.v2_encoder, gateway=True)
+        layout = np.asarray(self.release.layout)
+        leaves, stack, payloads = [], [(0, 0, 0)], {}
+        while stack:
+            z, x, y = stack.pop()
+            body, rows, xy, weights = self.tile(client, z, x, y)
+            payloads[f'{z}/{x}/{y}'] = body
+            self.assertEqual(body['domain'], tile_domain(self.release.manifest['layout']['bounds']))
+            self.assertEqual((len(rows), body['count']), (len(xy), len(rows)))
+            self.assertTrue(np.array_equal(xy, layout[rows]), 'tile positions are the release layout')
+            self.assertTrue(np.all(np.diff(rows.astype(np.int64)) > 0), 'rows in catalog order')
+            if body['complete']:
+                self.assertEqual(body['total'], len(rows))
+                leaves.append(rows)
+            else:
+                self.assertLessEqual(len(rows), body['cap'])
+                self.assertEqual(int(weights.sum()), body['total'])
+                stack.extend((z + 1, 2 * x + i, 2 * y + j) for i in (0, 1) for j in (0, 1))
+        every = np.sort(np.concatenate(leaves))
+        self.assertTrue(np.array_equal(every, np.arange(2000)), 'complete tiles partition the catalog')
+        for bad in ('z=13&x=0&y=0', 'z=1&x=2&y=0', 'z=1&x=0', 'z=0&x=0&y=0&row=1', 'z=-1&x=0&y=0'):
+            with self.subTest(bad=bad):
+                self.assertEqual(client.get('/collection/tiles?' + bad).status_code, 400)
+        # The page's emulation (tests/v2_web_fixture.mjs) cuts every tile exactly as the server does; the page's
+        # TileField children of complete tiles are checked against that emulation in web_map_lod.test.mjs.
+        node = shutil.which('node')
+        if node:
+            keys = json.dumps(sorted(payloads))
+            script = ("import {tiles} from './tests/v2_web_fixture.mjs';"
+                      "console.log(JSON.stringify(Object.fromEntries(JSON.parse(process.argv[1]).map(k=>[k,tiles.tile(...k.split('/').map(Number))]))));")
+            emulated = json.loads(subprocess.run([node, '--input-type=module', '-e', script, keys], cwd=ROOT, capture_output=True,
+                                                 text=True, check=True).stdout)
+            self.assertEqual(emulated, payloads)
+
+    def test_stored_links_are_the_graph_links_of_one_recording(self):
+        client = self.client(self.v2_encoder, gateway=True)
+        index = json.loads((V1_DIR / 'index.json').read_bytes())
+        for row in (0, 5, 777, 1999):
+            body = client.get(f'/collection/links?row={row}').json()
+            self.assertEqual((body['row'], body['levels']), (row, index['links'][row]))
+            self.assertEqual((body['graphId'], body['indexSha256']), (self.release.graph_id, self.release.graph_sha256))
+            linked = sorted({row, *(n for level in index['links'][row] for n in level)})
+            self.assertEqual(body['layout']['rows'], linked)
+            self.assertEqual(body['layout']['xy'], [float(v) for v in np.asarray(self.release.layout)[linked].reshape(-1)])
+        for bad in ('row=2000', 'row=x', 'row=1&z=0', ''):
+            with self.subTest(bad=bad):
+                self.assertEqual(client.get('/collection/links?' + bad).status_code, 400)
+
+    def test_map_tiles_links_and_credits_have_their_own_budgets(self):
+        from collection_v2 import CollectionRoutes
+        from web_gateway import SECURITY_HEADERS
+        routes = CollectionRoutes(self.release, None, audio=AudioDeliveryV2(None, self.release), headers=SECURITY_HEADERS,
+                                  tiles_per_minute=2, links_per_minute=1, credits_per_minute=1)
+        self.addCleanup(routes.close)
+        client = TestClient(routes, base_url=ORIGIN)
+        self.assertEqual([client.get('/collection/tiles?z=0&x=0&y=0').status_code for _ in range(3)], [200, 200, 429])
+        refused = client.get('/collection/tiles?z=1&x=0&y=0')
+        self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Map tile budget exhausted'))
+        self.assertEqual([client.get('/collection/links?row=1').status_code for _ in range(2)], [200, 429])
+        self.assertEqual([client.get('/collection/credits?page=1').status_code for _ in range(2)], [200, 429])
+        self.assertTrue(client.get('/collection/credits?page=1').headers['content-type'].startswith('text/html'))
+
     def test_gateway_refuses_a_web_package_built_for_another_release(self):
         broken = Path(self.temp.name) / 'broken'
         shutil.copytree(self.web, broken)

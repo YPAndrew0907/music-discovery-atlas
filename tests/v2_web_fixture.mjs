@@ -42,6 +42,33 @@ const examplesV2={schemaVersion:2,kind:'music-recorded-examples-v2',releaseSha25
 const xs=v1Layout.positions.map(p=>p[0]),ys=v1Layout.positions.map(p=>p[1]),bounds=[Math.min(...xs),Math.min(...ys),Math.max(...xs),Math.max(...ys)];
 const layoutV2={schemaVersion:2,kind:'music-layout-sample-v2',releaseSha256:identity.releaseSha256,graphId:v1.graphId,count,sampleCount:count,sampleMethod:'every row',bounds,
   rows:catalog.tracks.map((_,r)=>r),xy:v1Layout.positions.flat(),edges:indexConnections(indexJson.links).flatMap(e=>[e.from,e.to,e.level]),description:'Fixture layout.'};
+// ---- the server's map tiles (collection_v2.TileIndex), for the emulated routes -------------------
+const TILE_BITS=16,TILE_CAP=1024,TILE_MAX_LEVEL=12;
+const tileDomain=([x0,y0,x1,y1])=>{const side=Math.max(x1-x0,y1-y0,1e-6)*(1+1/512);return[(x0+x1)/2-side/2,(y0+y1)/2-side/2,side];};
+const spread=v=>{let out=0;for(let i=0;i<16;i++)if((v>>i)&1)out+=2**(2*i);return out;};
+function tileIndex(positions,box){
+  const domain=tileDomain(box),[x0,y0,side]=domain,scale=2**TILE_BITS/side,top=2**TILE_BITS-1;
+  const codes=positions.map(([x,y])=>spread(Math.max(0,Math.min(top,Math.floor((x-x0)*scale))))+2*spread(Math.max(0,Math.min(top,Math.floor((y-y0)*scale)))));
+  const order=codes.map((_,row)=>row).sort((a,b)=>codes[a]-codes[b]||a-b),sorted=order.map(r=>codes[r]);
+  const b64=(Kind,values)=>Buffer.from(Kind.from(values).buffer).toString('base64');
+  return{domain,tile(z,x,y){
+    const span=2**(2*(TILE_BITS-z)),prefix=spread(x)+2*spread(y),lo=sorted.findIndex(c=>c>=prefix*span),hiAt=sorted.findIndex(c=>c>=(prefix+1)*span);
+    const a=lo<0?sorted.length:lo,b=hiAt<0?sorted.length:hiAt,rows=order.slice(a,b),cs=sorted.slice(a,b),total=b-a;
+    let chosen,weights=null;
+    if(total<=TILE_CAP)chosen=[...rows].sort((p,q)=>p-q);
+    else{
+      let starts=null;
+      for(let depth=1;depth<=TILE_BITS-z;depth++){const unit=2**(2*(TILE_BITS-z-depth)),found=[];cs.forEach((c,i)=>{if(!i||Math.floor(c/unit)!==Math.floor(cs[i-1]/unit))found.push(i);});if(found.length>TILE_CAP)break;starts=found;}
+      const cells=starts.map((s,i)=>{const end=i+1<starts.length?starts[i+1]:total;return{low:Math.min(...rows.slice(s,end)),n:end-s};}).sort((p,q)=>p.low-q.low);
+      chosen=cells.map(c=>c.low);weights=cells.map(c=>c.n);
+    }
+    return{z,x,y,domain,cap:TILE_CAP,total,complete:weights===null,count:chosen.length,rows:b64(Uint32Array,chosen),
+      xy:b64(Float32Array,chosen.flatMap(r=>positions[r])),weights:weights&&b64(Uint32Array,weights)};
+  }};
+}
+const tiles=tileIndex(v1Layout.positions,bounds);
+const storedLinks=row=>{const levels=indexJson.links[row].map(l=>[...l]),rows=[...new Set([row,...levels.flat()])].sort((a,b)=>a-b);
+  return{schemaVersion:1,kind:'stored-index-links',row,graphId:v1.graphId,indexSha256:identity.indexSha256,levels,layout:{rows,xy:rows.flatMap(r=>v1Layout.positions[r])}};};
 const layoutBytes=Buffer.from(JSON.stringify(layoutV2)),examplesBytes=Buffer.from(JSON.stringify(examplesV2));
 const manifestV2={schemaVersion:2,format:2,kind:'music-collection-web-v2',...identity,catalogId:v1.catalogId,graphId:v1.graphId,vectorsSha256:v1.vectorsSha256,
   orderedIdsSha256:v1.orderedIdsSha256,count,dimensions:512,allowedQueryProfiles:v1.allowedQueryProfiles,collectionApi:'/collection/',searchDefaults:{k:16,ef:32},
@@ -65,4 +92,5 @@ function collectionTracks(params,available){
 }
 
 export {root,origin,bytes,v1,catalog,v1Examples,v1Layout,artists,indexJson,vectors,graph,hex,sha,count,identity,display,traceRows,labelRows,packet,
-  examplesV2,bounds,layoutV2,layoutBytes,examplesBytes,manifestV2,manifestBytes,MANIFEST_SHA,serverManifest,bitset,deliverySummary,collectionTracks};
+  examplesV2,bounds,layoutV2,layoutBytes,examplesBytes,manifestV2,manifestBytes,MANIFEST_SHA,serverManifest,bitset,deliverySummary,collectionTracks,
+  tiles,tileIndex,tileDomain,storedLinks,TILE_CAP};

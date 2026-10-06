@@ -14,12 +14,18 @@ rows are "Preview unavailable") with two v2 modes:
 * remote: content-addressed objects on one pinned HTTPS origin, verified at publish time by
   the operator's verifier. The server never fetches or serves them.
 
+The map's level of detail is read the same way: /collection/tiles serves the layout as a quadtree of
+point tiles (every row of a tile when it holds at most TILE_CAP, otherwise a weighted stratified
+sample), and /collection/links serves the stored index links of one recording, so the page draws
+links only around the recording in focus.
+
 Track credits are served the same way: /collection/credits renders the static credit page's
 articles fifty at a time as plain HTML (no script needed), so a v2 package does not ship a
 credits file that grows with the catalog (10 MB at 5,777 rows).
 """
 import asyncio
 import base64
+from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import html
@@ -30,6 +36,8 @@ import re
 import threading
 import time
 from urllib.parse import parse_qsl, urlsplit
+
+import numpy as np
 
 from corpus_release import TRACK_ID, ReleaseError, require, strict_json, valid_sha
 from release_v2 import page_query
@@ -163,6 +171,92 @@ class AudioDeliveryV2:
         return path
 
 
+# ---- map tiles -------------------------------------------------------------------------------
+TILE_BITS = 16       # positions are ordered along a Morton curve over a 65,536 x 65,536 grid
+TILE_CAP = 1024      # points per tile: every row when the tile holds at most this many
+TILE_MAX_LEVEL = 12  # 4,096 x 4,096 tiles at the deepest level
+
+
+def tile_domain(bounds):
+    """The square the tile pyramid covers: centred on the layout bounds [x0, y0, x1, y1], with the larger
+    side plus a 1/512 margin. build_web_v2.py pins this in layout.json; every tile reply repeats it."""
+    x0, y0, x1, y1 = (float(v) for v in bounds)
+    side = max(x1 - x0, y1 - y0, 1e-6) * (1 + 1 / 512)
+    return [(x0 + x1) / 2 - side / 2, (y0 + y1) / 2 - side / 2, side]
+
+
+def spread_bits(values):
+    """Interleave zeros between the low 16 bits of each value (one axis of a Morton code)."""
+    v = np.asarray(values, dtype=np.uint64) & np.uint64(0xFFFF)
+    for shift, mask in ((8, 0x00FF00FF), (4, 0x0F0F0F0F), (2, 0x33333333), (1, 0x55555555)):
+        v = (v | (v << np.uint64(shift))) & np.uint64(mask)
+    return v
+
+
+def b64(array, dtype):
+    return base64.b64encode(np.ascontiguousarray(array, dtype=dtype).tobytes()).decode('ascii')
+
+
+class TileIndex:
+    """A quadtree of point tiles over the release layout, from one Morton ordering of the rows.
+
+    Tile (z, x, y) covers the z-level cell (x, y) of tile_domain(); its rows are one contiguous run of the
+    Morton order. A tile with at most `cap` rows is complete (every row). A fuller tile is a stratified
+    sample, as build_web_v2.sample_layout draws the overview: the lowest row of each occupied cell at the
+    finest sub-level whose occupied cells number at most `cap`, weighted by the rows that cell holds.
+    Display only: tiles never decide a search result."""
+
+    def __init__(self, layout, bounds, *, cap=TILE_CAP, max_level=TILE_MAX_LEVEL, cache=512):
+        self.layout, self.cap, self.max_level = layout, cap, max_level
+        self.domain = tile_domain(bounds)
+        x0, y0, side = self.domain
+        xy = np.asarray(layout, dtype=np.float64)
+        scale = (1 << TILE_BITS) / side
+        top = (1 << TILE_BITS) - 1
+        qx = np.clip(np.floor((xy[:, 0] - x0) * scale), 0, top)
+        qy = np.clip(np.floor((xy[:, 1] - y0) * scale), 0, top)
+        codes = spread_bits(qx) | (spread_bits(qy) << np.uint64(1))
+        self.order = np.argsort(codes, kind='stable')  # rows along the curve; equal codes keep catalog order
+        self.codes = codes[self.order]
+        self._cache, self._lock, self._size = OrderedDict(), threading.Lock(), cache
+
+    def tile(self, z, x, y):
+        require(0 <= z <= self.max_level and 0 <= x < (1 << z) and 0 <= y < (1 << z), 'Tile outside the map')
+        key = (z, x, y)
+        with self._lock:
+            if key in self._cache:
+                self._cache.move_to_end(key)
+                return self._cache[key]
+        shift = np.uint64(2 * (TILE_BITS - z))
+        prefix = int(spread_bits(x) | (spread_bits(y) << np.uint64(1)))
+        lo = int(np.searchsorted(self.codes, np.uint64(prefix) << shift, 'left'))
+        hi = int(np.searchsorted(self.codes, np.uint64(prefix + 1) << shift, 'left'))
+        rows, codes, total = self.order[lo:hi], self.codes[lo:hi], hi - lo
+        weights = None
+        if total <= self.cap:
+            chosen = np.sort(rows)
+        else:
+            starts = None
+            for depth in range(1, TILE_BITS - z + 1):
+                cells = codes >> np.uint64(2 * (TILE_BITS - z - depth))
+                found = np.flatnonzero(np.r_[True, cells[1:] != cells[:-1]])
+                if len(found) > self.cap:
+                    break
+                starts = found
+            lowest, counts = np.minimum.reduceat(rows, starts), np.diff(np.r_[starts, total])
+            ranked = np.argsort(lowest)
+            chosen, weights = lowest[ranked], counts[ranked]
+        payload = {'z': z, 'x': x, 'y': y, 'domain': self.domain, 'cap': self.cap, 'total': total,
+                   'complete': weights is None, 'count': len(chosen),
+                   'rows': b64(chosen, '<u4'), 'xy': b64(np.asarray(self.layout)[chosen], '<f4'),
+                   'weights': None if weights is None else b64(weights, '<u4')}
+        with self._lock:
+            self._cache[key] = payload
+            if len(self._cache) > self._size:
+                self._cache.popitem(last=False)
+        return payload
+
+
 # ---- track credits ---------------------------------------------------------------------------
 CREDITS_PAGE_SIZE = 50
 CREDITS_STYLE = ('body{max-width:75ch;margin:2rem auto;padding:0 1rem;font:16px/1.6 system-ui}'
@@ -272,13 +366,15 @@ class Budget:
 class CollectionRoutes:
     """GET /collection/tracks and /collection/neighbors over a verified ReleaseV2."""
 
-    def __init__(self, release, graph, *, audio, headers, neighbors_per_minute=60, credits_per_minute=300, pending=8,
-                 trace_limit=2048, page_limit=48, rows_limit=64):
+    def __init__(self, release, graph, *, audio, headers, neighbors_per_minute=60, credits_per_minute=300,
+                 tiles_per_minute=2400, links_per_minute=600, pending=8, trace_limit=2048, page_limit=48, rows_limit=64):
         # trace_limit 2048 is the v1 page's local default; ef 32 traces hold about 50 events.
         self.release, self.graph, self.audio, self.headers = release, graph, audio, headers
         self._bits = base64.b64decode(audio.manifest['availableRows']) if audio.manifest.get('enabled') else b''
         self.neighbors_budget = Budget(neighbors_per_minute)
         self.credits_budget = Budget(credits_per_minute)
+        self.tiles_budget, self.links_budget = Budget(tiles_per_minute), Budget(links_per_minute)
+        self._tiles, self._tiles_lock = None, threading.Lock()
         self.executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix='music-collection')
         self.pending, self.max_pending, self.lock = 0, pending, threading.Lock()
         self.trace_limit, self.page_limit, self.rows_limit = trace_limit, page_limit, rows_limit
@@ -349,6 +445,31 @@ class CollectionRoutes:
                 'layout': self.release.positions(trace_rows(traced['trace'], exact) | {row}),
                 'timingMs': {'exactSearch': (exact_at - started) * 1000, 'graphTrace': (finished - exact_at) * 1000}}
 
+    def tile_index(self):
+        with self._tiles_lock:  # built on first use: one sort of the layout (about 20 ms at 200K rows)
+            if self._tiles is None:
+                self._tiles = TileIndex(self.release.layout, self.release.manifest['layout']['bounds'])
+            return self._tiles
+
+    def tiles(self, values):
+        require(set(values) == {'z', 'x', 'y'}, 'Expected z, x and y')
+        z = self.number(values, 'z', None, 0, TILE_MAX_LEVEL)
+        return self.tile_index().tile(z, self.number(values, 'x', None, 0, (1 << z) - 1),
+                                      self.number(values, 'y', None, 0, (1 << z) - 1))
+
+    def links(self, values):
+        """The stored index links of one recording, level by level in stored order, with the positions of
+        the recording and every linked row. Display only: the page draws them around the focus."""
+        require(set(values) == {'row'}, 'Expected row')
+        release = self.release
+        row = self.number(values, 'row', None, 0, release.count - 1)
+        first, last = int(release.node_layers[row]), int(release.node_layers[row + 1])
+        levels = [release.neighbors[int(release.layer_offsets[layer]):int(release.layer_offsets[layer + 1])].tolist()
+                  for layer in range(first, last)]
+        return {'schemaVersion': 1, 'kind': 'stored-index-links', 'row': row, 'graphId': release.graph_id,
+                'indexSha256': release.graph_sha256, 'levels': levels,
+                'layout': release.positions({row, *(target for level in levels for target in level)})}
+
     def credits(self, values):
         """An HTML page of track credits, or a redirect from a recording ID to the page that holds it."""
         from starlette.responses import HTMLResponse, RedirectResponse
@@ -373,6 +494,8 @@ class CollectionRoutes:
         routes = {'/collection/tracks': (self.tracks, {'rows', 'offset', 'limit', 'q', 'text', 'genre', 'preview', 'facets'}, None,
                                          'Collection'),
                   '/collection/neighbors': (self.neighbors, {'row'}, self.neighbors_budget, 'Neighbor exploration'),
+                  '/collection/tiles': (self.tiles, {'z', 'x', 'y'}, self.tiles_budget, 'Map tile'),
+                  '/collection/links': (self.links, {'row'}, self.links_budget, 'Map link'),
                   '/collection/credits': (self.credits, {'page', 'id'}, self.credits_budget, 'Credit page')}
         headers = {**self.headers, 'Cache-Control': 'no-store'}
 

@@ -175,8 +175,8 @@ class InstallerTests(unittest.TestCase):
     # ---- bundled ----------------------------------------------------------------------------------
     def test_bundled_release_is_verified_in_place_with_every_row(self):
         rows = {'rows': V1_COUNT, 'evidenceFiles': V1_COUNT, 'evidenceBytes': V1_EVIDENCE_BYTES}
-        # Release format 2.1 (the converter's default) also proves its lookup index; 2.0 (no index) is the
-        # format the fma2000 deploy pins (279cd21b...).
+        # Release format 2.1 (the converter's default, and what the fma2000 deploy pins: b537a7ac...) also
+        # proves its lookup index; 2.0 (no index, --no-lookup-index: 279cd21b...) is the deploy's fallback.
         for (src, sha), expected in [((self.src, self.sha), {**rows, 'lookupIndex': 'fts5-trigram-v1'}),
                                      (converted_fma2000(lookup_index=False), {**rows, 'lookupIndex': None})]:
             with self.subTest(release=sha):

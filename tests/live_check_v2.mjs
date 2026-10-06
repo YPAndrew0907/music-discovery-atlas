@@ -10,7 +10,8 @@
 //   NODE_PATH=<dir with playwright> node tests/live_check_v2.mjs
 //   MUSIC_UI_ORIGIN        default https://music-discovery-atlas.onrender.com
 //   EXPECT_COUNT           default 1992 (fma2000 after the rights quarantine of 2026-10-06)
-//   EXPECT_RELEASE         the selection's manifestSha256 (default: fma2000-v2, 279cd21b…)
+//   EXPECT_RELEASE         the selection's manifestSha256 (default: fma2000-v2 in release format 2.1, b537a7ac…;
+//                          the 2.0 fallback converted with --no-lookup-index is 279cd21b…)
 //   OUT_DIR                default /tmp/music-live-check-v2 (live-check-v2.json and screenshots)
 //   MUSIC_UI_INSECURE_TLS  1 only for a local TLS terminator with a self-signed certificate
 import {createRequire} from 'node:module';
@@ -18,7 +19,7 @@ import {mkdir, readFile, writeFile} from 'node:fs/promises';
 const {chromium, request} = createRequire(import.meta.url)('playwright');
 const ORIGIN = process.env.MUSIC_UI_ORIGIN ?? 'https://music-discovery-atlas.onrender.com';
 const COUNT = Number(process.env.EXPECT_COUNT ?? 1992);
-const RELEASE = process.env.EXPECT_RELEASE ?? '279cd21b116f084001162c8e10177511e7ffda89064189328e31d73c5fea68b7';
+const RELEASE = process.env.EXPECT_RELEASE ?? 'b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740';
 // Preview routes of the recordings the rights quarantine list keeps out of every build.
 const QUARANTINED = JSON.parse(await readFile(new URL('../corpus-releases/quarantine.json', import.meta.url)))
   .entries.map(entry => '/audio/' + entry.id.slice(4).padStart(6, '0') + '.mp3');

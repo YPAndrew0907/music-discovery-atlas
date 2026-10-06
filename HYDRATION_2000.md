@@ -1,13 +1,17 @@
-# Approved 2,000-track build hydration
+# Approved fma2000 build hydration
 
-This deployment source uses the exact reviewed 2,000-recording corpus. The Docker build retrieves only pinned byte ranges from the official FMA archives and extracts their unchanged MP3 members. There is no full-archive fallback, new model work, re-encoding, ffmpeg dependency, GitHub audio-release upload, credential change or runtime audio download.
+This deployment source uses the exact reviewed fma2000 corpus. Since the rights quarantine of 2026-10-06 it holds 1,992 recordings: the original 2,000 without eight removed or held rows ([docs/RIGHTS_QUARANTINE.md](docs/RIGHTS_QUARANTINE.md)).
+
+The plan keeps each remaining entry of the reviewed 2,000-entry plan byte for byte and is rebound to the rebuilt release (`scripts/derive_hydration_plan.py`). The build never downloads the quarantined recordings.
+
+The 2,000-row figures in the verification sections below are the original acceptance. The Docker build retrieves only pinned byte ranges from the official FMA archives and extracts their unchanged MP3 members. There is no full-archive fallback, new model work, re-encoding, ffmpeg dependency, GitHub audio-release upload, credential change or runtime audio download.
 
 ## Exact source and resource bounds
 
-- Corpus release SHA-256: `af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283`
-- Hydration plan SHA-256: `cc00b6d1447eb290fe2fb4883580d8ed9b06e451723a5ec79738ca189948a79b`
-- 1,551 members of official fma_large.zip and 449 of fma_small.zip
-- Exactly 1,951,856,486 planned range bytes; 2,034,768,876 final MP3 bytes
+- Corpus release SHA-256: `32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42` (the 2,000-row release was `af67c98ae1d6edce3a89ec696f1348972ecedd62d067bf27f7a09ac1982ba283`)
+- Hydration plan SHA-256: `edc829227393039b3ef46bfbfa12381b3e5cae84e7442208aec22c4bc9a557b4` (was `cc00b6d1447eb290fe2fb4883580d8ed9b06e451723a5ec79738ca189948a79b`); `RELEASE_COUNT` 1992
+- 1,548 members of official fma_large.zip and 444 of fma_small.zip (were 1,551 and 449)
+- Exactly 1,945,985,122 planned range bytes; 2,028,759,233 final MP3 bytes (were 1,951,856,486 and 2,034,768,876)
 - Six workers, two attempts per member at most, 2.4 GB total reserved transfer including retries
 - A supervising process forcibly terminates the entire threaded worker at the 3,600-second deadline, including stuck connect/header/body/decode work
 - Complete output and credits are staged privately. Parent-side file hashes, inventory and delivery pins are checked again before the final delivery marker is moved into the image root
@@ -18,6 +22,14 @@ Every request requires exact HTTP206, Content-Range, Content-Length and pinned E
 The 2,000 real vectors, paired model, native text profile, indexes, attribution and query/privacy behavior are unchanged. Disabled corpus selection retains the legacy 108 installer; a separately approved single archive retains its existing installer path. The tested four-shard alternative and prior 500/1,000/2,000 local releases remain separate and unchanged.
 
 ## Verified before publication
+
+For the 1,992-entry plan, 2026-10-06:
+
+- `--verify-plan` passes through the real entrypoint.
+- The v1 hydration functions (stage 1 root) and the v2 ones (activated root) published all 1,992 files from the verified local cache, re-hashed them and passed the delivery checks.
+- The real server then passed the production Atlas check, 17/17 on both roots, and every quarantined preview answered 404.
+
+Receipts are in `validation/rights-fix-2000/`. The original 2,000-entry acceptance follows.
 
 83 Python and 38 Node tests pass. Twelve hydration tests cover malformed/denied transport, retry/deadline budgets, identity mismatches, bounded decompression, low disk and no partial publication. Independent offline slow-connect, trickled HTTP header/body and stalled-decode cases were killed at about 0.402 seconds for a 0.4-second supervisor deadline; all processes/threads and private stages were gone.
 

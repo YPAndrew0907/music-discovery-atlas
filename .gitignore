@@ -3905,3 +3905,4 @@ __pycache__/
 !/scripts/pin_corpus_release.py
 !/scripts/derive_hydration_plan.py
 !/tests/test_corpus_rebuild_tools.py
+!/docs/RIGHTS_QUARANTINE.md

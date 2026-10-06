@@ -1,6 +1,6 @@
-# Music Discovery Atlas: approved 2,000-track deployment
+# Music Discovery Atlas: approved fma2000 deployment
 
-Read [HYDRATION_2000.md](HYDRATION_2000.md) for exact official-source range pins, bounded all-or-nothing build hydration, current local acceptance and deployment gates. The Docker build verifies all 2,000 audio files before the service can become ready.
+The fma2000 release holds 1,992 tracks since the rights quarantine of 2026-10-06; [docs/RIGHTS_QUARANTINE.md](docs/RIGHTS_QUARANTINE.md) explains the eight rows that left and the procedure for the next one. Read [HYDRATION_2000.md](HYDRATION_2000.md) for exact official-source range pins, bounded all-or-nothing build hydration, current local acceptance and deployment gates. The Docker build verifies all 1,992 audio files before the service can become ready.
 
 The following sections retain earlier local-review history.
 

@@ -113,6 +113,38 @@ class VerifierTests(unittest.TestCase):
     def url(self, row):
         return verifier.object_url(ORIGIN, PREFIX, self.published.audio_pins()[row][3])
 
+    def test_the_anonymous_session_never_stores_or_sends_a_cookie(self):
+        # A real HTTP exchange (the fake origin above never sets a cookie): the server sets one on every reply.
+        import http.server
+        import threading
+        import requests
+        seen = []
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                seen.append(self.headers.get('Cookie'))
+                self.send_response(200)
+                self.send_header('Set-Cookie', 'tracker=1; Path=/')
+                self.send_header('Content-Length', '2')
+                self.end_headers()
+                self.wfile.write(b'ok')
+
+            def log_message(self, *args):
+                pass
+        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        self.addCleanup(server.server_close)
+        self.addCleanup(server.shutdown)
+        url = f'http://127.0.0.1:{server.server_address[1]}/a.mp3'
+        for factory, expected in [(requests.Session, 'tracker=1'), (verifier.anonymous_session, None)]:
+            seen.clear()
+            with self.subTest(factory=factory.__name__), factory() as session:
+                for _ in range(2):
+                    session.get(url, timeout=10).close()
+                # A plain session sends the cookie back on the second request; the verifier's never does.
+                self.assertEqual(seen, [None, expected])
+                self.assertEqual(len(session.cookies), 0 if expected is None else 1)
+
     def test_the_real_fixture_rights_rows_all_meet_the_publication_rule(self):
         problems = [verifier.rights_problems(self.release, *pin) for pin in self.release.audio_pins()]
         self.assertEqual([p for p in problems if p], [])

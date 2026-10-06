@@ -77,6 +77,17 @@ def range_window(size, row):
     return start, min(size, start + RANGE_BYTES) - 1
 
 
+def anonymous_session():
+    """A requests session that carries nothing ambient: no proxy, .netrc or other environment settings, and a
+    cookie policy that stores no cookie, so a Set-Cookie from the origin is never sent back."""
+    from http.cookiejar import DefaultCookiePolicy
+    import requests
+    session = requests.Session()
+    session.trust_env = False
+    session.cookies.set_policy(DefaultCookiePolicy(allowed_domains=[]))
+    return session
+
+
 def object_problems(session, url, size, digest, *, row, sample, deadline):
     """Fetch one object anonymously and compare it with its pins ([] when it matches)."""
     headers = {'Accept-Encoding': 'identity', 'User-Agent': USER_AGENT}
@@ -230,12 +241,6 @@ def main():
                               limits=LimitsV2.from_config(args.limits))
     subset = strict_json(args.subset_ids.read_bytes(), 'subset IDs', 16_000_000) if args.subset_ids else None
     require(subset is None or (isinstance(subset, list) and all(isinstance(i, str) for i in subset)), 'Subset must be a JSON array of IDs')
-    import requests
-
-    def anonymous_session():
-        session = requests.Session()
-        session.trust_env = False  # no proxy, .netrc or other ambient credentials
-        return session
     record, report = verify(release, origin=args.origin, prefix=args.prefix, session_factory=anonymous_session,
                             subset=subset, range_every=args.range_every, workers=args.workers,
                             seconds=args.deadline_seconds, max_failures=args.max_failures)

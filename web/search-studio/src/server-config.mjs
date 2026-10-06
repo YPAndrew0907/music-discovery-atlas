@@ -17,9 +17,13 @@ export function validateDeploymentConfig(data, pageOrigin) {
     recipient: data.recipient, privacySummary: data.privacySummary});
 }
 
+// A hung configuration fetch must not leave the page stuck on "Checking server…".
+export const CONFIG_TIMEOUT_MS = 10_000;
+
 export async function loadDeploymentConfig({pageOrigin, fetcher = fetch} = {}) {
   const response = await fetcher(new URL('/deployment-config.json', pageOrigin), {
     credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', redirect: 'error',
+    signal: AbortSignal.timeout(CONFIG_TIMEOUT_MS),
   });
   if (!response.ok) throw new Error('Server configuration is unavailable');
   return validateDeploymentConfig(await response.json(), pageOrigin);

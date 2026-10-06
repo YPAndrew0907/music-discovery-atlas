@@ -8,7 +8,7 @@ import {reviewQueryLimits} from '../web/search-studio/src/query-limits.mjs';
 import {indexConnections} from '../web/search-studio/src/search-motion.mjs';
 import {MANIFEST_SHA,ARTIST_METADATA_SHA} from '../web/search-studio/src/studio-release.mjs';
 import {rankCandidates} from '../web/search-studio/src/rerank.mjs';
-import {ServerSearch} from '../web/search-studio/src/contracts.mjs';
+import {ServerSearch,publicCharacterLimit} from '../web/search-studio/src/contracts.mjs';
 import {SERVER_CONFIG,loadDeploymentConfig} from '../web/search-studio/src/server-config.mjs';
 import {loadAudioDelivery,previewForTrack,UNAVAILABLE_PREVIEW} from '../web/search-studio/src/audio-delivery.mjs';
 import {HNSW,exactSearch} from '../web/search-studio/src/hnsw.mjs';
@@ -28,7 +28,8 @@ const vectors=new Float32Array(vectorBytes.buffer,vectorBytes.byteOffset,vectorB
 const graph=HNSW.load(JSON.parse(await bytes('search-studio/data/index.json')),vectors);
 const serverManifest={catalogId:manifest.catalogId,graphId:manifest.graphId,indexSha256:manifest.indexSha256,
   catalogSha256:manifest.files.catalog.sha256,vectorsSha256:manifest.vectorsSha256,
-  engineId:manifest.allowedQueryProfiles.find(p=>p.kind==='server-live').id,deploymentGeneration:'fixture-generation',maxQueryUtf8Bytes:2048};
+  engineId:manifest.allowedQueryProfiles.find(p=>p.kind==='server-live').id,deploymentGeneration:'fixture-generation',maxQueryUtf8Bytes:2048,
+  publicPreview:{anonymous:true,maxQueryCharacters:512,searchesPerMinute:6,searchesPerProcessHour:30,audioEnabled:false}};
 const config={schemaVersion:1,enabled:true,mode:'anonymous-preview',origin,apiBase:'/v1/',recipient:'This site’s server',
   privacySummary:'Application query/access logging is disabled; host infrastructure metadata may be retained.'};
 const source=(await bytes('search-studio/src/app.mjs')).toString()
@@ -45,7 +46,7 @@ function responseFor(body,example=0){
 }
 async function harness({deferManifest=false,enabled=true,badManifest=false,failConfig=false,deferSearch=false}={}){
   const elements=new Map(),events={},clicks={},calls=[],searches=[],manifests=[],encodes=[],audioRequests=[];
-  const api={enabled,badManifest,failConfig,deferManifest,deferSearch,failSearch:false};
+  const api={enabled,badManifest,failConfig,deferManifest,deferSearch,failSearch:false,searchStatus:503,searchError:'fixture failure',searchRetryAfter:null,searchTransportError:false};
   function el(key){
     if(!elements.has(key))elements.set(key,{dataset:{},style:{},handlers:{},attributes:{},value:key==='#query-kind'?'description':'',src:'',paused:true,hidden:false,
       textContent:'',innerHTML:'',addEventListener(name,fn){this.handlers[name]=fn;},setAttribute(name,value){this.attributes[name]=value;},removeAttribute(name){this[name]='';},
@@ -77,7 +78,8 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
     if(url.pathname==='/v1/search'){
       const d=deferred(),record={body,options,...d};searches.push(record);
       if(api.deferSearch)return d.promise;
-      return api.failSearch?new Response('{}',{status:503}):new Response(JSON.stringify(responseFor(body)));
+      if(api.searchTransportError)throw new TypeError('Failed to fetch');
+      return api.failSearch?new Response(JSON.stringify({error:api.searchError}),{status:api.searchStatus,headers:api.searchRetryAfter?{'retry-after':String(api.searchRetryAfter)}:{}}):new Response(JSON.stringify(responseFor(body)));
     }
     assert.ok(url.pathname.startsWith('/search-studio/data/'),'Unexpected fetch: '+url.pathname);
     return new Response(await bytes(url.pathname.slice(1)));
@@ -100,7 +102,7 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
     ServerSearch:class extends ServerSearch{constructor(options){super({...options,fetcher});}},
     loadDeploymentConfig:options=>loadDeploymentConfig({...options,fetcher}),
     loadAudioDelivery:options=>loadAudioDelivery({...options,fetcher}),previewForTrack,UNAVAILABLE_PREVIEW,SERVER_CONFIG,
-    sourceGenres,refineCandidates,resultPage,resultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,
+    sourceGenres,refineCandidates,resultPage,resultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,publicCharacterLimit,
     fetch:fetcher,crypto:webcrypto,TextDecoder,TextEncoder,Float32Array,Uint8Array,URL,Blob,DOMException,performance,
     getComputedStyle:()=>({getPropertyValue:()=> '#000'}),
     document:{body:{dataset:{}},activeElement:null,querySelector:el,querySelectorAll:selector=>selector==='[data-needs-catalog]'?[el('#search'),el('#enable-local')]:[],addEventListener(name,fn){clicks[name]=fn;}},
@@ -338,4 +340,59 @@ test('cancelling on-device work unloads the worker and does not silently change 
   assert.match(h.el('#status').textContent,/cancelled and model unloaded/);assert.equal(h.el('#open-engine').textContent,'On-device off');
   h.encodes[0].reject(new DOMException('Stopped fixture worker','AbortError'));await flush();
   assert.equal(h.el('#results-region').attributes['aria-busy'],'false');assert.equal(h.searches.length,0);
+});
+
+test('server refusals are explained in the server’s own terms and keep the honest no-fallback statement',async()=>{
+  const h=await harness();h.api.failSearch=true;
+  assert.match(h.el('#server-detail').textContent,/allow 6 searches per minute and 30 per hour, up to 512 characters each/);
+  assert.equal(h.el('#query').maxLength,512);assert.match(h.el('#search-processing').textContent,/Up to 512 characters/);
+  h.api.searchStatus=429;h.api.searchError='Public preview budget exhausted';h.api.searchRetryAfter=10;
+  await h.submit('seventh search this minute');
+  assert.match(h.el('#status').textContent,/^Server search failed: search limit reached \(anonymous previews allow 6 searches per minute and 30 per hour\)\. Previous results remain; no fallback search was run\. Try again in 10 s\.$/);
+  assert.equal(h.el('#open-engine').textContent,'Server ready');assert.equal(h.el('#engine-label').textContent,'Recorded example');
+  h.api.searchStatus=400;h.api.searchError='Invalid or oversized preview request';h.api.searchRetryAfter=null;
+  await h.submit('refused by the server');
+  assert.match(h.el('#status').textContent,/refused this description \(Invalid or oversized preview request\); it accepts at most 512 characters.*no fallback.*Shorten it/);
+  assert.equal(h.el('#open-engine').textContent,'Server ready');
+  h.api.searchStatus=409;h.api.searchError='Encoder, catalog or deployment identity mismatch; reload manifest';
+  await h.submit('stale identity');
+  assert.match(h.el('#status').textContent,/no longer matches the server release \(Encoder, catalog or deployment identity mismatch; reload manifest\).*Reload the page/);
+  assert.equal(h.el('#open-engine').textContent,'Server unavailable');assert.equal(h.searches.length,3);assert.equal(h.encodes.length,0);
+});
+
+test('a server error or transport failure marks the server unavailable; the next submit re-checks instead of retrying blindly',async()=>{
+  for(const failure of [{searchStatus:503,searchError:'Service unavailable',expected:/^Server search failed: server error \(503: Service unavailable\)\. Previous results remain; no fallback search was run\. Try again later\.$/},
+                        {searchTransportError:true,expected:/^Server search failed: server unreachable \(Failed to fetch\)\. Previous results remain; no fallback search was run\. Check the connection and submit again; availability is re-checked first\.$/}]){
+    const h=await harness();Object.assign(h.api,{failSearch:true,...failure});
+    const source=h.el('#results-source').textContent;
+    await h.submit('fails at the server');
+    assert.equal(h.searches.length,1);assert.equal(h.calls.filter(c=>c.path==='/v1/search').length,1);
+    assert.match(h.el('#status').textContent,failure.expected);
+    assert.equal(h.el('#open-engine').textContent,'Server unavailable');assert.equal(h.el('#use-server').textContent,'Check server availability');
+    assert.equal(h.el('#server-state').textContent,'Unavailable');assert.match(h.el('#server-detail').textContent,/did not complete the last search\. Nothing else was sent/);
+    assert.equal(h.el('#results-source').textContent,source);assert.equal(h.el('#results-region').attributes['aria-busy'],'false');
+    assert.equal(vm.runInContext('server',h.context),null);
+    Object.assign(h.api,{failSearch:false,searchTransportError:false});
+    const manifests=h.calls.filter(c=>c.path==='/v1/manifest').length;
+    await h.submit('after recovery');
+    assert.equal(h.calls.filter(c=>c.path==='/v1/manifest').length,manifests+1);
+    assert.equal(h.calls.filter(c=>c.path==='/v1/search').length,1,'the re-check sends no description');
+    assert.match(h.el('#status').textContent,/Server ready\. Submit your description again/);assert.equal(h.el('#open-engine').textContent,'Server ready');
+    await h.submit('deliberately submitted again');assert.equal(h.calls.filter(c=>c.path==='/v1/search').length,2);
+    assert.equal(h.el('#engine-label').textContent,'Live · server');
+  }
+});
+
+test('descriptions over the published public character limit are refused before transmission, and the cap does not apply to local lookup',async()=>{
+  const h=await harness();const long='x'.repeat(513);
+  await h.submit(long);
+  assert.equal(h.searches.length,0);assert.equal(h.calls.filter(c=>c.path==='/v1/search').length,0);
+  assert.match(h.el('#status').textContent,/^This description is 513 characters; this server accepts at most 512\. Nothing was sent\. Shorten it and submit again\.$/);
+  assert.equal(h.el('#results-region').attributes['aria-busy'],'false');
+  await h.submit('x'.repeat(512));assert.equal(h.searches.length,1);assert.equal(h.searches[0].body.query.length,512);
+  h.el('#query-kind').value='lookup';h.el('#query-kind').handlers.change();
+  assert.equal(h.el('#query').maxLength,4096);
+  await h.submit(long);assert.equal(h.searches.length,1);
+  h.el('#query-kind').value='description';h.el('#query-kind').handlers.change();assert.equal(h.el('#query').maxLength,512);
+  await h.el('#use-server').onclick();assert.equal(h.el('#query').maxLength,4096);
 });

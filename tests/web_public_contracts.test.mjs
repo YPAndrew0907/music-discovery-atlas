@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ServerSearch,validateResponse,sameOriginApi} from '../web/search-studio/src/contracts.mjs';
+import {ServerSearch,validateResponse,sameOriginApi,publicCharacterLimit,READINESS_TIMEOUT_MS} from '../web/search-studio/src/contracts.mjs';
 const origin='https://music.example';
 const ids=new Set(['fma:1']);
 const expected={catalogId:'c',graphId:'g',indexSha256:'i',catalogSha256:'s',vectorsSha256:'v',allowedEngineIds:['e']};
@@ -105,4 +105,46 @@ test('newer search wins and route substitution cannot transmit query or cancella
   pending[1]();assert.equal((await second).query,'second');pending[0]();await assert.rejects(first,{name:'AbortError'});
   const before=calls;c.endpoint='https://external.example/v1/';await assert.rejects(c.search('never sent',ids),/same-origin/);
   c.current={requestId:'private-id',generation:1};c.cancel();assert.equal(calls,before);
+});
+
+test('refusals carry the status, the server’s message and Retry-After; non-JSON refusals keep a generic message',async()=>{
+  const cases=[[429,{error:'Public preview budget exhausted'},'10'],[400,{error:'Invalid or oversized preview request'},null],[409,{error:'Encoder, catalog or deployment identity mismatch; reload manifest'},null],[503,'not json',null]];
+  for(const [status,body,retryAfter] of cases){
+    const c=client(async(url,options)=>{
+      if(!options.body)return {ok:true,json:async()=>manifest};
+      return {ok:false,status,headers:{get:name=>name==='retry-after'?retryAfter:null},json:async()=>{if(typeof body!=='object')throw new SyntaxError('not json');return body;}};
+    });
+    await c.connect();
+    await assert.rejects(c.search('public example',ids),e=>{
+      assert.equal(e.status,status);assert.equal(e.retryAfter,retryAfter?Number(retryAfter):null);
+      assert.equal(e.message,typeof body==='object'?body.error:'Server search failed');return true;
+    });
+  }
+  // Fake responses without headers (as in these tests) must not turn into a TypeError.
+  const bare=client(async(url,options)=>options.body?{ok:false,status:500,json:async()=>({})}:{ok:true,json:async()=>manifest});
+  await bare.connect();await assert.rejects(bare.search('public example',ids),e=>e.status===500&&e.message==='Server search failed'&&e.retryAfter===null);
+});
+
+test('the published public character limit is enforced before transmission and absent limits fall back to the byte bound',async()=>{
+  const sent=[];
+  const limited=client(async(url,options)=>{
+    if(!options.body)return {ok:true,json:async()=>({...manifest,maxQueryUtf8Bytes:2048,publicPreview:{maxQueryCharacters:512}})};
+    sent.push(JSON.parse(options.body).query);return {ok:true,json:async()=>({...manifest,...JSON.parse(options.body),results:[]})};
+  });
+  await limited.connect();assert.equal(publicCharacterLimit(limited.manifest),512);
+  await assert.rejects(limited.search('x'.repeat(513),ids),/server limit of 512 characters/);
+  assert.deepEqual(sent,[]);
+  await limited.search('x'.repeat(512),ids);assert.deepEqual(sent,['x'.repeat(512)]);
+  const unlimited=client(async(url,options)=>options.body?{ok:true,json:async()=>({...manifest,...JSON.parse(options.body),results:[]})}:{ok:true,json:async()=>({...manifest,maxQueryUtf8Bytes:2048})});
+  await unlimited.connect();assert.equal(publicCharacterLimit(unlimited.manifest),null);
+  await unlimited.search('x'.repeat(600),ids);
+  await assert.rejects(unlimited.search('é'.repeat(1100),ids),/server input limit/);
+});
+
+test('readiness checks are bounded by a timeout signal and still carry no payload, redirect or cache allowance',async()=>{
+  let options;const c=client(async(url,init)=>{options=init;return {ok:true,json:async()=>manifest};});
+  await c.connect();
+  const {signal,...rest}=options;
+  assert.deepEqual(rest,{credentials:'same-origin',mode:'same-origin',cache:'no-store',redirect:'error'});
+  assert.ok(signal instanceof AbortSignal&&!signal.aborted);assert.equal(READINESS_TIMEOUT_MS,10_000);
 });

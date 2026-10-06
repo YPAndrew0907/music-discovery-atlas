@@ -31,7 +31,10 @@ test('deployment config has one fixed same-origin route, no redirects/cache and 
   }});
   assert.equal(result.enabled,true);
   assert.equal(calls[0].url,origin+'/deployment-config.json');
-  assert.deepEqual(calls[0].options,{credentials:'same-origin',mode:'same-origin',cache:'no-store',redirect:'error'});
+  const {signal,...options}=calls[0].options;
+  assert.deepEqual(options,{credentials:'same-origin',mode:'same-origin',cache:'no-store',redirect:'error'});
+  // A hung configuration fetch is bounded by a timeout signal; it is not a redirect or cache allowance.
+  assert.ok(signal instanceof AbortSignal&&!signal.aborted);
   await assert.rejects(loadDeploymentConfig({pageOrigin:origin,fetcher:async()=>({ok:false})}));
 });
 

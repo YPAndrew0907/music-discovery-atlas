@@ -4,7 +4,7 @@ import {AudioMap} from './graph.mjs';
 import {indexConnections} from './search-motion.mjs';
 import {MANIFEST_SHA,ARTIST_METADATA_SHA} from './studio-release.mjs';
 import {rankCandidates} from './rerank.mjs';
-import {ServerSearch} from './contracts.mjs';
+import {ServerSearch,publicCharacterLimit} from './contracts.mjs';
 import {SERVER_CONFIG,loadDeploymentConfig} from './server-config.mjs';
 import {loadAudioDelivery,previewForTrack,UNAVAILABLE_PREVIEW} from './audio-delivery.mjs';
 import {HNSW,exactSearch} from './hnsw.mjs';
@@ -32,7 +32,9 @@ function updateEngineLabel(){
   $('#use-server').textContent=serverState!=='ready'?'Check server availability':engineSelection==='server'?'Pause server search':'Use server search';
   $('#enable-local').hidden=encoder.state==='loading'||(localReady&&engineSelection==='local');
   $('#enable-local').textContent=localReady?'Use on-device search':'Download & enable';
-  $('#search-processing').textContent=$('#query-kind').value==='lookup'?'Title / artist lookup stays in this browser.':engineSelection==='local'?'Search is processed on this device.':engineSelection==='recorded'?'Live search is paused. Recorded examples stay in this browser.':'Search is processed on this server. Only submitted descriptions are sent.';
+  const limit=engineSelection==='server'&&serverState==='ready'&&!lookup?publicCharacterLimit(server?.manifest):null;
+  $('#query').maxLength=limit??4096;
+  $('#search-processing').textContent=$('#query-kind').value==='lookup'?'Title / artist lookup stays in this browser.':engineSelection==='local'?'Search is processed on this device.':engineSelection==='recorded'?'Live search is paused. Recorded examples stay in this browser.':`Search is processed on this server. Only submitted descriptions are sent.${limit?` Up to ${limit.toLocaleString()} characters.`:''}`;
 }
 
 function preview(row){return previewForTrack(catalog?.tracks[row],audioDelivery);}
@@ -109,7 +111,11 @@ function applyDisplayPolicy({preserveSelection=false,animate=false}={}){
 function showResult({text,ranked,trace,label,timing,encoderSpaceId=manifest.graphId,sourceRankingId='search-'+queryGeneration,animate=true}){if(!label.startsWith('Recorded'))for(const b of document.querySelectorAll('[data-example]'))b.setAttribute('aria-pressed','false');candidateRows=ranked;currentTrace=trace;pageIndex=0;resultChannel=label.startsWith('Collection')?'browse':label.startsWith('Title')?'lookup':label.startsWith('Audio')?'neighbors':'sound';updateGenreOptions();rankingPacket=ranked.length&&ranked.every(r=>Number.isFinite(r.score))&&artistRecords?{catalogId:catalog.id,encoderSpaceId,sourceRankingId,artistMetadataSha256:ARTIST_METADATA_SHA,candidates:ranked.map((r,i)=>({trackId:catalog.tracks[r.row].id,artistId:artistRecords.get(catalog.tracks[r.row].id),sourceRank:i+1,rawSimilarity:r.score,row:r.row}))}:null;currentQuery=text;renderQueryLimits(text,label);$('#results').scrollTop=0;$('#query').value=text;$('#node-inspector').hidden=true;$('#results-heading').textContent=resultChannel==='browse'?'Collection':resultChannel==='lookup'?'Title / artist matches':'Sound matches';$('#results-source').textContent=label+(text?` · “${text.length>85?text.slice(0,82)+'…':text}”`:'');$('#engine-label').textContent=label.startsWith('Recorded')?'Recorded example':label.startsWith('Live')?'Live · '+(label.includes('server')?'server':'on device'):label.startsWith('Title')?'Title / artist':label.startsWith('Collection')?'Catalog browse':'Audio neighbors';applyDisplayPolicy({animate});const misses=trace.events.length?rows.filter(r=>!trace.finalResults.some(x=>x.id===r.row)).length:0;status(`${timing} ${trace.events.length?'Results ready. The map follows this search through the collection.':'Choose a recording, then find its audio neighbors.'}${misses?` ${misses} exact result${misses===1?' is':'s are'} outside the approximate graph shortlist.`:''}`,{quiet:true});}
 function exampleSearch(id,{animate=true}={}){queryGeneration++;server?.cancel();$('#query-kind').value='description';setSearchBusy(false);updateEngineLabel();const item=examples.examples.find(x=>x.id===id);if(!item)return;map?.pause();const q=new Float32Array(item.queryVector),ranked=exactSearch(vectors,q,16).map(r=>({row:r.id,score:1-r.distance})),found=index.search(q,{k:16,ef:32,trace:true,spaceId:manifest.graphId});showResult({text:item.text,ranked,trace:found.trace,label:'Recorded example · native Q8',timing:'Saved public description, real audio-vector search.',encoderSpaceId:item.queryProfileId,sourceRankingId:item.queryVectorSha256,animate});for(const b of document.querySelectorAll('[data-example]'))b.setAttribute('aria-pressed',String(b.dataset.example===id));}
 async function runQuery(text){if(!pageActive||!catalog||!map)return;const generation=++queryGeneration;server?.cancel();map?.pause();setSearchBusy(false);updateEngineLabel();if(!text.trim()){status($('#query-kind').value==='lookup'?'Enter a recorded title or artist, or choose Browse collection.':'Describe the music you want to hear.');$('#query').focus();return;}if($('#query-kind').value==='lookup'){const found=metadataSearch(text,catalog.tracks,catalog.tracks.length);showResult({text,ranked:found.map(r=>({row:r.row,score:null})),trace:{events:[],finalResults:[]},label:'Title / artist lookup',timing:found.length?'Matched recorded names only.':'No title or artist matches in this limited catalog.'});setSearchBusy(false);return;}if(engineSelection==='server'){
-  if(server?.manifest&&serverState==='ready'){await runServerQuery(text,generation);return;}
+  if(server?.manifest&&serverState==='ready'){
+    const limit=publicCharacterLimit(server.manifest);
+    if(limit&&text.length>limit){status(`This description is ${text.length.toLocaleString()} characters; this server accepts at most ${limit.toLocaleString()}. Nothing was sent. Shorten it and submit again.`);$('#query').focus();return;}
+    await runServerQuery(text,generation);return;
+  }
   if(serverState==='checking'){readinessNoticeGeneration=generation;status('Checking server availability. Nothing was sent. Submit again when the server is ready.');updateEngineLabel();return;}
   status('Server search is unavailable. Nothing was sent. Checking availability…');
   await connectServer();
@@ -121,7 +127,29 @@ if(engineSelection!=='local'||!['ready','encoding'].includes(encoder.state)){
   $('#engine-dialog').showModal();return;
 }
 map.pause();status('Reading your description on this device…');setSearchBusy(true);try{if(inflight)await inflight.catch(()=>{});if(generation!==queryGeneration)return;const started=performance.now();inflight=encoder.encode(text);const response=await inflight;if(generation!==queryGeneration)return;const e=response.encoded;if(e.spaceId!==RELEASE.encoderSpaceId||e.modelSha256!==RELEASE.textAssets[0].sha256||e.tokenizerSha256!==RELEASE.textAssets[1].sha256)throw new Error('The encoder does not match this collection');const q=new Float32Array(e.vector);const found=exactSearch(vectors,q,16);const graph=await index.searchAsync(q,{k:16,ef:32,trace:true,spaceId:manifest.graphId});if(generation!==queryGeneration)return;showResult({text,ranked:found.map(r=>({row:r.id,score:1-r.distance})),trace:graph.trace,label:'Live search · on-device Q8',encoderSpaceId:e.spaceId,sourceRankingId:'local-'+generation,timing:`${Math.round(performance.now()-started)} ms encode and search.${e.truncated?' Input reached the 77-token limit.':''}`});for(const b of document.querySelectorAll('[data-example]'))b.setAttribute('aria-pressed','false');}catch(e){if(generation===queryGeneration&&e.name!=='AbortError')status(e.message);}finally{if(generation===queryGeneration){inflight=null;setSearchBusy(false);}}}
-async function runServerQuery(text,generation){map.pause();status('Finding recordings on the configured server… Previous results remain until this search finishes.');setSearchBusy(true);try{const response=await server.search(text,new Set(catalog.tracks.map(t=>t.id)));if(generation!==queryGeneration)return;if(!response.trace?.events||response.indexSha256!==manifest.indexSha256||response.graphId!==manifest.graphId)throw new Error('Server trace does not match this audio graph');const ranked=response.results.map(r=>{const row=catalog.tracks.findIndex(t=>t.id===r.id);if(row<0||(r.row!==undefined&&r.row!==row))throw new Error('Server recording order mismatch');return{row,score:r.cosineSimilarity};});showResult({text,ranked,trace:response.trace,label:'Live search · server Q8',encoderSpaceId:response.engineId,sourceRankingId:response.requestId,timing:`${Math.round(response.timingMs.serverCompute)} ms server compute; network time is additional.${response.tokenization.truncated?' Input reached the 77-token limit.':''}`});}catch(e){if(generation===queryGeneration&&e.name!=='AbortError')status('Server search failed: '+e.message+'. Previous results remain; no fallback search was run. Try again later.');}finally{if(generation===queryGeneration)setSearchBusy(false);}}
+async function runServerQuery(text,generation){map.pause();status('Finding recordings on the configured server… Previous results remain until this search finishes.');setSearchBusy(true);try{const response=await server.search(text,new Set(catalog.tracks.map(t=>t.id)));if(generation!==queryGeneration)return;if(!response.trace?.events||response.indexSha256!==manifest.indexSha256||response.graphId!==manifest.graphId)throw new Error('Server trace does not match this audio graph');const ranked=response.results.map(r=>{const row=catalog.tracks.findIndex(t=>t.id===r.id);if(row<0||(r.row!==undefined&&r.row!==row))throw new Error('Server recording order mismatch');return{row,score:r.cosineSimilarity};});showResult({text,ranked,trace:response.trace,label:'Live search · server Q8',encoderSpaceId:response.engineId,sourceRankingId:response.requestId,timing:`${Math.round(response.timingMs.serverCompute)} ms server compute; network time is additional.${response.tokenization.truncated?' Input reached the 77-token limit.':''}`});}catch(e){if(generation===queryGeneration&&e.name!=='AbortError'){const failure=describeServerFailure(e);status(failure.text);if(failure.unavailable)markServerUnavailable();}}finally{if(generation===queryGeneration)setSearchBusy(false);}}
+// Refusals and transport failures are explained in the server's own terms. A server that
+// stopped answering, errored or changed identity is no longer "ready": the next submit
+// re-checks availability instead of retrying blindly, and nothing is sent meanwhile.
+function describeServerFailure(e){
+  const limits=server?.manifest?.publicPreview??{},tail='Previous results remain; no fallback search was run.';
+  const perMinute=Number.isInteger(limits.searchesPerMinute)?limits.searchesPerMinute:null,perHour=Number.isInteger(limits.searchesPerProcessHour)?limits.searchesPerProcessHour:null,maxChars=publicCharacterLimit(server?.manifest);
+  if(Number.isInteger(e.status)){
+    if(e.status===429)return{text:`Server search failed: search limit reached${perMinute?` (anonymous previews allow ${perMinute} searches per minute${perHour?` and ${perHour} per hour`:''})`:''}. ${tail} Try again in ${e.retryAfter?`${e.retryAfter} s`:'a minute'}.`,unavailable:false};
+    if(e.status===400)return{text:`Server search failed: the server refused this description (${e.message})${maxChars?`; it accepts at most ${maxChars.toLocaleString()} characters`:''}. ${tail} Shorten it and try again.`,unavailable:false};
+    if(e.status===409)return{text:`Server search failed: this page no longer matches the server release (${e.message}). ${tail} Reload the page to continue.`,unavailable:true};
+    if(e.status===499)return{text:`Server search failed: the server reported this search as cancelled. ${tail} Submit it again.`,unavailable:false};
+    if(e.status>=500)return{text:`Server search failed: server error (${e.status}: ${e.message}). ${tail} Try again later.`,unavailable:true};
+    return{text:`Server search failed: the server refused this request (${e.status}: ${e.message}). ${tail}`,unavailable:false};
+  }
+  if(e.name==='TypeError')return{text:`Server search failed: server unreachable (${e.message}). ${tail} Check the connection and submit again; availability is re-checked first.`,unavailable:true};
+  return{text:`Server search failed: ${e.message}. ${tail} Try again later.`,unavailable:false};
+}
+function markServerUnavailable(){
+  server=null;serverState='unavailable';
+  $('#server-detail').textContent='The server did not complete the last search. Nothing else was sent. Check availability again before searching, or choose recorded examples or on-device search.';
+  updateEngineLabel();
+}
 async function connectServer(){
   const generation=++connectionGeneration;
   server?.cancel();server=null;serverState='checking';updateEngineLabel();
@@ -134,7 +162,9 @@ async function connectServer(){
     await candidate.connect();
     if(generation!==connectionGeneration||!pageActive){candidate.cancel();return;}
     server=candidate;serverState='ready';
-    $('#server-detail').textContent=`${config.privacySummary} Recipient: ${config.recipient}. Only descriptions deliberately submitted with Find music are sent. Checking readiness never sends the input. Existing results keep their original source label.`;
+    const limits=candidate.manifest.publicPreview,perMinute=Number.isInteger(limits?.searchesPerMinute)?limits.searchesPerMinute:null,perHour=Number.isInteger(limits?.searchesPerProcessHour)?limits.searchesPerProcessHour:null,maxChars=publicCharacterLimit(candidate.manifest);
+    const allowance=perMinute?` Anonymous previews allow ${perMinute} searches per minute${perHour?` and ${perHour} per hour`:''}${maxChars?`, up to ${maxChars.toLocaleString()} characters each`:''}.`:'';
+    $('#server-detail').textContent=`${config.privacySummary} Recipient: ${config.recipient}. Only descriptions deliberately submitted with Find music are sent. Checking readiness never sends the input. Existing results keep their original source label.${allowance}`;
   }catch{
     if(generation!==connectionGeneration||!pageActive)return;
     server=null;serverConfig=SERVER_CONFIG;serverState='unavailable';

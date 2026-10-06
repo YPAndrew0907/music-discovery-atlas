@@ -12,6 +12,27 @@ export function validateResponse(data, {requestId, generation, engineId, deploym
   return data;
 }
 
+// A hung readiness check must not leave the page stuck on "Checking server…".
+export const READINESS_TIMEOUT_MS = 10_000;
+
+// The anonymous preview publishes its description limit; honour it before transmitting.
+export function publicCharacterLimit(manifest) {
+  const limit = manifest?.publicPreview?.maxQueryCharacters;
+  return Number.isInteger(limit) && limit > 0 ? limit : null;
+}
+
+// Refusals keep their status, the server's own message and Retry-After so the page can
+// explain budget exhaustion, oversized input or a stale identity instead of a generic failure.
+async function refusal(response) {
+  let detail = null;
+  try { detail = (await response.json())?.error; } catch { /* non-JSON or empty body */ }
+  const error = new Error(typeof detail === 'string' && detail.trim() ? detail.trim() : 'Server search failed');
+  error.status = Number.isInteger(response.status) ? response.status : null;
+  const retry = Number(response.headers?.get?.('retry-after'));
+  error.retryAfter = Number.isFinite(retry) && retry > 0 ? retry : null;
+  return error;
+}
+
 export function sameOriginApi(endpoint, pageOrigin) {
   if (!endpoint) throw new Error('No server endpoint configured');
   const origin = new URL(pageOrigin);
@@ -39,7 +60,8 @@ export class ServerSearch {
     if (!this.expected || sameKeys.some(k => typeof this.expected[k] !== 'string') || !Array.isArray(this.expected.allowedEngineIds)) {
       throw new Error('Pinned server/catalog identities are required');
     }
-    const response = await this.fetcher(url, {credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', redirect: 'error'});
+    const response = await this.fetcher(url, {credentials: 'same-origin', mode: 'same-origin', cache: 'no-store', redirect: 'error',
+      signal: AbortSignal.timeout(READINESS_TIMEOUT_MS)});
     if (!response.ok) throw new Error('Server manifest unavailable');
     const manifest = await response.json();
     if (sameKeys.some(k => manifest[k] !== this.expected[k]) || !this.expected.allowedEngineIds.includes(manifest.engineId) ||
@@ -56,6 +78,10 @@ export class ServerSearch {
         new TextEncoder().encode(query).length > (this.manifest.maxQueryUtf8Bytes ?? 8000)) {
       throw new Error('Description exceeds the server input limit');
     }
+    const maxCharacters = publicCharacterLimit(this.manifest);
+    if (maxCharacters && query.length > maxCharacters) {
+      throw new Error(`Description exceeds the server limit of ${maxCharacters} characters`);
+    }
     // Revalidate the origin at every transmission, including cancellation.
     const url = this.route('search');
     this.cancel();
@@ -69,7 +95,7 @@ export class ServerSearch {
         cache: 'no-store', redirect: 'error', headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(body), signal: abort.signal});
       if (generation !== this.generation) throw new DOMException('Search replaced', 'AbortError');
-      if (!response.ok) throw new Error('Server search failed');
+      if (!response.ok) throw await refusal(response);
       const data = await response.json();
       if (generation !== this.generation) throw new DOMException('Search replaced', 'AbortError');
       return validateResponse(data, {...this.expected, ...body, trackIds});

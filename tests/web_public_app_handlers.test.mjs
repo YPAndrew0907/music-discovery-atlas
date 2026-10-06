@@ -280,8 +280,11 @@ test('sound candidates page 12 then 4 without fetching deeper results or changin
 });
 
 test('collection browse and source-genre/name refinements cover the full real catalog locally',async()=>{
-  const h=await harness();h.el('#browse-collection').onclick();
-  assert.match(h.el('#query-label').textContent,/title or artist/);assert.match(h.el('#query').placeholder,/title or artist/);
+  const h=await harness();h.el('#query').value='typed but not yet submitted';h.el('#browse-collection').onclick();
+  // Browse is a view of the catalog, not a mode switch: the visible selector and unsent text stay as they were.
+  assert.equal(h.el('#query-kind').value,'description');assert.equal(h.el('#query').value,'typed but not yet submitted');
+  assert.match(h.el('#query-label').textContent,/Describe the music/);assert.equal(h.el('#engine-label').textContent,'Catalog browse');
+  assert.equal(h.el('#results-heading').textContent,'Collection');assert.match(h.el('#results-source').textContent,/^Collection browse · local metadata$/);
   assert.equal(vm.runInContext('candidateRows.length',h.context),catalog.tracks.length);
   assert.match(h.el('#result-scope').textContent,/^Showing 1–12 of 2,000 recordings · 2,000 recordings in the collection/);
   assert.equal(h.el('#page-indicator').textContent,'1–12 / 2,000');assert.equal(h.el('#page-position').textContent,'Page 1 of 167');
@@ -290,7 +293,10 @@ test('collection browse and source-genre/name refinements cover the full real ca
   assert.equal(vm.runInContext('viewPage.total',h.context),expected);assert.ok(vm.runInContext('rows.length',h.context)<=12);
   h.el('#refine-text').value=catalog.tracks[1200].artist;h.el('#refine-text').handlers.input();
   assert.ok(vm.runInContext('viewPage.total',h.context)>0);assert.equal(h.searches.length,0);
+  let focused=null;h.el('#refine-text').focus=()=>{focused='refine-text';};
   h.el('#clear-refinements').onclick();assert.equal(vm.runInContext('viewPage.total',h.context),catalog.tracks.length);
+  assert.equal(focused,'refine-text','Clear refinements keeps keyboard focus in the panel');
+  await h.submit('a sound description after browsing');assert.equal(h.searches.length,1);assert.equal(h.el('#engine-label').textContent,'Live · server');
 });
 
 test('empty refined sound results can be cleared without issuing a new query or misreporting scope',async()=>{
@@ -396,4 +402,20 @@ test('descriptions over the published public character limit are refused before 
   await h.submit(long);assert.equal(h.searches.length,1);
   h.el('#query-kind').value='description';h.el('#query-kind').handlers.change();assert.equal(h.el('#query').maxLength,512);
   await h.el('#use-server').onclick();assert.equal(h.el('#query').maxLength,4096);
+});
+
+test('a retained refinement that hides new results is stated on the status line, not only in the scope line',async()=>{
+  const h=await harness();h.el('#refine-text').value='no such recorded name 000000';h.el('#refine-text').handlers.input();
+  await h.submit('new sound search under a stale refinement');
+  assert.equal(h.searches.length,1);assert.equal(vm.runInContext('rows.length',h.context),0);assert.equal(h.el('#results-empty').hidden,false);
+  assert.match(h.el('#result-scope').textContent,/^Showing 0 from 16 retrieved sound candidates/);
+  assert.match(h.el('#status').textContent,/Results ready\..*Refinements hide 16 of 16; clear them to see every result\.$/);
+  h.el('#refine-text').value='';h.el('#refine-text').handlers.input();
+  await h.submit('a second search with no refinement');
+  assert.doesNotMatch(h.el('#status').textContent,/Refinements hide/);assert.equal(vm.runInContext('rows.length',h.context),12);
+  h.el('#genre-filter').value=catalog.tracks[vm.runInContext('rows[0].row',h.context)].genre;h.el('#genre-filter').handlers.change();
+  const shown=vm.runInContext('viewPage.total',h.context);await h.clickExample('dev-02');
+  const after=vm.runInContext('viewPage.total',h.context);
+  if(after<16)assert.match(h.el('#status').textContent,new RegExp(`Refinements hide ${16-after} of 16`));else assert.doesNotMatch(h.el('#status').textContent,/Refinements hide/);
+  assert.ok(shown>=1);
 });

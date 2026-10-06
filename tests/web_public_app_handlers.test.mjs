@@ -79,6 +79,7 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
       const d=deferred(),record={body,options,...d};searches.push(record);
       if(api.deferSearch)return d.promise;
       if(api.searchTransportError)throw new TypeError('Failed to fetch');
+      if(api.oversizedReply){const reply=responseFor(body);reply.results=exactSearch(vectors,new Float32Array(examples.examples[0].queryVector),api.oversizedReply).map(r=>({id:catalog.tracks[r.id].id,row:r.id,cosineSimilarity:1-r.distance}));return new Response(JSON.stringify(reply));}
       return api.failSearch?new Response(JSON.stringify({error:api.searchError}),{status:api.searchStatus,headers:api.searchRetryAfter?{'retry-after':String(api.searchRetryAfter)}:{}}):new Response(JSON.stringify(responseFor(body)));
     }
     assert.ok(url.pathname.startsWith('/search-studio/data/'),'Unexpected fetch: '+url.pathname);
@@ -435,4 +436,19 @@ test('the map draws sound matches numbered, name matches unnumbered and browse p
   assert.ok(h.map.searches.at(-1).rows.length>0);assert.ok(h.map.searches.at(-1).rows.every(r=>r.displayRank===null));assert.equal(h.el('#fit').disabled,false);
   h.el('#query-kind').value='description';h.el('#query-kind').handlers.change();await h.clickExample('dev-02');
   assert.deepEqual(h.map.searches.at(-1).rows.map(r=>r.displayRank).slice(0,3),[1,2,3]);assert.equal(h.map.searches.at(-1).options.animate,true);
+});
+
+test('an over-long server reply is rejected before any label or row changes, and later refinements still work',async()=>{
+  const h=await harness();h.api.oversizedReply=21;
+  const before={source:h.el('#results-source').textContent,heading:h.el('#results-heading').textContent,label:h.el('#engine-label').textContent,rows:Array.from(vm.runInContext('rows.map(r=>r.row)',h.context)),candidates:vm.runInContext('candidateRows.length',h.context)};
+  await h.submit('a query answered with 21 rows');
+  assert.equal(h.searches.length,1);assert.match(h.el('#status').textContent,/^Server search failed: Invalid search results\. Previous results remain; no fallback search was run\./);
+  assert.equal(h.el('#results-source').textContent,before.source);assert.equal(h.el('#results-heading').textContent,before.heading);assert.equal(h.el('#engine-label').textContent,before.label);
+  assert.deepEqual(Array.from(vm.runInContext('rows.map(r=>r.row)',h.context)),before.rows);assert.equal(vm.runInContext('candidateRows.length',h.context),before.candidates);
+  assert.equal(h.el('#open-engine').textContent,'Server ready');
+  h.el('#refine-text').value='';h.el('#refine-text').handlers.input();h.el('#next-page').onclick();
+  assert.equal(vm.runInContext('rows.length',h.context),4);assert.equal(h.el('#results-region').attributes['aria-busy'],'false');
+  // The same guard protects showResult itself: a packet the display policy rejects changes nothing.
+  assert.throws(()=>vm.runInContext(`showResult({text:'bad',ranked:Array.from({length:21},(_,i)=>({row:i,score:.5})),trace:{events:[],finalResults:[]},label:'Live search · server Q8',timing:'x'})`,h.context),/Unsupported display policy/);
+  assert.equal(h.el('#results-source').textContent,before.source);assert.equal(vm.runInContext('candidateRows.length',h.context),before.candidates);
 });

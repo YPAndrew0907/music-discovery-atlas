@@ -1,12 +1,16 @@
 const sameKeys = ['catalogId', 'graphId', 'indexSha256', 'catalogSha256', 'vectorsSha256'];
 
-export function validateResponse(data, {requestId, generation, engineId, deploymentGeneration, trackIds, ...expected}) {
+export function validateResponse(data, {requestId, generation, engineId, deploymentGeneration, trackIds, k = null, ...expected}) {
   if (!data || data.requestId !== requestId || data.generation !== generation || data.engineId !== engineId ||
-      data.deploymentGeneration !== deploymentGeneration || sameKeys.some(k => expected[k] !== undefined && data[k] !== expected[k])) {
+      data.deploymentGeneration !== deploymentGeneration || sameKeys.some(key => expected[key] !== undefined && data[key] !== expected[key])) {
     throw new Error('Search response identity mismatch');
   }
-  if (!Array.isArray(data.results) || new Set(data.results.map(r => r.id)).size !== data.results.length ||
-      data.results.some(r => !trackIds.has(r.id) || !Number.isFinite(r.cosineSimilarity) || r.cosineSimilarity < -1.00001 || r.cosineSimilarity > 1.00001)) {
+  // A reply is bounded by the requested k and must be a ranking (non-increasing similarity),
+  // so the display policy downstream can never be handed more or unordered candidates.
+  if (!Array.isArray(data.results) || (Number.isInteger(k) && data.results.length > k) ||
+      new Set(data.results.map(r => r.id)).size !== data.results.length ||
+      data.results.some((r, i) => !trackIds.has(r.id) || !Number.isFinite(r.cosineSimilarity) || r.cosineSimilarity < -1.00001 || r.cosineSimilarity > 1.00001 ||
+        (i > 0 && r.cosineSimilarity > data.results[i - 1].cosineSimilarity))) {
     throw new Error('Invalid search results');
   }
   return data;

@@ -44,6 +44,16 @@ test('response validates query generation, catalog, graph, encoder and deploymen
     [{id:'fma:1',cosineSimilarity:.4},{id:'fma:1',cosineSimilarity:.4}]]) {
     assert.throws(()=>validateResponse({...response,results},identity),/Invalid/);
   }
+  // Bounded by the requested k and ordered as a ranking; both hold for the shipped k:16 contract.
+  const many=new Set(Array.from({length:20},(_,i)=>'fma:'+(i+1)));
+  const ranking=n=>Array.from({length:n},(_,i)=>({id:'fma:'+(i+1),cosineSimilarity:.9-i*.01}));
+  assert.equal(validateResponse({...response,results:ranking(16)},{...identity,trackIds:many,k:16}).results.length,16);
+  assert.throws(()=>validateResponse({...response,results:ranking(17)},{...identity,trackIds:many,k:16}),/Invalid/);
+  assert.equal(validateResponse({...response,results:ranking(17)},{...identity,trackIds:many}).results.length,17,'no k, no length bound');
+  const unsorted=ranking(3);unsorted[2].cosineSimilarity=.95;
+  assert.throws(()=>validateResponse({...response,results:unsorted},{...identity,trackIds:many,k:16}),/Invalid/);
+  const ties=[{id:'fma:1',cosineSimilarity:.5},{id:'fma:2',cosineSimilarity:.5}];
+  assert.equal(validateResponse({...response,results:ties},{...identity,trackIds:many,k:16}).results.length,2);
 });
 
 test('all routes require exact same-origin HTTPS /v1/ before transmitting anything',async()=>{

@@ -148,7 +148,10 @@ def load_graph(encoder, directory):
     return HNSW(graph,encoder.vectors),binding
 
 
-def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
+def create_app(settings=None, encoder=None, graph=None, graph_binding=None, serving=None):
+    """serving: the request-time serving list (server/serving.py) bound to the same catalog as the encoder,
+    or None to serve every row (fixtures). Held rows are never search results, and the manifest counts only
+    served rows."""
     settings=settings or Settings(
         precision=os.environ.get('MUSIC_TEXT_PRECISION','q8'),
         graph_dir=os.environ.get('MUSIC_GRAPH_DIR',str(WORK/'music-search-studio/data')),
@@ -163,6 +166,10 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
             app.state.graph,app.state.graph_binding=load_graph(app.state.encoder,getattr(app.state.encoder,'release_directory',settings.graph_dir))
         else:
             app.state.graph,app.state.graph_binding=graph,graph_binding
+        if serving is not None and (serving.catalog_id!=app.state.encoder.catalog_version
+                                    or list(serving.ordered_ids)!=list(app.state.encoder.ids)):
+            raise RuntimeError('Serving list does not match the search catalog')
+        app.state.serving=serving
         app.state.executor=ThreadPoolExecutor(max_workers=1,thread_name_prefix='music-inference')
         app.state.active={}
         app.state.cancelled={}
@@ -223,7 +230,9 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
                 'traceAlgorithm':'hnsw-static-cosine-v1',
                 'defaults':{'k':8,'ef':32,'trace':False,'traceLimit':256},
                 'cancellation':'POST /v1/cancel; per-call ORT termination plus queue/traversal checks; client must discard older generations',
-                'maxQueryUtf8Bytes':8000,'maxPendingRequests':settings.max_pending}
+                'maxQueryUtf8Bytes':8000,'maxPendingRequests':settings.max_pending,
+                **({'catalogCount':app.state.serving.count,'serving':app.state.serving.manifest_block()}
+                   if app.state.serving is not None else {})}
 
     @app.post('/v1/cancel')
     async def cancel(request:Request):
@@ -247,7 +256,10 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
         started=time.perf_counter()
         vector,tokens,timing=enc.encode(value['query'],control)
         encoded=time.perf_counter()
-        exact=app.state.graph.exact_search(vector,k=value['k'])
+        serving=app.state.serving
+        allowed=serving.served_rows if serving is not None else None
+        exact=(app.state.graph.exact_search(vector,k=value['k']) if allowed is None
+               else app.state.graph.exact_search(vector,k=value['k'],allowed=allowed))
         control.check()
         exact_at=time.perf_counter()
         trace_result=None
@@ -261,6 +273,12 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
                  for rank,item in enumerate(exact,1)]
         trace=None
         ann=None
+        if trace_result and allowed is not None:
+            # The traversal crosses held rows like any other; they are kept out of every result it reports.
+            kept=[item for item in trace_result['results'] if item['id'] in allowed]
+            trace_result={**trace_result,'results':kept,'trace':{**trace_result['trace'],'finalResults':kept,
+                'events':[{**event,'items':[item for item in event['items'] if item['id'] in allowed]}
+                          if event.get('type')=='results' else event for event in trace_result['trace']['events']]}}
         if trace_result:
             trace=trace_result['trace']
             ann_ids=[item['id'] for item in trace_result['results']]
@@ -286,7 +304,7 @@ def create_app(settings=None, encoder=None, graph=None, graph_binding=None):
             # row the trace or results mention. Rankings, scores and trace are unchanged.
             from search_v2 import label_rows, trace_rows
             rows=[item['id'] for item in exact]
-            labels=[row for row in label_rows(trace) if row not in rows]
+            labels=[row for row in label_rows(trace) if row not in rows and (allowed is None or row in allowed)]
             response['tracks']=release.display_rows(rows+labels)
             response['layout']=release.positions(trace_rows(trace,exact))
             response['timingMs']['collectionMetadata']=(time.perf_counter()-finished)*1000

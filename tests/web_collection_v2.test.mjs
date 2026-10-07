@@ -19,6 +19,7 @@ import {Collection,RowDelivery,TRACK_ID,loadRowDelivery,validateCollectionManife
 import {AudioMap} from '../web/search-studio/src/graph.mjs';
 import {RELEASE} from '../web/listen-lab/src/release.mjs';
 import {metadataSearch} from '../web/listen-lab/src/retrieval.mjs';
+import {loadServing,bindServing} from '../web/search-studio/src/serving.mjs';
 
 import {root,origin,bytes,v1,catalog,v1Examples,v1Layout,artists,indexJson,vectors,graph,hex,sha,count,identity,display,traceRows,labelRows,packet,
   examplesV2,bounds,layoutV2,layoutBytes,examplesBytes,manifestV2,manifestBytes,MANIFEST_SHA,serverManifest,bitset,deliverySummary,collectionTracks,
@@ -148,6 +149,7 @@ async function harness({available=catalog.tracks.map((_,r)=>r)}={}){
     if(url.pathname==='/audio-delivery.json')return new Response(JSON.stringify(deliverySummary(available)));
     if(url.pathname==='/v1/manifest')return new Response(JSON.stringify(serverManifest));
     if(url.pathname==='/v1/cancel')return new Response('{}');
+    if(url.pathname==='/serving.json')return new Response('{"error":"Not found"}',{status:404});// no serving list: every row is served
     if(url.pathname==='/v1/search'){searches.push(body);return new Response(JSON.stringify({...serverManifest,...body,...packet(new Float32Array(v1Examples.examples[2].queryVector)),timingMs:{serverCompute:1},tokenization:{truncated:false}}));}
     if(url.pathname==='/collection/tracks')return new Response(JSON.stringify(collectionTracks(url.searchParams,availableSet)));
     if(url.pathname==='/collection/neighbors'){const row=Number(url.searchParams.get('row'));return new Response(JSON.stringify({...packet(vectors.slice(row*512,(row+1)*512),{exclude:row}),catalogId:v1.catalogId,graphId:v1.graphId,indexSha256:identity.indexSha256,releaseSha256:identity.releaseSha256,row}));}
@@ -163,6 +165,7 @@ async function harness({available=catalog.tracks.map((_,r)=>r)}={}){
     ServerSearch:class extends ServerSearch{constructor(o){super({...o,fetcher});}},loadDeploymentConfig:o=>loadDeploymentConfig({...o,fetcher}),
     loadAudioDelivery:o=>loadAudioDelivery({...o,fetcher}),previewForTrack,UNAVAILABLE_PREVIEW,SERVER_CONFIG,
     Collection:class extends Collection{constructor(o){super({...o,fetcher});}},TRACK_ID,loadRowDelivery:c=>loadRowDelivery(c,{fetcher}),RESULT_PAGE_SIZE,
+    loadServing:o=>loadServing({...o,fetcher}),bindServing,
     sourceGenres,refineCandidates,resultPage,resultScope,compactResultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA:identity.catalogSha256,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,publicCharacterLimit,
     fetch:fetcher,crypto:webcrypto,TextDecoder,TextEncoder,Float32Array,Uint8Array,URL,Blob,DOMException,performance,AbortSignal,Response,setTimeout,atob,
     getComputedStyle:()=>({getPropertyValue:()=> '#000'}),

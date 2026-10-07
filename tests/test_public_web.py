@@ -21,7 +21,8 @@ class PublicWebTests(unittest.TestCase):
         self.graph, self.binding = load_graph(self.encoder, str(ROOT / 'music-search-studio/data'))
         self.app = build_application(mode='anonymous-preview', enable_anonymous=True,
             generation='test-web-v1', public_origin=ORIGIN, encoder=self.encoder,
-            graph=self.graph, graph_binding=self.binding)
+            graph=self.graph, graph_binding=self.binding,
+            serving=None)  # the fixture encoder searches the legacy catalog; tests/test_serving.py covers the list
         self.client = TestClient(self.app, base_url=ORIGIN)
         self.client.__enter__()
         self.addCleanup(self.client.__exit__, None, None, None)
@@ -66,7 +67,7 @@ class PublicWebTests(unittest.TestCase):
     def test_authenticated_mode_never_exposes_secret_or_enables_public_api(self):
         token = 'not-a-real-credential-00000000000000'
         app = build_application(token=token, generation='test-private-v1', encoder=self.encoder,
-            graph=self.graph, graph_binding=self.binding)
+            graph=self.graph, graph_binding=self.binding, serving=None)
         with TestClient(app, base_url=ORIGIN) as client:
             config = client.get('/deployment-config.json')
             self.assertFalse(config.json()['enabled'])

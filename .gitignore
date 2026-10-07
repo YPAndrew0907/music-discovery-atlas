@@ -3910,3 +3910,8 @@ __pycache__/
 !/web/search-studio/src/map-lod.mjs
 !/tests/web_map_lod.test.mjs
 !/tests/browser_credits_v2.mjs
+!/server/serving.py
+!/corpus-releases/serving.json
+!/scripts/derive_serving_list.py
+!/web/notices/takedown.html
+!/web/search-studio/src/serving.mjs

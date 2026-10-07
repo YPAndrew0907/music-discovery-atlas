@@ -77,4 +77,5 @@ export class HNSW {
     if(index.links[graph.entry].length!==graph.maxLevel+1)throw new Error('Invalid entry level');index.entry=graph.entry;index.maxLevel=graph.maxLevel;return index;
   }
 }
-export function exactSearch(matrix,query,k,{excludeId=null}={}){const dims=query.length;if(matrix.length%dims)throw new Error('Matrix shape mismatch');assertUnit(query,dims);const heap=new Heap((a,b)=>nearest(a,b)>0);for(let id=0;id<matrix.length/dims;id++){if(id===excludeId)continue;const item={id,distance:cosineDistance(query,matrix.subarray(id*dims,(id+1)*dims))};if(heap.size<k)heap.push(item);else if(nearest(item,heap.peek())<0){heap.pop();heap.push(item);}}return heap.items.sort(nearest);}
+// allowed: an optional Set of the rows a result may be (the serving list's served rows).
+export function exactSearch(matrix,query,k,{excludeId=null,allowed=null}={}){const dims=query.length;if(matrix.length%dims)throw new Error('Matrix shape mismatch');assertUnit(query,dims);const heap=new Heap((a,b)=>nearest(a,b)>0);for(let id=0;id<matrix.length/dims;id++){if(id===excludeId||(allowed&&!allowed.has(id)))continue;const item={id,distance:cosineDistance(query,matrix.subarray(id*dims,(id+1)*dims))};if(heap.size<k)heap.push(item);else if(nearest(item,heap.peek())<0){heap.pop();heap.push(item);}}return heap.items.sort(nearest);}

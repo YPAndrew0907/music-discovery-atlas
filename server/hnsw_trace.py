@@ -281,12 +281,14 @@ class HNSW:
             entries = [found[0]["id"]]
             record({"type": "descend", "level": level, "nextLevel": level - 1, "entryId": entries[0]})
 
-    def exact_search(self, query, k=8, exclude_id=None):
-        """Exhaustive top-k oracle with the reference's numeric row-ID ties."""
+    def exact_search(self, query, k=8, exclude_id=None, allowed=None):
+        """Exhaustive top-k oracle with the reference's numeric row-ID ties. allowed, when given, is the set
+        of rows a result may be (the serving list's served rows); every other row is skipped like exclude_id."""
         query = self._query(query)
         if not _integer(k, 1, self.size):
             raise ValueError("Invalid search budget")
         if exclude_id is not None and not _integer(exclude_id, 0, self.size - 1):
             raise ValueError("Invalid excluded row ID")
         return sorted(({"id": row_id, "distance": cosine_distance(query, vector)}
-                       for row_id, vector in enumerate(self.vectors) if row_id != exclude_id), key=_key)[:k]
+                       for row_id, vector in enumerate(self.vectors)
+                       if row_id != exclude_id and (allowed is None or row_id in allowed)), key=_key)[:k]

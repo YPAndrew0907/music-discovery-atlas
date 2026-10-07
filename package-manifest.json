@@ -18103,8 +18103,8 @@
     },
     {
       "path": "server/api.py",
-      "bytes": 20145,
-      "sha256": "e06b99648e584572200d555e6d102183a5301bcf59e1daed1b6295e765063c5f"
+      "bytes": 21685,
+      "sha256": "6f16a0ad3472a4ae47e6b1590840dcfce8db2abe985cc3d0a061994c8c1d7105"
     },
     {
       "path": "server/corpus_release.py",
@@ -18118,13 +18118,13 @@
     },
     {
       "path": "server/hnsw_trace.py",
-      "bytes": 12980,
-      "sha256": "4dd2db06836f73ee2f4b26a68795f4f4ae5083d3480a01ec43dcb682523e7836"
+      "bytes": 13202,
+      "sha256": "564682dd744453dc0c560d313936c41d82d849d00f01e06639567d21f9b9697b"
     },
     {
       "path": "server/hosting.py",
-      "bytes": 6492,
-      "sha256": "37820972f84673d130746e75fefc6d5a1a0f5916fe6376372c771c4131e089b7"
+      "bytes": 8181,
+      "sha256": "511049fa5a74ff3230f51f2f81c116a8ea75c0d2c6456d2d39003c277eb3a673"
     },
     {
       "path": "server/loopback_service.py",
@@ -18138,28 +18138,28 @@
     },
     {
       "path": "server/web_gateway.py",
-      "bytes": 13327,
-      "sha256": "f52aac7abd5afc296fdbcb253302b3b99c178287b1f23e10bb8d64ea735f8092"
+      "bytes": 16245,
+      "sha256": "6709c289b0122905e9d7592da6c314d4165cf8bc5d1a4203435907bd53110331"
     },
     {
       "path": "server/release_v2.py",
-      "bytes": 52122,
-      "sha256": "de8d3eab42858ed642fce956ba7130cbb9ed24527f7c03a678d99d9d48be0e2b"
+      "bytes": 52462,
+      "sha256": "fb904ce2b664e0fd358556e5f258626847693c18d58717949d09fec4d65651c1"
     },
     {
       "path": "server/search_v2.py",
-      "bytes": 7392,
-      "sha256": "bb220535d198684e213b078b8ea2ed1a6caa99399bcb1b81f95dbf12869e1efd"
+      "bytes": 8147,
+      "sha256": "18b55a114448b43e13bace281cccb7bb0437482aa108d40b65fe89c703e715d5"
     },
     {
       "path": "server/collection_v2.py",
-      "bytes": 33543,
-      "sha256": "7e76849c98cc2f3ff32aa60c3b9041f4344395a3e46b1c7ff76b699574f43c54"
+      "bytes": 37101,
+      "sha256": "5fb7e5388276662b74de8111304ff2775f1e0bf23cf2bbc7d5196da09a5b2ef6"
     },
     {
       "path": "web-manifest.json",
-      "bytes": 8922,
-      "sha256": "f0a46e6e6217dd6c9688511e2973f671dfa79108694eebcd12dd7ea9cf53dc40"
+      "bytes": 9242,
+      "sha256": "87f79deb2cc378be476debfc0ac8247c34f90f2da842e04b1fe9f9998a4ae3db"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18343,13 +18343,13 @@
     },
     {
       "path": "web/search-studio/index.html",
-      "bytes": 14077,
-      "sha256": "ab0cf526b209a8b632356445b5be7dc270247cbe00375881fbf4f12f6fa81182"
+      "bytes": 14128,
+      "sha256": "de6ff1cf8b9671bb5f93f8b9b87db9e4cde1269c7081ba4019bdc6a4c6bf57a9"
     },
     {
       "path": "web/search-studio/src/app.mjs",
-      "bytes": 57018,
-      "sha256": "a7fadc1d54b79fe8ae6240b8a219217bdd1611ec3a1f5aeb02b8a62299a61b7b"
+      "bytes": 58385,
+      "sha256": "1c037ecfa80100e9a6693bf56f9d0c7f5745389eb66d8468ed58172bba31b005"
     },
     {
       "path": "web/search-studio/src/audio-delivery.mjs",
@@ -18373,8 +18373,8 @@
     },
     {
       "path": "web/search-studio/src/hnsw.mjs",
-      "bytes": 10135,
-      "sha256": "da9d421f511df4dfbe5d21c4c4b748821d0b5f14b9e37a5f09c1b32c7ba0031d"
+      "bytes": 10267,
+      "sha256": "90d14f0d5ac6c2571c23d383961c305a044134e6355220865c4ebb1593ed1336"
     },
     {
       "path": "web/search-studio/src/query-limits.mjs",
@@ -18415,6 +18415,26 @@
       "path": "web/search-studio/style.css",
       "bytes": 27700,
       "sha256": "0515451421ea8f2f90c8b7e4129160051b018f4a05ff44dfd2069b856a2758cf"
+    },
+    {
+      "path": "server/serving.py",
+      "bytes": 9683,
+      "sha256": "d2f13f39d2d2d873b91131434d1128a47661b49c8a2c52b87ef738c5cfc7b123"
+    },
+    {
+      "path": "corpus-releases/serving.json",
+      "bytes": 134399,
+      "sha256": "24515e93d87eedad2a58b490979a419e982eba7d026eb53ea2930d00b2792b1f"
+    },
+    {
+      "path": "web/search-studio/src/serving.mjs",
+      "bytes": 2290,
+      "sha256": "312519a67e5dda2b8d5e22ae50bb40e077eae8704abd0f7783fc4aeb278c375b"
+    },
+    {
+      "path": "web/notices/takedown.html",
+      "bytes": 5371,
+      "sha256": "fa5d9a0d28c6805af043a1c12adb1bc78c862bc64fe765b63e382af44bd99083"
     }
   ]
 }

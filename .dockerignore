@@ -3844,3 +3844,7 @@
 !scripts/make_audio_delivery_v2.py
 !corpus-releases/quarantine.json
 !web/search-studio/src/map-lod.mjs
+!server/serving.py
+!corpus-releases/serving.json
+!web/notices/takedown.html
+!web/search-studio/src/serving.mjs

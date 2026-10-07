@@ -14,6 +14,7 @@ import {loadAudioDelivery,previewForTrack,UNAVAILABLE_PREVIEW} from '../web/sear
 import {HNSW,exactSearch} from '../web/search-studio/src/hnsw.mjs';
 import {RELEASE} from '../web/listen-lab/src/release.mjs';
 import {metadataSearch} from '../web/listen-lab/src/retrieval.mjs';
+import {loadServing,bindServing} from '../web/search-studio/src/serving.mjs';
 
 // Execute the checked-in app, including init, form/click handlers and page lifecycle.
 // Only DOM/canvas and encoder hardware are fixtures; the real pack, retrieval,
@@ -75,6 +76,7 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
       return reply();
     }
     if(url.pathname==='/v1/cancel')return new Response('{}');
+    if(url.pathname==='/serving.json')return new Response('{"error":"Not found"}',{status:404});// no serving list: every row is served
     if(url.pathname==='/v1/search'){
       const d=deferred(),record={body,options,...d};searches.push(record);
       if(api.deferSearch)return d.promise;
@@ -103,6 +105,7 @@ async function harness({deferManifest=false,enabled=true,badManifest=false,failC
     ServerSearch:class extends ServerSearch{constructor(options){super({...options,fetcher});}},
     loadDeploymentConfig:options=>loadDeploymentConfig({...options,fetcher}),
     loadAudioDelivery:options=>loadAudioDelivery({...options,fetcher}),previewForTrack,UNAVAILABLE_PREVIEW,SERVER_CONFIG,
+    loadServing:options=>loadServing({...options,fetcher}),bindServing,
     sourceGenres,refineCandidates,resultPage,resultScope,compactResultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,publicCharacterLimit,
     fetch:fetcher,crypto:webcrypto,TextDecoder,TextEncoder,Float32Array,Uint8Array,URL,Blob,DOMException,performance,
     getComputedStyle:()=>({getPropertyValue:()=> '#000'}),

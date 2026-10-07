@@ -184,13 +184,13 @@
     },
     {
       "path": "search-studio/index.html",
-      "bytes": 14077,
-      "sha256": "ab0cf526b209a8b632356445b5be7dc270247cbe00375881fbf4f12f6fa81182"
+      "bytes": 14128,
+      "sha256": "de6ff1cf8b9671bb5f93f8b9b87db9e4cde1269c7081ba4019bdc6a4c6bf57a9"
     },
     {
       "path": "search-studio/src/app.mjs",
-      "bytes": 57018,
-      "sha256": "a7fadc1d54b79fe8ae6240b8a219217bdd1611ec3a1f5aeb02b8a62299a61b7b"
+      "bytes": 58385,
+      "sha256": "1c037ecfa80100e9a6693bf56f9d0c7f5745389eb66d8468ed58172bba31b005"
     },
     {
       "path": "search-studio/src/audio-delivery.mjs",
@@ -214,8 +214,8 @@
     },
     {
       "path": "search-studio/src/hnsw.mjs",
-      "bytes": 10135,
-      "sha256": "da9d421f511df4dfbe5d21c4c4b748821d0b5f14b9e37a5f09c1b32c7ba0031d"
+      "bytes": 10267,
+      "sha256": "90d14f0d5ac6c2571c23d383961c305a044134e6355220865c4ebb1593ed1336"
     },
     {
       "path": "search-studio/src/query-limits.mjs",
@@ -256,6 +256,16 @@
       "path": "search-studio/style.css",
       "bytes": 27700,
       "sha256": "0515451421ea8f2f90c8b7e4129160051b018f4a05ff44dfd2069b856a2758cf"
+    },
+    {
+      "path": "notices/takedown.html",
+      "bytes": 5371,
+      "sha256": "fa5d9a0d28c6805af043a1c12adb1bc78c862bc64fe765b63e382af44bd99083"
+    },
+    {
+      "path": "search-studio/src/serving.mjs",
+      "bytes": 2290,
+      "sha256": "312519a67e5dda2b8d5e22ae50bb40e077eae8704abd0f7783fc4aeb278c375b"
     }
   ]
 }

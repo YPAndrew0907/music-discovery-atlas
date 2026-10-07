@@ -692,18 +692,24 @@ def lookup_prefilter(release, connection, words, use_index=True):
     return [], []
 
 
-def page_query(release, *, offset=0, limit=12, query='', text='', genre='', rows_filter=None, facets=False, use_index=True):
+def page_query(release, *, offset=0, limit=12, query='', text='', genre='', rows_filter=None, facets=False, use_index=True,
+               served=None):
     """Server-side twin of the page's browse/lookup + refinement rules (results-view.mjs and
     listen-lab retrieval.mjs): browse is catalog order; a lookup scores an exact folded title 100
     and every folded word inside "title artist" 10, ordered by score then row; refinement keeps
     rows whose folded "title artist album" contains every word and whose genre matches exactly.
     rows_filter, when given, is a callable row -> bool (verified-preview filter). On a release-2.1 catalog the
-    lookup index narrows the rows first (lookup_prefilter; use_index=False forces the scan, for proofs)."""
+    lookup index narrows the rows first (lookup_prefilter; use_index=False forces the scan, for proofs).
+    served, when given, is the set of rows the serving list serves: every other row is left out of the page,
+    the totals and the genre counts alike."""
     require(integer(offset, 0, 10_000_000) and integer(limit, 1, 48), 'Invalid page window')
     for value in (query, text, genre):
         require(isinstance(value, str) and len(value) <= 512, 'Invalid page filter')
     connection = release.connection()
     where, params, order = [], [], 'row'
+    if served is not None:
+        connection.create_function('served_row', 1, served.__contains__, deterministic=True)
+        where.append('served_row(row)')
     lookup = fold(query).strip()
     channel = 'lookup' if query.strip() else 'browse'
     words = lookup.split() if channel == 'lookup' else []

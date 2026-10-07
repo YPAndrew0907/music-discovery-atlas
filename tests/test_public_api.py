@@ -66,7 +66,8 @@ class PublicAPITests(unittest.TestCase):
         self.graph, self.binding = load_graph(self.encoder, str(DATA))
         self.hosted = build_application(mode='anonymous-preview', enable_anonymous=True,
             generation='test-fixture-v1', public_origin=ORIGIN, encoder=self.encoder,
-            graph=self.graph, graph_binding=self.binding, limits=limits, budget=budget, serve_web=False)
+            graph=self.graph, graph_binding=self.binding, limits=limits, budget=budget, serve_web=False,
+            serving=None)  # the legacy fixture catalog has no serving list; tests/test_serving.py covers it
         self.client = TestClient(self.hosted, base_url=ORIGIN)
         self.client.__enter__()
         self.addCleanup(self.client.__exit__, None, None, None)
@@ -111,7 +112,7 @@ class PublicAPITests(unittest.TestCase):
         self.setup_client()
         token = 'not-a-real-credential-00000000000000'
         app = build_application(token=token, generation='test-auth-v1', encoder=self.encoder,
-            graph=self.graph, graph_binding=self.binding, serve_web=False)
+            graph=self.graph, graph_binding=self.binding, serve_web=False, serving=None)
         with TestClient(app) as client:
             self.assertEqual(client.get('/healthz').status_code, 200)
             self.assertEqual(client.get('/v1/manifest').status_code, 401)

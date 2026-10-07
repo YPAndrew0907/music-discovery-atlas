@@ -102,8 +102,17 @@ class GraphV2(HNSW):
         self.links = _Links(release.node_layers, release.layer_offsets, release.neighbors)
         self.stats = {'proposals': 0, 'widened': 0, 'fullRescores': 0}
 
-    def exact_search(self, query, k=8, exclude_id=None):
-        """Same contract and output as hnsw_trace.HNSW.exact_search, bit for bit."""
+    def allowed_mask(self, allowed):
+        """A boolean row mask for a set of allowed rows, cached for the long-lived serving list."""
+        cached = getattr(self, '_allowed', None)
+        if cached is None or cached[0] is not allowed:
+            mask = np.zeros(self.size, dtype=bool)
+            mask[np.fromiter(allowed, dtype=np.int64, count=len(allowed))] = True
+            self._allowed = cached = (allowed, mask)
+        return cached[1]
+
+    def exact_search(self, query, k=8, exclude_id=None, allowed=None):
+        """Same contract and output as hnsw_trace.HNSW.exact_search, bit for bit, allowed included."""
         query = self._query(query)
         if not _integer(k, 1, self.size):
             raise ValueError('Invalid search budget')
@@ -111,9 +120,13 @@ class GraphV2(HNSW):
             raise ValueError('Invalid excluded row ID')
         q32 = np.frombuffer(query.tobytes(), dtype=np.float32)
         approximate = self.matrix @ q32
+        mask = None if allowed is None else self.allowed_mask(allowed)
+        if mask is not None:
+            approximate[~mask] = -np.inf
         if exclude_id is not None:
             approximate[exclude_id] = -np.inf
-        available = self.size - (exclude_id is not None)
+        available = (self.size if mask is None else int(mask.sum())) - (
+            exclude_id is not None and (mask is None or bool(mask[exclude_id])))
         k = min(k, available)
         proposal = max(4 * k, 64)
         self.stats['proposals'] += 1
@@ -130,7 +143,7 @@ class GraphV2(HNSW):
             proposal *= 4
             self.stats['widened'] += 1
         self.stats['fullRescores'] += 1
-        rows = [row for row in range(self.size) if row != exclude_id]
+        rows = [row for row in range(self.size) if row != exclude_id and (mask is None or mask[row])]
         distances = []
         for start in range(0, len(rows), 8192):
             distances.extend(exact_rescore(self.matrix, query, rows[start:start + 8192]))

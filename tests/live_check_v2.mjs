@@ -3,22 +3,29 @@
 // server search with its animation, playback, an /audio/ 206, no page errors on desktop and
 // mobile, ?direction=list) and adds the v2 contract: health, the server manifest's v2 binding,
 // the local delivery summary, the collection routes, an exact audio range, the excluded row and the
-// rows of corpus-releases/quarantine.json, no whole-catalog file, and a page that downloads only the
-// pinned v2 data.
+// rows of corpus-releases/quarantine.json, the rows corpus-releases/serving.json holds (preview 404, absent
+// from lookups, credit 404), no whole-catalog file, and a page that downloads only the pinned v2 data (27 checks).
 // Optional; never installs anything. Uses 2 live searches and 1 neighbor read, inside the
 // anonymous limits (6 searches a minute, 30 per process-hour).
 //   NODE_PATH=<dir with playwright> node tests/live_check_v2.mjs
 //   MUSIC_UI_ORIGIN        default https://music-discovery-atlas.onrender.com
-//   EXPECT_COUNT           default 1992 (fma2000 after the rights quarantine of 2026-10-06)
+//   EXPECT_COUNT           default: the served rows of corpus-releases/serving.json (670 of the 1,992 on 2026-10-06)
 //   EXPECT_RELEASE         the selection's manifestSha256 (default: fma2000-v2 in release format 2.1, b537a7ac…;
 //                          the 2.0 fallback converted with --no-lookup-index is 279cd21b…)
 //   OUT_DIR                default /tmp/music-live-check-v2 (live-check-v2.json and screenshots)
 //   MUSIC_UI_INSECURE_TLS  1 only for a local TLS terminator with a self-signed certificate
 import {createRequire} from 'node:module';
 import {mkdir, readFile, writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 const {chromium, request} = createRequire(import.meta.url)('playwright');
 const ORIGIN = process.env.MUSIC_UI_ORIGIN ?? 'https://music-discovery-atlas.onrender.com';
-const COUNT = Number(process.env.EXPECT_COUNT ?? 1992);
+// The serving list in force (corpus-releases/serving.json): the server serves its served rows only.
+const SERVING_BYTES = await readFile(new URL('../corpus-releases/serving.json', import.meta.url));
+const SERVING = JSON.parse(SERVING_BYTES), SERVING_SHA = createHash('sha256').update(SERVING_BYTES).digest('hex');
+const HELD = SERVING.rows.filter(row => !row.serve).map(row => row.id);
+const TOTAL = SERVING.rows.length;
+const COUNT = Number(process.env.EXPECT_COUNT ?? SERVING.rows.length - HELD.length);
+const route = id => '/audio/' + id.slice(4).padStart(6, '0') + '.mp3';
 const RELEASE = process.env.EXPECT_RELEASE ?? 'b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740';
 // Preview routes of the recordings the rights quarantine list keeps out of every build.
 const QUARANTINED = JSON.parse(await readFile(new URL('../corpus-releases/quarantine.json', import.meta.url)))
@@ -38,13 +45,14 @@ try {
     const m = await (await api.get('/v1/manifest')).json();
     const value = {catalogCount: m.catalogCount, releaseFormat: m.releaseFormat, bindingStatus: m.bindingStatus, corpusReleaseSha256: m.corpusReleaseSha256,
                    catalogId: m.catalogId, anonymous: m.publicPreview?.anonymous, audioEnabled: m.publicPreview?.audioEnabled, deploymentGeneration: m.deploymentGeneration};
+    value.serving = m.serving;
     return {pass: m.catalogCount === COUNT && m.releaseFormat === 2 && m.bindingStatus === 'verified-corpus-release-v2' && m.corpusReleaseSha256 === RELEASE
-      && m.publicPreview?.audioEnabled === true, value};
+      && m.publicPreview?.audioEnabled === true && m.serving?.sha256 === SERVING_SHA && m.serving?.served === COUNT, value};
   });
   await check('api', 'delivery summary: every preview available, local, lazily verified', async () => {
     const d = await (await api.get('/audio-delivery.json')).json();
     return {pass: d.schemaVersion === 2 && d.kind === 'music-audio-delivery-v2' && d.enabled === true && d.publicDeliveryVerified === true && d.mode === 'local'
-      && d.available === COUNT && d.total === COUNT && d.releaseSha256 === RELEASE, value: {mode: d.mode, available: d.available, total: d.total, scope: d.deliveryVerificationScope}};
+      && d.available === COUNT && d.total === TOTAL && d.releaseSha256 === RELEASE, value: {mode: d.mode, available: d.available, total: d.total, scope: d.deliveryVerificationScope}};
   });
   let first;
   await check('api', 'collection pages come from the server', async () => {
@@ -54,8 +62,10 @@ try {
     return {pass: page.total === COUNT && page.rows.length === 12 && last.rows.length === COUNT - Math.floor((COUNT - 1) / 12) * 12, value: {total: page.total, first: first?.id, lastRows: last.rows.length}};
   });
   await check('api', 'neighbors are computed on the server', async () => {
-    const r = await api.get('/collection/neighbors?row=0'); const n = await r.json();
-    return {pass: r.status() === 200 && n.results?.length === 16 && n.releaseSha256 === RELEASE && n.trace?.events?.length > 0, value: {status: r.status(), results: n.results?.length, traceEvents: n.trace?.events?.length}};
+    const r = await api.get('/collection/neighbors?row=' + first.row); const n = await r.json();
+    const held = new Set(HELD);
+    return {pass: r.status() === 200 && n.results?.length === 16 && n.releaseSha256 === RELEASE && n.trace?.events?.length > 0 && n.results.every(x => !held.has(x.id)),
+      value: {status: r.status(), row: first.row, results: n.results?.length, traceEvents: n.trace?.events?.length}};
   });
   await check('api', 'an audio range is served exactly (206)', async () => {
     const route = '/audio/' + first.id.slice(4).padStart(6, '0') + '.mp3';
@@ -63,6 +73,17 @@ try {
     const h = r.headers();
     return {pass: r.status() === 206 && h['content-range'] === `bytes 0-65535/${first.audioBytes}` && h['content-type'] === 'audio/mpeg' && (await r.body()).length === 65536,
       value: {route, status: r.status(), contentRange: h['content-range'], contentType: h['content-type']}};
+  });
+  await check('api', 'recordings the serving list holds are not served: preview 404, absent from lookups, rows and neighbors 404', async () => {
+    const ids = [...new Set(['fma:20086', 'fma:6679', 'fma:39539', ...HELD.filter((_, i) => i % 61 === 0)])].filter(id => HELD.includes(id));
+    const previews = {}, rows = {};
+    for (const id of ids) previews[id] = (await api.get(route(id))).status();
+    const lookup = await (await api.get('/collection/tracks?q=' + encodeURIComponent('Different Strokes for Different Folks'))).json();
+    const credit = (await api.get('/collection/credits?id=fma%3A6679', {maxRedirects: 0})).status();
+    const summary = await (await api.get('/serving.json')).json();
+    return {pass: ids.length >= 3 && Object.values(previews).every(status => status === 404) && !lookup.rows.some(row => HELD.includes(row.id))
+      && credit === 404 && summary.served === COUNT && summary.sha256 === SERVING_SHA,
+      value: {previews, lookupRows: lookup.rows.map(row => row.id), credit, served: summary.served}};
   });
   await check('api', 'the excluded and quarantined recordings and whole-catalog files are not served', async () => {
     const excluded = (await api.get('/audio/030702.mp3')).status(), catalog = (await api.get('/search-studio/data/catalog.json')).status(), vectors = (await api.get('/search-studio/data/vectors.f32')).status();

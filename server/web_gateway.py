@@ -4,7 +4,7 @@ import json
 from pathlib import Path, PurePosixPath
 from urllib.parse import urlsplit
 
-from starlette.responses import FileResponse, JSONResponse, RedirectResponse
+from starlette.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
 SECURITY_HEADERS = {
     'X-Content-Type-Options': 'nosniff',
@@ -54,7 +54,9 @@ def confined_file(root, relative):
 
 
 class AudioDelivery:
-    def __init__(self, manifest_path, catalog_path, *, enabled=False, directory=None, catalog_bytes=None):
+    def __init__(self, manifest_path, catalog_path, *, enabled=False, directory=None, catalog_bytes=None, serving=None):
+        """serving: the request-time serving list. A held recording's file is still verified as part of the
+        pack's inventory, but it gets no route (404) and the public manifest lists it as unavailable."""
         catalog_path = Path(catalog_path)
         catalog_bytes = bytes(catalog_bytes) if catalog_bytes is not None else catalog_path.read_bytes()
         catalog = json.loads(catalog_bytes)
@@ -102,6 +104,9 @@ class AudioDelivery:
             if path.stat().st_size != row['bytes'] or digest(path) != row['sha256']:
                 raise ValueError('Audio content pin mismatch')
             expected_files.add(filename)
+            if serving is not None and not serving.serves_id(ident):
+                entries.append({'id': ident, 'available': False, 'url': None})
+                continue
             self.paths[route] = path
             self.specs[route] = {'filename': filename, 'bytes': row['bytes'], 'sha256': row['sha256']}
             entries.append({k: row[k] for k in ['id', 'available', 'url', 'bytes', 'sha256']})
@@ -123,8 +128,12 @@ class AudioDelivery:
 class WebGateway:
     def __init__(self, api, *, web_root, web_manifest, catalog_path,
                  mode='authenticated', public_origin='', audio_manifest=None,
-                 enable_audio=False, audio_directory=None, catalog_bytes=None, release_v2=None):
+                 enable_audio=False, audio_directory=None, catalog_bytes=None, release_v2=None,
+                 serving=None, rights_contact=None):
+        """serving: the request-time serving list bound to the served catalog (None serves every row, for
+        fixtures). rights_contact: the address the takedown page names; without it the page is not served."""
         self.api, self.mode, self.public_origin = api, mode, public_origin
+        self.serving, self.dynamic = serving, {}
         self.headers, self.collection = SECURITY_HEADERS, None
         self.web_root = Path(web_root)
         manifest = json.loads(Path(web_manifest).read_text())
@@ -148,8 +157,20 @@ class WebGateway:
         if release_v2 is not None:
             self.configure_v2(release_v2, audio_manifest, enable_audio, audio_directory)
         else:
-            self.audio = AudioDelivery(audio_manifest, catalog_path,
-                                       enabled=enable_audio, directory=audio_directory, catalog_bytes=catalog_bytes)
+            self.audio = AudioDelivery(audio_manifest, catalog_path, enabled=enable_audio, directory=audio_directory,
+                                       catalog_bytes=catalog_bytes, serving=serving)
+            if serving is not None and 'notices/track-attribution.html' in self.assets:
+                from serving import served_credits_page
+                from corpus_release import ReleaseError
+                try:
+                    self.dynamic['notices/track-attribution.html'] = served_credits_page(
+                        self.assets['notices/track-attribution.html'].read_bytes(), serving)
+                except ReleaseError as error:
+                    raise ValueError(str(error)) from None
+        template = self.assets.get('notices/takedown.html')
+        if rights_contact is not None and template is not None:
+            from serving import takedown_page
+            self.dynamic['notices/takedown.html'] = takedown_page(template.read_bytes(), rights_contact)
         if hasattr(getattr(self.api, 'app', None), 'audio_enabled'):
             self.api.app.audio_enabled = self.audio.manifest['enabled']
 
@@ -160,14 +181,21 @@ class WebGateway:
         from search_v2 import GraphV2
         try:
             check_web_release(self.web_root, self.assets, release)
-            self.audio = AudioDeliveryV2(audio_manifest, release, enabled=enable_audio, directory=audio_directory)
+            self.audio = AudioDeliveryV2(audio_manifest, release, enabled=enable_audio, directory=audio_directory,
+                                         serving=self.serving)
         except ReleaseError as error:
             raise ValueError(str(error)) from None
+        if self.serving is not None and 'notices/track-attribution.html' in self.assets:
+            from collection_v2 import credits_index_page
+            from serving import HELD_SENTENCE
+            self.dynamic['notices/track-attribution.html'] = credits_index_page(
+                self.serving.count, HELD_SENTENCE if self.serving.count < self.serving.total else None)
         if self.audio.origin:
             # Hardening only: previews may load from the one pinned object-store origin.
             self.headers = {**SECURITY_HEADERS, 'Content-Security-Policy':
                             SECURITY_HEADERS['Content-Security-Policy'] + f"; media-src 'self' {self.audio.origin}"}
-        self.collection = CollectionRoutes(release, GraphV2(release), audio=self.audio, headers=self.headers)
+        self.collection = CollectionRoutes(release, GraphV2(release), audio=self.audio, headers=self.headers,
+                                           serving=self.serving)
 
     def deployment_config(self, scope):
         hosts = [v.decode('latin-1').lower() for k, v in scope.get('headers', []) if k.lower() == b'host']
@@ -200,6 +228,10 @@ class WebGateway:
             await JSONResponse(self.audio.manifest, headers={
                 **self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
             return
+        if path == '/serving.json' and self.serving is not None:
+            await JSONResponse(self.serving.public(), headers={
+                **self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
+            return
         if path == '/':
             await RedirectResponse('/search-studio/', status_code=307,
                 headers=self.headers)(scope, receive, send)
@@ -224,6 +256,16 @@ class WebGateway:
         relative = path[1:] if path.startswith('/') else ''
         if relative.endswith('/'):
             relative += 'index.html'
+        if relative in self.dynamic:
+            # Built at start from verified static bytes: the credits of served recordings only, and the
+            # takedown page with its configured contact.
+            await Response(self.dynamic[relative], media_type='text/html; charset=utf-8',
+                           headers=self.headers)(scope, receive, send)
+            return
+        if relative == 'notices/takedown.html':  # never the template with its placeholder
+            await JSONResponse({'error': 'Not found'}, status_code=404,
+                headers={**self.headers, 'Cache-Control': 'no-store'})(scope, receive, send)
+            return
         path_on_disk = self.assets.get(relative)
         if path_on_disk is None:
             await JSONResponse({'error': 'Not found'}, status_code=404,

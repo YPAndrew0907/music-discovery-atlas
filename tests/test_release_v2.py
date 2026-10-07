@@ -264,6 +264,7 @@ class LookupIndexTests(V2Fixture):
         cases = [(q, '', '', None) for q in ('love', 'lady love', 'the', 'the night', 'a', 'of', 'Électro', 'électro', 'ü',
                                               'straße', '"', 'a"b', "o'b", '-', '...', '(live)', 'zzzz not here', '  ', '́')]
         cases += [('', t, '', None) for t in ('piano', 'love', 'ü', 'xx yy', '"quoted"')]
+        cases += [('ab\x00c', '', '', None), ('', 'pi\x00ano', '', None), ('love\x00', 'night', '', None)]  # FTS5 reads NUL as the end of a phrase
         cases += [('a', 'e', 'Electronic', None), ('', '', 'Folk', None), ('love', '', '', lambda row: row % 3 == 0),
                   ('the', 'night', '', lambda row: row % 2 == 0)]
         for row in sorted(rng.choice(len(texts), size=40, replace=False).tolist()):

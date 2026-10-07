@@ -665,8 +665,10 @@ LOOKUP_INDEX_SHARE = 10  # use the index while a phrase matches under 1/10 of th
 
 def lookup_phrase(words):
     """The FTS5 query for a word list: one quoted phrase per word of three or more characters (a trigram
-    index cannot narrow shorter words), with quotes doubled, so no word is read as query syntax."""
-    return ' '.join('"' + word.replace('"', '""') + '"' for word in words if len(word) >= 3)
+    index cannot narrow shorter words), with quotes doubled, so no word is read as query syntax. A word
+    holding NUL is left out too: FTS5 reads NUL as the end of the phrase and refuses the query, and leaving
+    a word out only widens the prefilter, so such a lookup returns the scan's page."""
+    return ' '.join('"' + word.replace('"', '""') + '"' for word in words if len(word) >= 3 and '\x00' not in word)
 
 
 def lookup_prefilter(release, connection, words, use_index=True):

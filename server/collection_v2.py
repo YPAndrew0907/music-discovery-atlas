@@ -391,9 +391,9 @@ class CollectionRoutes:
     serving: the request-time serving list (server/serving.py). Held recordings are absent from every page,
     lookup, neighbour list, tile, link list and credit page, and a request that names one answers 404."""
 
-    def __init__(self, release, graph, *, audio, headers, tracks_per_minute=300, neighbors_per_minute=60,
-                 credits_per_minute=300, tiles_per_minute=2400, links_per_minute=600, pending=8, trace_limit=2048,
-                 page_limit=48, rows_limit=64, serving=None):
+    def __init__(self, release, graph, *, audio, headers, tracks_per_minute=300, rows_per_minute=600,
+                 neighbors_per_minute=60, credits_per_minute=300, tiles_per_minute=2400, links_per_minute=600, pending=8,
+                 trace_limit=2048, page_limit=48, rows_limit=64, serving=None):
         # trace_limit 2048 is the v1 page's local default; ef 32 traces hold about 50 events.
         self.release, self.graph, self.audio, self.headers = release, graph, audio, headers
         self.serving = serving
@@ -407,6 +407,10 @@ class CollectionRoutes:
         # Every collection read spends process CPU, which the anonymous search budget (public_boundary.PreviewBudget)
         # also counts, so each route has a per-minute cap. A browse or lookup session uses about 20 pages.
         self.tracks_budget = Budget(tracks_per_minute)
+        # Explicit rows (/collection/tracks?rows=, at most rows_limit primary-key lookups each) are the map's hover and
+        # click reads. They have their own cap, so using the map never spends the pages' budget (scale UI review F1). The
+        # page reads a hovered row only after a 250 ms rest, so one visitor's hovering sends at most 240 a minute.
+        self.rows_budget = Budget(rows_per_minute)
         self.neighbors_budget = Budget(neighbors_per_minute)
         self.credits_budget = Budget(credits_per_minute)
         self.tiles_budget, self.links_budget = Budget(tiles_per_minute), Budget(links_per_minute)
@@ -568,6 +572,8 @@ class CollectionRoutes:
         except ReleaseError as error:
             await failure(str(error), 400)(scope, receive, send)
             return
+        if path == '/collection/tracks' and 'rows' in values:
+            budget, name = self.rows_budget, 'Collection row'
         if budget is not None:
             retry = budget.admit()
             if retry:

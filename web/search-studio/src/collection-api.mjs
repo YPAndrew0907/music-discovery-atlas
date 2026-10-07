@@ -56,6 +56,7 @@ export class Collection {
     this.rowById = new Map();
     this.artists = new Map();
     this.requests = 0;
+    this.reading = new Map();  // row -> the explicit-rows read in flight that brings it
   }
 
   absorbTrack(track) {
@@ -135,14 +136,30 @@ export class Collection {
     return {rows, total: body.total, baseTotal: body.baseTotal, genres};
   }
 
+  // Display metadata for explicit rows the page has not seen, 64 a read. A row that a read in flight already
+  // asks for is not asked for again: the call waits for that read, so hover, click and any other caller share
+  // one request per row. When a read fails, every caller waiting for it fails, and its rows can be asked for again.
   async ensure(rows) {
     const missing = [...new Set(rows)].filter(row => Number.isInteger(row) && row >= 0 && row < this.count && !this.tracks[row]);
-    for (let i = 0; i < missing.length; i += 64) {
-      const part = missing.slice(i, i + 64), body = await this.get('tracks', {rows: part.join(',')});
-      if (!Array.isArray(body?.rows) || body.rows.length !== part.length) throw new Error('Invalid collection rows');
-      body.rows.forEach((track, j) => { if (this.absorbTrack(track) !== part[j]) throw new Error('Invalid collection rows'); });
+    const waits = new Set(missing.filter(row => this.reading.has(row)).map(row => this.reading.get(row)));
+    const fresh = missing.filter(row => !this.reading.has(row));
+    if (fresh.length) {
+      const read = (async () => {
+        for (let i = 0; i < fresh.length; i += 64) {
+          const part = fresh.slice(i, i + 64), body = await this.get('tracks', {rows: part.join(',')});
+          if (!Array.isArray(body?.rows) || body.rows.length !== part.length) throw new Error('Invalid collection rows');
+          body.rows.forEach((track, j) => { if (this.absorbTrack(track) !== part[j]) throw new Error('Invalid collection rows'); });
+        }
+      })();
+      for (const row of fresh) this.reading.set(row, read);
+      const settled = () => { for (const row of fresh) if (this.reading.get(row) === read) this.reading.delete(row); };
+      read.then(settled, settled);
+      waits.add(read);
     }
+    await Promise.all(waits);
   }
+
+  inFlight(row) { return this.reading.has(row); }
 
   async neighbors(row) {
     const body = await this.get('neighbors', {row});

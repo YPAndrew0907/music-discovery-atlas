@@ -384,7 +384,8 @@ console.log(JSON.stringify(out));"""
         from collection_v2 import CollectionRoutes
         from web_gateway import SECURITY_HEADERS
         routes = CollectionRoutes(self.release, None, audio=AudioDeliveryV2(None, self.release), headers=SECURITY_HEADERS,
-                                  tracks_per_minute=2, tiles_per_minute=2, links_per_minute=1, credits_per_minute=1)
+                                  tracks_per_minute=2, rows_per_minute=2, tiles_per_minute=2, links_per_minute=1,
+                                  credits_per_minute=1)
         self.addCleanup(routes.close)
         client = TestClient(routes, base_url=ORIGIN)
         # Collection pages and lookups spend the CPU that the anonymous search budget counts, so they are capped too.
@@ -392,15 +393,55 @@ console.log(JSON.stringify(out));"""
         refused = client.get('/collection/tracks?q=a&preview=1')
         self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Collection page budget exhausted'))
         self.assertTrue(1 <= int(refused.headers['retry-after']) <= 61)
-        self.assertEqual(client.get('/collection/tracks?rows=1').status_code, 429)  # explicit rows share the budget
-        self.assertEqual(routes.tracks_budget.per_minute, 2)
-        self.assertEqual(CollectionRoutes.__init__.__kwdefaults__['tracks_per_minute'], 300)
+        # Explicit rows (the map's hover and click reads) have a cap of their own, so they still answer (F1).
+        self.assertEqual([client.get('/collection/tracks?rows=1').status_code for _ in range(3)], [200, 200, 429])
+        refused = client.get('/collection/tracks?rows=2,3')
+        self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Collection row budget exhausted'))
+        self.assertTrue(1 <= int(refused.headers['retry-after']) <= 61)
+        self.assertEqual((routes.tracks_budget.per_minute, routes.rows_budget.per_minute), (2, 2))
+        defaults = CollectionRoutes.__init__.__kwdefaults__
+        self.assertEqual((defaults['tracks_per_minute'], defaults['rows_per_minute']), (300, 600))
         self.assertEqual([client.get('/collection/tiles?z=0&x=0&y=0').status_code for _ in range(3)], [200, 200, 429])
         refused = client.get('/collection/tiles?z=1&x=0&y=0')
         self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Map tile budget exhausted'))
         self.assertEqual([client.get('/collection/links?row=1').status_code for _ in range(2)], [200, 429])
         self.assertEqual([client.get('/collection/credits?page=1').status_code for _ in range(2)], [200, 429])
         self.assertTrue(client.get('/collection/credits?page=1').headers['content-type'].startswith('text/html'))
+
+    def test_explicit_row_reads_never_spend_the_page_budget(self):
+        """Scale UI review F1: hovering and clicking the v2 map read rows with /collection/tracks?rows=. With the default
+        caps, a burst of row reads up to theirs (600 a minute) leaves every page read answering 200, and a spent page
+        budget leaves row reads answering."""
+        from collection_v2 import CollectionRoutes
+        routes = CollectionRoutes(self.release, None, audio=AudioDeliveryV2(None, self.release), headers=SECURITY_HEADERS)
+        self.addCleanup(routes.close)
+        client = TestClient(routes, base_url=ORIGIN)
+        cap = routes.rows_budget.per_minute
+        self.assertEqual((cap, routes.tracks_budget.per_minute), (600, 300))
+        # Single rows (a hover) and full reads of 64 distinct rows (the most one request may ask for), alternately.
+        wide = lambda n: ','.join(str((n * 64 + k) % V1_COUNT) for k in range(64))  # noqa: E731
+        statuses = [client.get('/collection/tracks?rows=' + (str(n % V1_COUNT) if n % 2 else wide(n))).status_code
+                    for n in range(cap)]
+        self.assertEqual(statuses, [200] * cap)
+        refused = client.get('/collection/tracks?rows=5')
+        self.assertEqual((refused.status_code, refused.json()['error']), (429, 'Collection row budget exhausted'))
+        self.assertTrue(1 <= int(refused.headers['retry-after']) <= 61)
+        pages = ['limit=12&facets=1', 'offset=12&limit=12', 'offset=1980&limit=12', 'q=love&facets=1', 'q=love&offset=12',
+                 'text=piano', 'genre=Folk', 'q=the&text=night&preview=1']
+        for query in pages:
+            with self.subTest(query=query):
+                reply = client.get('/collection/tracks?' + query)
+                self.assertEqual(reply.status_code, 200, reply.text)
+                self.assertIn(reply.json()['channel'], ('browse', 'lookup'))
+        self.assertEqual(len(routes.tracks_budget.events), len(pages))
+        # The other way round: pages spent, a hover or a click still reads its row.
+        spent = CollectionRoutes(self.release, None, audio=AudioDeliveryV2(None, self.release), headers=SECURITY_HEADERS,
+                                 tracks_per_minute=1)
+        self.addCleanup(spent.close)
+        other = TestClient(spent, base_url=ORIGIN)
+        self.assertEqual([other.get('/collection/tracks?limit=12').status_code for _ in range(2)], [200, 429])
+        reply = other.get('/collection/tracks?rows=7')
+        self.assertEqual((reply.status_code, [row['row'] for row in reply.json()['rows']]), (200, [7]))
 
     def test_gateway_refuses_a_web_package_built_for_another_release(self):
         broken = Path(self.temp.name) / 'broken'

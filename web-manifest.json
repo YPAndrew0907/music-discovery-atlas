@@ -189,8 +189,8 @@
     },
     {
       "path": "search-studio/src/app.mjs",
-      "bytes": 58385,
-      "sha256": "1c037ecfa80100e9a6693bf56f9d0c7f5745389eb66d8468ed58172bba31b005"
+      "bytes": 58968,
+      "sha256": "15ab5ee3aec9a0c74093f3d5d9f5daa5c7136e8beba14bbcbc8cd89c5e0fd124"
     },
     {
       "path": "search-studio/src/audio-delivery.mjs",
@@ -199,8 +199,8 @@
     },
     {
       "path": "search-studio/src/collection-api.mjs",
-      "bytes": 19109,
-      "sha256": "fefd94d9e3f3cf14eb26499b9abc2bd364b5d51613701f62d4f27608785efe1a"
+      "bytes": 20119,
+      "sha256": "7bdcff44ec57ca6dc3d0d85eacb42071fc83ece5eb4898ef8349d73a1731eb3b"
     },
     {
       "path": "search-studio/src/contracts.mjs",

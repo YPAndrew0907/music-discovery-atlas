@@ -62,6 +62,25 @@ test('rows, pages, packets and the layout sample are validated before they reach
     assert.throws(()=>fresh().loadLayout({...layoutV2,...change}),message);
 });
 
+test('ensure asks for a row once while a read of it is in flight; a failed read fails its waiters and can be retried',async()=>{
+  const calls=[],gates=[];let refuse=true;
+  const c=new Collection({manifest:manifestV2,pageOrigin:origin,fetcher:url=>{url=new URL(url);const rows=url.searchParams.get('rows');calls.push(rows);
+    return new Promise(resolve=>gates.push(()=>resolve(refuse&&rows==='7'?new Response('{"error":"Collection row budget exhausted"}',{status:429}):
+      new Response(JSON.stringify(collectionTracks(url.searchParams,new Set()))))));}});
+  const open=()=>gates.splice(0).forEach(go=>go());
+  // A hover, a second hover and a click on the same unread rows while the first read is still on its way.
+  const first=c.ensure([5]),second=c.ensure([5]),third=c.ensure([5,6]);
+  assert.deepEqual(calls,['5','6'],'row 5 is asked for once');assert.ok(c.inFlight(5)&&c.inFlight(6)&&!c.inFlight(7));
+  open();await Promise.all([first,second,third]);
+  assert.equal(c.tracks[5].title,catalog.tracks[5].title);assert.equal(c.tracks[6].title,catalog.tracks[6].title);assert.ok(!c.inFlight(5)&&!c.inFlight(6));
+  await c.ensure([6,5]);assert.equal(calls.length,2,'known rows are not read again');
+  // A refused read fails every caller waiting for it, and leaves its row free to be asked for again.
+  const a=c.ensure([7]),b=c.ensure([7]);assert.deepEqual(calls.slice(2),['7']);open();
+  await Promise.all([a,b].map(p=>assert.rejects(p,e=>e.status===429&&e.message==='Collection row budget exhausted')));
+  assert.ok(!c.inFlight(7));assert.equal(c.tracks[7],undefined);refuse=false;
+  const retry=c.ensure([7]);assert.deepEqual(calls.slice(2),['7','7']);open();await retry;assert.equal(c.tracks[7].id,catalog.tracks[7].id);
+});
+
 test('map tiles and stored links are decoded, bounded and checked against the positions the page holds',async()=>{
   const sample=catalog.tracks.map((_,r)=>r).filter(r=>r%4===0),fixture=sampledFixture(sample),calls=[];
   const fetcher=async url=>{url=new URL(url);calls.push(url);const q=url.searchParams;
@@ -133,13 +152,17 @@ const source=(await bytes('search-studio/src/app.mjs')).toString().replace(/^imp
   .replaceAll('import.meta.url',JSON.stringify(origin+'/search-studio/src/app.mjs')).replace('await init();','');
 const flush=async()=>{for(let i=0;i<8;i++)await new Promise(setImmediate);};
 async function until(condition){const deadline=performance.now()+3000;while(performance.now()<deadline){if(condition())return;await new Promise(r=>setTimeout(r,2));}assert.fail('Fixture did not reach the expected state');}
-async function harness({available=catalog.tracks.map((_,r)=>r)}={}){
+// The map canvas the page measures (and the real AudioMap draws on): 870 × 600 CSS px, as in the scale UI review's sweep.
+const MAP_RECT=Object.freeze({width:870,height:600,left:0,top:0});
+async function harness({available=catalog.tracks.map((_,r)=>r),realMap=false}={}){
   const elements=new Map(),events={},clicks={},calls=[],searches=[];
   const availableSet=new Set(available);
   function el(key){
     if(!elements.has(key))elements.set(key,{dataset:{},style:{},handlers:{},attributes:{},value:key==='#query-kind'?'description':'',src:'',paused:true,hidden:false,checked:false,
       textContent:'',innerHTML:'',addEventListener(name,fn){this.handlers[name]=fn;},setAttribute(name,value){this.attributes[name]=value;},removeAttribute(name){this[name]='';},
-      focus(){},scrollIntoView(){},closest(){return null;},showModal(){this.open=true;},close(){this.open=false;},pause(){this.paused=true;},load(){this.paused=true;},async play(){this.paused=false;}});
+      focus(){},scrollIntoView(){},closest(){return null;},showModal(){this.open=true;},close(){this.open=false;},pause(){this.paused=true;},load(){this.paused=true;},async play(){this.paused=false;},
+      ...(key==='#map'?{width:0,height:0,getBoundingClientRect:()=>MAP_RECT,setPointerCapture(){},releasePointerCapture(){},hasPointerCapture:()=>false,
+        getContext:()=>new Proxy({measureText:t=>({width:t.length*6})},{get:(o,k)=>o[k]??(()=>{}),set:(o,k,v)=>{o[k]=v;return true;}})}:{})});
     return elements.get(key);
   }
   const fetcher=async(url,options={})=>{
@@ -160,14 +183,16 @@ async function harness({available=catalog.tracks.map((_,r)=>r)}={}){
   };
   let map;
   class TestAudioMap{constructor(canvas,options){map=this;this.options=options;this.searches=[];this.hover=null;this.redraws=0;}select(){}fit(){}draw(){}destroy(){}finish(){}zoom(){}replay(){}pause(){}requestDraw(){this.redraws++;}setSearch(trace,rows,options){this.searches.push({trace,rows,options});}}
+  class RealAudioMap extends AudioMap{constructor(canvas,options){super(canvas,options);map=this;}}// needs withMapGlobals()
   class Encoder{constructor({status}){this.status=status;this.state='unloaded';}set(s){this.state=s;this.status({state:s});}async prepare(){this.set('ready');}encode(){throw new Error('no local encoder in v2');}cancel(){this.set('unloaded');}}
-  const context=vm.createContext({BrowserEncoder:Encoder,AudioMap:TestAudioMap,
+  const context=vm.createContext({BrowserEncoder:Encoder,AudioMap:realMap?RealAudioMap:TestAudioMap,
     ServerSearch:class extends ServerSearch{constructor(o){super({...o,fetcher});}},loadDeploymentConfig:o=>loadDeploymentConfig({...o,fetcher}),
     loadAudioDelivery:o=>loadAudioDelivery({...o,fetcher}),previewForTrack,UNAVAILABLE_PREVIEW,SERVER_CONFIG,
     Collection:class extends Collection{constructor(o){super({...o,fetcher});}},TRACK_ID,loadRowDelivery:c=>loadRowDelivery(c,{fetcher}),RESULT_PAGE_SIZE,
     loadServing:o=>loadServing({...o,fetcher}),bindServing,
     sourceGenres,refineCandidates,resultPage,resultScope,compactResultScope,reviewQueryLimits,indexConnections,MANIFEST_SHA,ARTIST_METADATA_SHA:identity.catalogSha256,rankCandidates,HNSW,exactSearch,RELEASE,metadataSearch,publicCharacterLimit,
-    fetch:fetcher,crypto:webcrypto,TextDecoder,TextEncoder,Float32Array,Uint8Array,URL,Blob,DOMException,performance,AbortSignal,Response,setTimeout,atob,
+    fetch:fetcher,crypto:webcrypto,TextDecoder,TextEncoder,Float32Array,Uint8Array,URL,Blob,DOMException,performance,AbortSignal,Response,atob,
+    setTimeout:(...a)=>setTimeout(...a),clearTimeout:id=>clearTimeout(id),// looked up per call, so t.mock.timers reaches the page
     getComputedStyle:()=>({getPropertyValue:()=> '#000'}),
     document:{body:{dataset:{}},activeElement:null,querySelector:el,querySelectorAll:selector=>selector==='[data-needs-catalog]'?[el('#search'),el('#enable-local'),el('#browse-collection')]:[],addEventListener(name,fn){clicks[name]=fn;}},
     location:{href:origin+'/search-studio/',origin},window:{addEventListener(name,fn){events[name]=fn;}}});
@@ -265,4 +290,69 @@ test('a partial preview pack is reported and filterable through the server',asyn
   h.el('#browse-collection').onclick();await until(()=>h.el('#page-position').textContent==='Page 1 of 166');
   h.el('#preview-only').checked=true;h.el('#preview-only').handlers.change();await until(()=>h.el('#page-position').textContent==='Page 1 of 1');
   assert.equal(h.collectionCalls().at(-1).params.get('preview'),'1');assert.match(h.el('#page-indicator').textContent,/1–5 \/ 5/);
+});
+
+// ---- map hover reads (scale UI review F1) -------------------------------------------------------
+// A hovered dot whose row the page has not read is read from /collection/tracks?rows= only once the pointer has rested
+// on it for HOVER_READ_MS; a hover change drops the pending read, and a row already being read joins that read.
+const rowReads=h=>h.collectionCalls().filter(c=>c.path==='/collection/tracks'&&c.params.has('rows')).map(c=>c.params.get('rows'));
+test('hover reads wait for the pointer to rest, are dropped when it moves on, and join a read in flight',async t=>{
+  const h=await harness(),m=h.map(),tip=h.el('#tooltip');
+  assert.equal(vm.runInContext('HOVER_READ_MS',h.context),250);
+  const hover=id=>{m.hover=id;m.options.onHover(id,{clientX:300,clientY:200});};
+  const unread=[];for(let row=0;row<count&&unread.length<6;row++)if(!m.options.tracks[row])unread.push(row);
+  const [a,b,c,d,e,f]=unread,known=m.options.tracks.findIndex(Boolean);
+  t.mock.timers.enable({apis:['setTimeout']});
+  hover(a);assert.equal(tip.hidden,false);assert.equal(tip.innerHTML,'…');t.mock.timers.tick(249);await flush();
+  hover(b);t.mock.timers.tick(249);await flush();assert.deepEqual(rowReads(h),[],'a pointer passing over dots reads nothing');
+  t.mock.timers.tick(1);await flush();assert.deepEqual(rowReads(h),[String(b)],'the dot it rests on is read, the one it left is not');
+  assert.match(tip.innerHTML,new RegExp(catalog.tracks[b].title.slice(0,8).replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/&/g,'&amp;')));
+  hover(c);t.mock.timers.tick(100);hover(null);assert.equal(tip.hidden,true);t.mock.timers.tick(1000);await flush();
+  hover(known);t.mock.timers.tick(1000);await flush();assert.deepEqual(rowReads(h),[String(b)],'leaving the map, or a known row, reads nothing');
+  // The pointer rests on d (its read starts), moves to e and back to d before the reply: d's read is joined, e's dropped.
+  hover(d);t.mock.timers.tick(250);assert.deepEqual(rowReads(h).slice(1),[String(d)]);hover(e);hover(d);await flush();t.mock.timers.tick(1000);await flush();
+  assert.deepEqual(rowReads(h),[String(b),String(d)]);assert.ok(m.options.tracks[d]&&!m.options.tracks[e]);
+  // A click on a dot whose hover read is still on its way waits for that read instead of sending another.
+  hover(f);t.mock.timers.tick(250);m.options.onSelect(f);await flush();
+  assert.deepEqual(rowReads(h),[String(b),String(d),String(f)]);assert.equal(m.options.tracks[f].id,catalog.tracks[f].id);
+});
+
+// The real AudioMap reads these from its own realm, not from the page's VM context (as in the density test above).
+async function withMapGlobals(run){
+  const globals={devicePixelRatio:1,matchMedia:()=>({matches:true,addEventListener(){}}),document:{hidden:false,addEventListener(){}},
+    ResizeObserver:class{observe(){}disconnect(){}},requestAnimationFrame:()=>1,cancelAnimationFrame(){}},saved={};
+  for(const [k,v] of Object.entries(globals)){saved[k]=Object.getOwnPropertyDescriptor(globalThis,k);Object.defineProperty(globalThis,k,{configurable:true,writable:true,value:v});}
+  try{return await run();}finally{for(const [k,d] of Object.entries(saved)){if(d)Object.defineProperty(globalThis,k,d);else delete globalThis[k];}}
+}
+
+test('a 1 s, 500 px pointer sweep across the real map reads at most two rows, at the overview and zoomed in',async t=>{
+  await withMapGlobals(async()=>{
+    const h=await harness({realMap:true}),map=h.map(),canvas=h.el('#map');
+    assert.ok(map instanceof AudioMap&&canvas.handlers.pointermove,'the app drew the real AudioMap on the page canvas');
+    t.mock.timers.enable({apis:['setTimeout']});
+    const swept=[];
+    for(const [view,zoom] of [['overview',1],['4x zoom',4]]){
+      map.fit('all');map.zoom(zoom);
+      const before=rowReads(h).length,crossed=new Set();
+      // 61 pointer events at 60 Hz along y = 300, from x = 180 to x = 680, as in the review's sweep.
+      for(let i=0;i<=60;i++){
+        canvas.handlers.pointermove({clientX:180+i*500/60,clientY:300,pointerId:1});
+        if(map.hover!==null&&!map.tracks[map.hover])crossed.add(map.hover);
+        t.mock.timers.tick(Math.round((i+1)*1000/60)-Math.round(i*1000/60));await flush();
+      }
+      const moving=rowReads(h).length-before;
+      t.mock.timers.tick(250);await flush();// the pointer rests where the sweep ended
+      const reads=rowReads(h).slice(before);
+      swept.push(`${view}: ${crossed.size} unread dots crossed, ${reads.length} read`);
+      // Before this fix each of those crossings was a read (the review measured 23 at the overview and 17 at 4x).
+      assert.ok(crossed.size>=10,`the ${view} sweep crosses ${crossed.size} unread dots`);
+      assert.equal(moving,0,`nothing is read while the pointer moves (${view})`);
+      assert.ok(reads.length<=2,`${reads.length} metadata reads for the ${view} sweep`);
+      if(map.hover!==null&&!crossed.has(map.hover))assert.equal(reads.length,0);
+      for(const rows of reads)assert.ok(map.tracks[Number(rows)],'a read row is absorbed');
+      canvas.handlers.pointerleave();
+    }
+    t.diagnostic(swept.join('; '));
+    map.destroy();
+  });
 });

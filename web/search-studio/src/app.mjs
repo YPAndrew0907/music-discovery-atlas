@@ -25,6 +25,9 @@ let resultChannel='sound',pageIndex=0,viewPage=resultPage([]),searchPending=fals
 let catalog,manifest,index,vectors,examples,map,rows=[],selected=null,kept=[],undo=[],playing=null,queryGeneration=0,modelGeneration=0,inflight=null,currentQuery='',exportUrl=null,server=null,engineSelection='server',artistRecords=null,candidateRows=[],currentTrace=null,rankingPacket=null,spreadArtists=false,queryReview=null,audioDelivery=new Map(),serverConfig=SERVER_CONFIG,playbackGeneration=0,connectionGeneration=0,serverState='checking',pageActive=true,readinessNoticeGeneration=null,pageGeneration=0;
 // Release format v2 (a manifest with format 2): the collection client and the server-paged view. Both stay null in v1.
 let collection=null,pagedQuery=null,serverView=null,serverPageGeneration=0;
+// v2 map hover: an unread dot's row is read only after the pointer has rested on it this long, so a sweep across the map
+// reads nothing (scale UI review F1). hoverRead is the pending read's timer; any hover change drops it.
+const HOVER_READ_MS=250;let hoverRead=0;
 // The serving list (serving.mjs): the rows this site serves, or null when the server publishes none (every row).
 let servingRows=null;
 const served=row=>!servingRows||servingRows.has(row);
@@ -321,7 +324,10 @@ async function initCollection(){
     onDensity:s=>setText($('#map-density'),`${s.visible} selectable · ${s.replaying?'search path only':s.edges?`${s.edges} links of the selection`:'zoom in for links'}`),
     onSelect:row=>{if(!served(row))return;void collection.ensure([row]).then(()=>choose(row,{scroll:true,explicit:true}),e=>status('Recording unavailable: '+e.message));},
     onHover:(id,e)=>{if(id!==null&&!served(id))id=null;// a held recording's dot reads nothing
-      $('#tooltip').hidden=id===null;if(id===null)return;showTip(id,e);if(!catalog.tracks[id])void collection.ensure([id]).then(()=>{if(map.hover===id)showTip(id,e);},()=>{});},
+      clearTimeout(hoverRead);hoverRead=0;$('#tooltip').hidden=id===null;if(id===null)return;showTip(id,e);if(catalog.tracks[id])return;
+      // A row already being read (a click, an earlier rest) joins that read; any other waits for the pointer to rest on it.
+      const read=()=>void collection.ensure([id]).then(()=>{if(map.hover===id)showTip(id,e);},()=>{});
+      if(collection.inFlight(id))read();else hoverRead=setTimeout(()=>{hoverRead=0;if(map.hover===id)read();},HOVER_READ_MS);},
     onTrace:s=>{$('#trace-play').disabled=!s.total||s.reducedMotion;$('#trace-skip').disabled=!s.total||s.completed;$('#trace-skip').hidden=!s.total||s.completed;setText($('#trace-play'),s.playing?'Pause':!s.completed?'Continue':'Watch again');$('#trace-fill').style.width=(s.total?s.progress*100:100)+'%';setText($('#trace-note'),!s.total?'':s.reducedMotion?'Animation off (reduced motion)':!s.completed?(s.phase==='entry'?'Starting':s.phase==='descent'?'Narrowing':s.phase==='results'?'Matches':'Exploring'):'Ready');}});
   $('#examples').innerHTML=examples.examples.map(e=>`<button data-example="${esc(e.id)}" aria-pressed="false">${esc(e.label)}</button>`).join('');
   for(const b of document.querySelectorAll('[data-needs-catalog]'))b.disabled=false;

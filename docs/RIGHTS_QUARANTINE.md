@@ -124,7 +124,7 @@ The v2 conversion of the new release passes every converter proof:
 
 ## 4. Where the eight rows still exist
 
-- **The live site.** Until this branch is deployed, `main` serves all eight, with audio. This is the most urgent item.
+- **The live site.** Until `platform-v2` reaches `main` (stage 1 of `DEPLOY_PLAN_V2.md`), the live site serves all eight, with audio. This is the most urgent item.
 - **The historical releases** `corpus-releases/fma500` and `fma1000`. They hold fma:1382, 93518 to 93521 and 98077 as catalog and rights rows (metadata, no audio). They are frozen parents: the builder proves the new release against them, and they are never selected or served. They are in the image because the image copies all of `corpus-releases/`. Dropping old releases from the image is already a follow-up in `docs/DEPLOY_PLAN_V2.md` section 7.4.
 - **The legacy 108 catalog** in `music-search-studio/data/` contains fma:1382. It is used only if `active-corpus.json` is disabled or absent. In that mode `audio-delivery.json` is disabled, so no audio plays, but 1382's title and artist would appear in search results. It is an emergency fallback, not a served path. Changing its strict pins is a separate review.
 - **Git history.** Older commits hold the metadata rows, never audio. The FMA metadata is CC BY 4.0 and is not what the quarantine is about. History does not need rewriting.

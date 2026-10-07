@@ -508,7 +508,7 @@ The 1-minute load was 150 during the run, and every case returned identical page
 **In-process at 200K (round 1, `page_query`).**
 
 - Rare and narrow phrases: 0.35–7.6 ms with the index, against 56–589 ms by scan.
-- A word in every row, a two-letter word or a single letter still scan, at 0.40–0.51 s. That is why section 9.3's per-minute budget for `/collection/tracks` is still wanted before serving 200K anonymously.
+- A word in every row, a two-letter word or a single letter still scan, at 0.40–0.51 s. That is why section 9.3 asked for a per-minute budget for `/collection/tracks` before serving 200K anonymously. It has one since `b34f0ab`, which bounds the drain but does not remove it at 200K (10.8).
 
 ### 10.3 Track credits, page by page
 

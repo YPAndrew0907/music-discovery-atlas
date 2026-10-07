@@ -44,7 +44,7 @@ The deploy serves the same 1,992 recordings with the same rankings, scores and s
 | `87b6f11` | The activation refuses stale pins and refreshes only its own (security review B1) |
 | `b34f0ab` | `/collection/tracks` has a per-minute budget, 300 by default (B2) |
 | `09117d2` | The audio publication verifier keeps no cookies, with a test that can fail (C6, T-6) |
-| (the docs commit) | This document, `PLATFORM_V2.md` and `RIGHTS_QUARANTINE.md` updated to the merged branch |
+| `c38bcc5` and the sweep after it | This document, `PLATFORM_V2.md` and `RIGHTS_QUARANTINE.md` updated to the merged branch. The sweep corrects the suite counts in 3.1 and 3.2 and two leftover status lines, and adds the head check to 3.1 and the non-fast-forward rollback to 3.4 |
 
 **v1 behaviour is unchanged.** For a v1, disabled or absent selection, the new Docker step prints `{"installed": false, ...}` and exits 0. The hydration entrypoint runs its v1 code exactly as before; the new dispatch only takes a pinned, parseable `schemaVersion: 2` file. The v1 server path is untouched. On the v1 page the merged scale UI adds only module preloads and one more map module; its level-of-detail paths are v2-only. Stage 1 below was proved locally with the unmodified production live check, on the merged branch too (section 5.2).
 
@@ -104,7 +104,8 @@ git fetch origin
 git rev-parse --abbrev-ref HEAD                                   # must print platform-v2
 git merge-base --is-ancestor origin/main platform-v2 && echo fast-forward   # must print fast-forward
 git status --short                                                # must be empty
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 168 OK
+git rev-parse platform-v2                                         # must print the head in validation/INTEGRATION_RECEIPT_V2.md
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 170 OK
 node --test tests/web_*.test.mjs                                  # expect 92 pass
 git push origin platform-v2:main
 ```
@@ -162,7 +163,7 @@ $B/venv-3.12.14/bin/python scripts/activate_release_v2.py \
   --expected-manifest-sha256 b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740 \
   --name fma2000-v2
 $B/venv-3.12.14/bin/python scripts/activate_release_v2.py --check   # expect "ok": true, lookupIndex fts5-trigram-v1
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 168 OK
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 170 OK
 node --test tests/web_*.test.mjs                                      # expect 92 pass
 NODE_PATH=$B/tooling/node_modules node tests/browser_search_ui.mjs       # v1 page fixture: passes
 NODE_PATH=$B/tooling/node_modules node tests/browser_collection_v2.mjs   # v2 page fixture: passes
@@ -302,6 +303,7 @@ cd .worktrees/$R
     git push origin HEAD:main
     ```
 
+  - `git push origin 35cec9e:main` is refused: it is not a fast-forward. Moving `main` back to `35cec9e` itself takes a force push, which GitHub accepts here because `main` has no branch protection: `git push --force-with-lease=main:<stage 1 head> origin 35cec9e:main`. It drops the stage commits from `main`'s history; they stay on `platform-v2`. The forward commit above keeps the history and is the default. Both were run against a local bare copy standing in for GitHub, together with the stage 1 push itself (`validation/v2-integrate/final/receipts/rollback-sim/push-sim.txt`).
   - **The rights-only backport** onto `35cec9e` would carry:
     - the quarantine list;
     - `corpus-releases/fma2000`;

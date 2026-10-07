@@ -18123,8 +18123,8 @@
     },
     {
       "path": "server/hosting.py",
-      "bytes": 8181,
-      "sha256": "511049fa5a74ff3230f51f2f81c116a8ea75c0d2c6456d2d39003c277eb3a673"
+      "bytes": 8260,
+      "sha256": "102fbd97c1bd6f3c1935b8c672d436bceab27ea2e5f24bb1c852c0b15c8f1946"
     },
     {
       "path": "server/loopback_service.py",

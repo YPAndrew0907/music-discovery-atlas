@@ -153,7 +153,7 @@ def main():
                     'uvicorn.access': {'handlers': [], 'propagate': False}}
     }
     uvicorn.run(app, host='0.0.0.0', port=port, workers=1, access_log=False,
-                log_config=log_config, log_level='warning', limit_concurrency=16,
+                log_config=log_config, log_level='warning', limit_concurrency=64,  # 16 refused module requests: a page load fires up to 19 at once (2026-10-07)
                 timeout_keep_alive=5, timeout_graceful_shutdown=15)
 
 

@@ -1,0 +1,63 @@
+{
+ "origin": "https://127.0.0.1:8862",
+ "servedRowsRead": 670,
+ "setupPageReads": [
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200
+ ],
+ "rowsPerRead": 64,
+ "admitted": 286,
+ "otherStatuses": [
+  429
+ ],
+ "firstRefusal": {
+  "request": 287,
+  "retryAfter": "60",
+  "body": {
+   "error": "Collection page budget exhausted"
+  }
+ },
+ "seconds": 0.45,
+ "serverCpuSeconds": 0.27,
+ "serverCpuMsPerRequest": 0.941,
+ "pageReadsAfterwards": {
+  "browse": {
+   "status": 429,
+   "retryAfter": "60",
+   "error": "Collection page budget exhausted",
+   "total": null
+  },
+  "next page": {
+   "status": 429,
+   "retryAfter": "60",
+   "error": "Collection page budget exhausted",
+   "total": null
+  },
+  "lookup": {
+   "status": 429,
+   "retryAfter": "60",
+   "error": "Collection page budget exhausted",
+   "total": null
+  },
+  "refinement": {
+   "status": 429,
+   "retryAfter": "60",
+   "error": "Collection page budget exhausted",
+   "total": null
+  }
+ },
+ "searchAfterwards": 200,
+ "loadavg": "{ 120.89 107.97 67.74 }"
+}

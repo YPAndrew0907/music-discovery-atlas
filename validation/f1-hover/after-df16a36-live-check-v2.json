@@ -1,0 +1,289 @@
+{
+ "origin": "https://127.0.0.1:8872",
+ "expectCount": 670,
+ "expectRelease": "b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740",
+ "startedAt": "2026-10-07T17:01:18.351Z",
+ "checks": [
+  {
+   "viewport": "api",
+   "name": "healthz ready",
+   "pass": true,
+   "value": 200
+  },
+  {
+   "viewport": "api",
+   "name": "server manifest binds the selected v2 release",
+   "pass": true,
+   "value": {
+    "catalogCount": 670,
+    "releaseFormat": 2,
+    "bindingStatus": "verified-corpus-release-v2",
+    "corpusReleaseSha256": "b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740",
+    "catalogId": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
+    "anonymous": true,
+    "audioEnabled": true,
+    "deploymentGeneration": "f1-hover-local-proof",
+    "serving": {
+     "sha256": "24515e93d87eedad2a58b490979a419e982eba7d026eb53ea2930d00b2792b1f",
+     "served": 670,
+     "held": 1322
+    }
+   }
+  },
+  {
+   "viewport": "api",
+   "name": "delivery summary: every preview available, local, lazily verified",
+   "pass": true,
+   "value": {
+    "mode": "local",
+    "available": 670,
+    "total": 1992,
+    "scope": "Local inventory and sizes checked at startup; each file SHA-256 verified on first request and whenever its file identity changes"
+   }
+  },
+  {
+   "viewport": "api",
+   "name": "collection pages come from the server",
+   "pass": true,
+   "value": {
+    "total": 670,
+    "first": "fma:10694",
+    "lastRows": 10
+   }
+  },
+  {
+   "viewport": "api",
+   "name": "neighbors are computed on the server",
+   "pass": true,
+   "value": {
+    "status": 200,
+    "row": 33,
+    "results": 16,
+    "traceEvents": 45
+   }
+  },
+  {
+   "viewport": "api",
+   "name": "an audio range is served exactly (206)",
+   "pass": true,
+   "value": {
+    "route": "/audio/010694.mp3",
+    "status": 206,
+    "contentRange": "bytes 0-65535/721553",
+    "contentType": "audio/mpeg"
+   }
+  },
+  {
+   "viewport": "api",
+   "name": "recordings the serving list holds are not served: preview 404, absent from lookups, rows and neighbors 404",
+   "pass": true,
+   "value": {
+    "previews": {
+     "fma:20086": 404,
+     "fma:6679": 404,
+     "fma:39539": 404,
+     "fma:1383": 404,
+     "fma:54465": 404,
+     "fma:112314": 404,
+     "fma:127266": 404,
+     "fma:114223": 404,
+     "fma:114398": 404,
+     "fma:116059": 404,
+     "fma:4389": 404,
+     "fma:149649": 404,
+     "fma:117054": 404,
+     "fma:127637": 404,
+     "fma:149489": 404,
+     "fma:154440": 404,
+     "fma:3854": 404,
+     "fma:120035": 404,
+     "fma:135709": 404,
+     "fma:150311": 404,
+     "fma:110267": 404,
+     "fma:129267": 404,
+     "fma:116382": 404,
+     "fma:129002": 404,
+     "fma:120050": 404
+    },
+    "lookupRows": [],
+    "credit": 404,
+    "served": 670
+   }
+  },
+  {
+   "viewport": "api",
+   "name": "the excluded and quarantined recordings and whole-catalog files are not served",
+   "pass": true,
+   "value": {
+    "excluded": 404,
+    "catalog": 404,
+    "vectors": 404,
+    "quarantined": {
+     "/audio/093518.mp3": 404,
+     "/audio/093519.mp3": 404,
+     "/audio/093520.mp3": 404,
+     "/audio/093521.mp3": 404,
+     "/audio/098077.mp3": 404,
+     "/audio/154569.mp3": 404,
+     "/audio/001382.mp3": 404,
+     "/audio/125279.mp3": 404
+    }
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "atlas h1",
+   "pass": true,
+   "value": "What does it sound like?"
+  },
+  {
+   "viewport": "desktop",
+   "name": "default direction atlas",
+   "pass": true,
+   "value": "atlas"
+  },
+  {
+   "viewport": "desktop",
+   "name": "map open",
+   "pass": true,
+   "value": true
+  },
+  {
+   "viewport": "desktop",
+   "name": "page downloads only the pinned v2 data",
+   "pass": true,
+   "value": [
+    "/search-studio/data/examples.json",
+    "/search-studio/data/layout.json",
+    "/search-studio/data/manifest.json"
+   ]
+  },
+  {
+   "viewport": "desktop",
+   "name": "live server results",
+   "pass": true,
+   "value": {
+    "rows": 12,
+    "scope": "1–12 of 16 · searched 670",
+    "seconds": "0.2",
+    "fps": "39"
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "trace/animation element present",
+   "pass": true,
+   "value": "width: 1.418%;"
+  },
+  {
+   "viewport": "desktop",
+   "name": "playback advances",
+   "pass": true,
+   "value": {
+    "t": 1.205678,
+    "rs": 4,
+    "err": null,
+    "src": "https://127.0.0.1:8872/audio/115768.mp3"
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "audio 206",
+   "pass": true,
+   "value": [
+    {
+     "path": "/audio/115768.mp3",
+     "status": 206
+    }
+   ]
+  },
+  {
+   "viewport": "desktop",
+   "name": "no page errors",
+   "pass": true,
+   "value": []
+  },
+  {
+   "viewport": "mobile",
+   "name": "atlas h1",
+   "pass": true,
+   "value": "What does it sound like?"
+  },
+  {
+   "viewport": "mobile",
+   "name": "default direction atlas",
+   "pass": true,
+   "value": "atlas"
+  },
+  {
+   "viewport": "mobile",
+   "name": "map open",
+   "pass": true,
+   "value": true
+  },
+  {
+   "viewport": "mobile",
+   "name": "page downloads only the pinned v2 data",
+   "pass": true,
+   "value": [
+    "/search-studio/data/examples.json",
+    "/search-studio/data/layout.json",
+    "/search-studio/data/manifest.json"
+   ]
+  },
+  {
+   "viewport": "mobile",
+   "name": "live server results",
+   "pass": true,
+   "value": {
+    "rows": 12,
+    "scope": "1–12 of 16 · searched 670",
+    "seconds": "0.2",
+    "fps": "42"
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "trace/animation element present",
+   "pass": true,
+   "value": "width: 0.215247%;"
+  },
+  {
+   "viewport": "mobile",
+   "name": "playback advances",
+   "pass": true,
+   "value": {
+    "t": 1.207305,
+    "rs": 4,
+    "err": null,
+    "src": "https://127.0.0.1:8872/audio/113179.mp3"
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "audio 206",
+   "pass": true,
+   "value": [
+    {
+     "path": "/audio/113179.mp3",
+     "status": 206
+    }
+   ]
+  },
+  {
+   "viewport": "mobile",
+   "name": "no page errors",
+   "pass": true,
+   "value": []
+  },
+  {
+   "viewport": "desktop",
+   "name": "?direction=list works",
+   "pass": true,
+   "value": "list"
+  }
+ ],
+ "passed": 27,
+ "total": 27,
+ "finishedAt": "2026-10-07T17:01:47.185Z"
+}

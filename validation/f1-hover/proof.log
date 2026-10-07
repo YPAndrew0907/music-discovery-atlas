@@ -1,0 +1,34 @@
+[12:53:02 load 73.50] start before-777a886-sweeps rc=0: {"run":"before-777a886-sweeps","root":"/private/tmp/claude-501/-Users-yipengandrewwang-SOP...
+[12:53:33 load 77.61] before-777a886 sweeps rc=0: before-777a886 SWEEPS {"sweeps":10,"readsIncludingRest":42,"readsWhileMoving":41,"maxReadsInOneSweep":8,"perSweep":[1,8,5,4,5,1,3,2,6,7],"unreadServedDotsCrossed":42,"perSweepCrossed":[1,8,5,4,5,1,3,2,6,7]}
+[12:53:34 load 77.61] stopped before-777a886-sweeps: {"run":"before-777a886-sweeps","cpuTimeBeforeStop":"0:03.45"}
+[12:53:38 load 75.48] start after-df16a36-sweeps rc=0: {"run":"after-df16a36-sweeps","root":"/private/tmp/claude-501/-Users-yipengandrewwang-SOP-...
+[12:54:10 load 57.78] after-df16a36 sweeps rc=0: after-df16a36 SWEEPS {"sweeps":10,"readsIncludingRest":2,"readsWhileMoving":0,"maxReadsInOneSweep":1,"perSweep":[0,0,0,0,0,0,1,0,0,1],"unreadServedDotsCrossed":42,"perSweepCrossed":[1,8,5,4,5,1,3,2,6,7]}
+[12:54:11 load 55.48] stopped after-df16a36-sweeps: {"run":"after-df16a36-sweeps","cpuTimeBeforeStop":"0:03.07"}
+[12:54:15 load 55.48] start before-777a886-mousing1 rc=0: {"run":"before-777a886-mousing1","root":"/private/tmp/claude-501/-Users-yipengandrewwang-S...
+[12:55:23 load 98.51] before-777a886 mousing1 rc=0: before-777a886 MOUSING users=1: 133 rows= reads in the first 60 s, 138 in 62.5 s (0 refused, first refusal at null s); visitor at 60 s: browse 200, next-page 200, lookup 200; user 1 after: browse 200, next-page 200, lookup 200; server CPU 0.29 s
+[12:55:24 load 98.51] stopped before-777a886-mousing1: {"run":"before-777a886-mousing1","cpuTimeBeforeStop":"0:03.69"}
+[12:55:29 load 103.76] start after-df16a36-mousing1 rc=0: {"run":"after-df16a36-mousing1","root":"/private/tmp/claude-501/-Users-yipengandrewwang-SO...
+[12:56:38 load 135.09] after-df16a36 mousing1 rc=0: after-df16a36 MOUSING users=1: 2 rows= reads in the first 60 s, 2 in 62.8 s (0 refused, first refusal at null s); visitor at 60 s: browse 200, next-page 200, lookup 200; user 1 after: browse 200, next-page 200, lookup 200; server CPU 0.21 s
+[12:56:39 load 135.09] stopped after-df16a36-mousing1: {"run":"after-df16a36-mousing1","cpuTimeBeforeStop":"0:03.59"}
+[12:56:49 load 135.00] start before-777a886-mousing4 rc=0: {"run":"before-777a886-mousing4","root":"/private/tmp/claude-501/-Users-yipengandrewwang-S...
+[12:58:05 load 204.54] before-777a886 mousing4 rc=0: before-777a886 MOUSING users=4: 519 rows= reads in the first 60 s, 557 in 63.3 s (246 refused, first refusal at 34.5 s); visitor at 60 s: browse 200, next-page 429 (Collection page budget exhausted), lookup 429 (Collection page budget exhausted); user 1 after: browse 429 (Collection page budget exhausted), next-page not sent: #next-page is disabled, lookup 200; server CPU 0.82 s
+[12:58:07 load 209.23] stopped before-777a886-mousing4: {"run":"before-777a886-mousing4","cpuTimeBeforeStop":"0:05.21"}
+[12:58:17 load 188.34] start after-df16a36-mousing4 rc=0: {"run":"after-df16a36-mousing4","root":"/private/tmp/claude-501/-Users-yipengandrewwang-SO...
+[12:59:32 load 123.58] after-df16a36 mousing4 rc=0: after-df16a36 MOUSING users=4: 14 rows= reads in the first 60 s, 16 in 62.6 s (0 refused, first refusal at null s); visitor at 60 s: browse 200, next-page 200, lookup 200; user 1 after: browse 200, next-page 200, lookup 200; server CPU 0.22 s
+[12:59:33 load 123.58] stopped after-df16a36-mousing4: {"run":"after-df16a36-mousing4","cpuTimeBeforeStop":"0:04.63"}
+[12:59:38 load 120.89] start before-777a886-rows-budget rc=0: {"run":"before-777a886-rows-budget","root":"/private/tmp/claude-501/-Users-yipengandrewwan...
+[12:59:39 load 120.89] before-777a886 rows budget rc=0: {"origin": "https://127.0.0.1:8862", "servedRowsRead": 670, "setupPageReads": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "rowsPerRead": 64, "admitted": 286, "otherStatuses": [429], "firstRefusal": {"request": 287, "retryAfter": "60", "body": {"error": "Collection page budget exhausted"}}, "seconds": 0.45, "serverCpuSeconds": 0.27, "serverCpuMsPerRequest": 0.941, "pageReadsAfterwards": {"browse": {"status": 429, "retryAfter": "60", "error": "Collection page budget exh
+[12:59:40 load 120.89] stopped before-777a886-rows-budget: {"run":"before-777a886-rows-budget","cpuTimeBeforeStop":"0:03.54"}
+[12:59:45 load 130.83] start after-df16a36-rows-budget rc=0: {"run":"after-df16a36-rows-budget","root":"/private/tmp/claude-501/-Users-yipengandrewwang...
+[12:59:47 load 128.52] after-df16a36 rows budget rc=0: {"origin": "https://127.0.0.1:8872", "servedRowsRead": 670, "setupPageReads": [200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200], "rowsPerRead": 64, "admitted": 600, "otherStatuses": [429], "firstRefusal": {"request": 601, "retryAfter": "59", "body": {"error": "Collection row budget exhausted"}}, "seconds": 1.33, "serverCpuSeconds": 0.8, "serverCpuMsPerRequest": 1.331, "pageReadsAfterwards": {"browse": {"status": 200, "retryAfter": null, "error": null, "total": 670}, "next pa
+[12:59:48 load 128.52] stopped after-df16a36-rows-budget: {"run":"after-df16a36-rows-budget","cpuTimeBeforeStop":"0:04.74"}
+[12:59:51 load 134.08] start after-df16a36-page-check rc=0: {"run":"after-df16a36-page-check","root":"/private/tmp/claude-501/-Users-yipengandrewwang-...
+[13:00:32 load 120.29] after-df16a36 browser_v2_check rc=0: 28/28 checks passed
+[13:00:33 load 120.29] stopped after-df16a36-page-check: {"run":"after-df16a36-page-check","cpuTimeBeforeStop":"0:03.80"}
+[13:00:33 load 120.29] done
+[13:01:17 load 92.43] started live-checks server: {"run":"after-df16a36-live-checks","root":"/private/tmp/clau...
+[13:01:47 load 102.09] live_check_v2 rc=0: LIVE_CHECK_V2 27/27
+[13:01:50 load 102.09] browser_credits_v2 rc=0: v2 credits browser checks passed at https://127.0.0.1:8872 (12 + 12 checks, desktop and mobile)
+{"run":"after-df16a36-live-checks","cpuTimeBeforeStop":"0:04.39"}
+[13:01:57 load 94.87] rows budget 2 rc=0: 600 {'error': 'Collection row budget exhausted'} 0.74 1.231 {'browse': 200, 'next page': 200, 'lookup': 200, 'refinement': 200} 200
+{"run":"after-df16a36-rows-budget-2","cpuTimeBeforeStop":"0:04.28"}

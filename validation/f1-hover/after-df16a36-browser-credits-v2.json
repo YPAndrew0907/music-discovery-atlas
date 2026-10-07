@@ -1,0 +1,47 @@
+{
+ "origin": "https://127.0.0.1:8872",
+ "viewports": {
+  "desktop": {
+   "viewport": {
+    "width": 1440,
+    "height": 1000
+   },
+   "pages": 14,
+   "checks": [
+    "first page is HTML",
+    "lang, title, one h1, heading order, one h2 per credit, no script",
+    "one labelled main, two distinctly labelled navigations",
+    "both page jumps have an accessible name",
+    "Tab shows the skip link; Enter moves focus to the credits",
+    "keyboard order: skip link, map link, page links, page jump",
+    "no horizontal scroll on pages 1, 7 and 14",
+    "out-of-range pages clamp",
+    "the page jump submits",
+    "an ID redirects to its page and its article is in view",
+    "an unknown ID is a 404 page with one h1",
+    "the small credits page forwards an old #fma-N link"
+   ]
+  },
+  "mobile": {
+   "viewport": {
+    "width": 390,
+    "height": 844
+   },
+   "pages": 14,
+   "checks": [
+    "first page is HTML",
+    "lang, title, one h1, heading order, one h2 per credit, no script",
+    "one labelled main, two distinctly labelled navigations",
+    "both page jumps have an accessible name",
+    "Tab shows the skip link; Enter moves focus to the credits",
+    "keyboard order: skip link, map link, page links, page jump",
+    "no horizontal scroll on pages 1, 7 and 14",
+    "out-of-range pages clamp",
+    "the page jump submits",
+    "an ID redirects to its page and its article is in view",
+    "an unknown ID is a 404 page with one h1",
+    "the small credits page forwards an old #fma-N link"
+   ]
+  }
+ }
+}

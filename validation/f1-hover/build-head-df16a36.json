@@ -1,0 +1,32 @@
+{
+ "ref": "df16a36",
+ "commit": "df16a362c5eaf955dfffed1b1521bc950e7ba38a",
+ "how": "git worktree add --detach, then the image build steps (build_worktree_root.sh)",
+ "buildPython": "3.12.14 3.54.0",
+ "release": "fma2000-v2, release format 2.1, b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740",
+ "activation": {
+  "changed": 38,
+  "checkOk": true
+ },
+ "installer": {
+  "installed": true,
+  "action": "verified",
+  "releaseSha256": "b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740",
+  "count": 1992,
+  "lookupIndex": "fts5-trigram-v1"
+ },
+ "interpreterCheck": "Hydration interpreter and requests dependency verified",
+ "fetchModel": "exit 0, no output (the pinned model was copied in first, so the step only verified it)",
+ "hydratePlan": {
+  "verified": true,
+  "releaseFormat": 2,
+  "tracks": 1992,
+  "rangeBytes": 1945985122
+ },
+ "hydration": {
+  "available": 1992,
+  "totalSeconds": 8.86,
+  "source": "the verified local MP3 cache instead of the official FMA ranges (local proof only)"
+ },
+ "gitStatusLinesAfterBuild": 16
+}

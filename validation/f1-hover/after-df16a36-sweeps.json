@@ -1,0 +1,237 @@
+{
+ "label": "after-df16a36",
+ "origin": "https://127.0.0.1:8872",
+ "mode": "sweeps",
+ "loadavg": "{ 57.78 50.37 35.75 }",
+ "sweeps": [
+  {
+   "view": "overview",
+   "dy": -120,
+   "density": "320 selectable · zoom in for links",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 451
+   },
+   "sweepMs": 1004,
+   "maxMoveGapMs": 20,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 1,
+   "pageErrors": [],
+   "screenshot": null
+  },
+  {
+   "view": "overview",
+   "dy": -60,
+   "density": "320 selectable · zoom in for links",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 511
+   },
+   "sweepMs": 1043,
+   "maxMoveGapMs": 52,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 8,
+   "pageErrors": [],
+   "screenshot": null
+  },
+  {
+   "view": "overview",
+   "dy": 0,
+   "density": "320 selectable · zoom in for links",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 571
+   },
+   "sweepMs": 1008,
+   "maxMoveGapMs": 23,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 5,
+   "pageErrors": [],
+   "screenshot": "sweep-overview-dy0.jpg"
+  },
+  {
+   "view": "overview",
+   "dy": 60,
+   "density": "320 selectable · zoom in for links",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 631
+   },
+   "sweepMs": 1006,
+   "maxMoveGapMs": 20,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 4,
+   "pageErrors": [],
+   "screenshot": null
+  },
+  {
+   "view": "overview",
+   "dy": 120,
+   "density": "320 selectable · zoom in for links",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 691
+   },
+   "sweepMs": 1006,
+   "maxMoveGapMs": 20,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 5,
+   "pageErrors": [],
+   "screenshot": null
+  },
+  {
+   "view": "zoom 4.3x",
+   "dy": -120,
+   "density": "420 selectable · 5 links of the selection",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 451
+   },
+   "sweepMs": 1020,
+   "maxMoveGapMs": 37,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 1,
+   "pageErrors": [],
+   "screenshot": null
+  },
+  {
+   "view": "zoom 4.3x",
+   "dy": -60,
+   "density": "420 selectable · 5 links of the selection",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 511
+   },
+   "sweepMs": 1010,
+   "maxMoveGapMs": 22,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 1,
+   "statuses": [
+    200
+   ],
+   "rows": [
+    "715"
+   ],
+   "unreadServedDotsCrossed": 3,
+   "pageErrors": [],
+   "screenshot": null
+  },
+  {
+   "view": "zoom 4.3x",
+   "dy": 0,
+   "density": "420 selectable · 5 links of the selection",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 571
+   },
+   "sweepMs": 1009,
+   "maxMoveGapMs": 24,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 2,
+   "pageErrors": [],
+   "screenshot": "sweep-zoom-4-3x-dy0.jpg"
+  },
+  {
+   "view": "zoom 4.3x",
+   "dy": 60,
+   "density": "420 selectable · 5 links of the selection",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 631
+   },
+   "sweepMs": 1008,
+   "maxMoveGapMs": 22,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 0,
+   "statuses": [],
+   "rows": [],
+   "unreadServedDotsCrossed": 6,
+   "pageErrors": [],
+   "screenshot": null
+  },
+  {
+   "view": "zoom 4.3x",
+   "dy": 120,
+   "density": "420 selectable · 5 links of the selection",
+   "line": {
+    "x0": 270,
+    "x1": 770,
+    "y": 691
+   },
+   "sweepMs": 1007,
+   "maxMoveGapMs": 20,
+   "readsWhileMoving": 0,
+   "readsIncludingRest": 1,
+   "statuses": [
+    200
+   ],
+   "rows": [
+    "413"
+   ],
+   "unreadServedDotsCrossed": 7,
+   "pageErrors": [],
+   "screenshot": null
+  }
+ ],
+ "summary": {
+  "sweeps": 10,
+  "readsIncludingRest": 2,
+  "readsWhileMoving": 0,
+  "maxReadsInOneSweep": 1,
+  "perSweep": [
+   0,
+   0,
+   0,
+   0,
+   0,
+   0,
+   1,
+   0,
+   0,
+   1
+  ],
+  "unreadServedDotsCrossed": 42,
+  "perSweepCrossed": [
+   1,
+   8,
+   5,
+   4,
+   5,
+   1,
+   3,
+   2,
+   6,
+   7
+  ]
+ }
+}

@@ -1,0 +1,33 @@
+Suite runs for the F1 receipt, 2026-10-07 (EDT), platform-v2 at df16a36 with a clean tree before and after
+every run. B=/Users/yipengandrewwang/SOP_2027/music_app_2026-10-05, run from $B/repo.
+
+Re-run for this receipt (12:42-12:56):
+  node --test 'tests/*.test.mjs'                                       tests 95, pass 95, fail 0
+  $B/venv/bin/python -m unittest tests.test_api_v2 tests.test_public_api tests.test_public_web
+                                                                       Ran 37 tests, OK
+  $B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'     Ran 171 tests, OK (106 s)
+  node --test --test-reporter=spec tests/web_collection_v2.test.mjs    13 pass, 0 fail; the sweep test says:
+    overview: 23 unread dots crossed, 0 read; 4x zoom: 16 unread dots crossed, 1 read
+
+The same harness sweep against the page before the fix (a scratch copy: git archive of df16a36 with
+777a886's web/search-studio/src/app.mjs and collection-api.mjs, and the sweep test's three count assertions
+replaced by output; not committed):
+    overview: 23 unread dots crossed, 23 read; overview: 23 read while moving; 4x zoom: 16 unread dots crossed, 16 read; 4x zoom: 16 read while moving
+
+tests/test_release_v2.py alone (the four failures the manager saw):
+  $B/venv/bin/python           (CPython 3.12.13, SQLite 3.50.4)       Ran 21 tests, OK
+  $B/venv-3.12.14/bin/python   (CPython 3.12.14, SQLite 3.54.0)       Ran 21 tests, FAILED (failures=4):
+      test_conversion_is_deterministic (release.json, catalog.sqlite, evidence.sqlite) and
+      test_upgrading_2_0_gives_the_same_catalog_bytes_as_converting_to_2_1
+  $B/venv-3.12.14/bin/python with TMPDIR set to an empty directory     Ran 21 tests, OK
+  Cause: tests/v2_fixtures.py caches its reference conversion under $TMPDIR/music-v2-test-cache/<code_key()>,
+  and code_key() covers the source release and the v2 code but not the SQLite version. The cache was written
+  under SQLite 3.50.4. A conversion under 3.54.0 writes a catalog.sqlite of the same size (10,039,296 bytes)
+  that differs in 18,052 bytes: the header's library version (bytes 96-99: 00 2E 99 B0 = 3054000 against
+  00 2E 8A 14 = 3050004) and content on many pages. Each interpreter is deterministic with its own cache.
+  Outside F1; the fix is to add sqlite3.sqlite_version to code_key().
+
+For comparison:
+  The manager, 12:45: node 95/95; the three API suites 37/37; test_release_v2 4 failures, pre-existing at 777a886.
+  The earlier agent at df16a36 (workspace validation/f1-hover/suites/main-checkout-df16a36): Python 171 OK
+  ($B/venv), Node 95 pass, browser_search_ui and browser_collection_v2 pass.

@@ -1,0 +1,272 @@
+{
+ "label": "before-777a886",
+ "origin": "https://127.0.0.1:8862",
+ "mode": "mousing",
+ "users": 4,
+ "mousingSeconds": 63.344,
+ "loadavgBefore": "{ 128.45 80.61 50.55 }",
+ "loadavgAfter": "{ 204.54 108.57 63.03 }",
+ "serverCpuSecondsFirst60s": 0.76,
+ "serverCpuSecondsWhileMousing": 0.82,
+ "rowsReadsFirst60s": 519,
+ "rowsReadsWhileMousing": 557,
+ "perUser": [
+  {
+   "user": 1,
+   "views": 9,
+   "lines": 44,
+   "pauses": 44,
+   "rowsReads": 152,
+   "rowsReadsFirst60s": 145,
+   "rowsStatuses": {
+    "200": 48,
+    "429": 104
+   },
+   "pageErrors": [],
+   "refusedOrFailed": [
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks"
+   ]
+  },
+  {
+   "user": 2,
+   "views": 9,
+   "lines": 44,
+   "pauses": 44,
+   "rowsReads": 139,
+   "rowsReadsFirst60s": 131,
+   "rowsStatuses": {
+    "200": 76,
+    "429": 63
+   },
+   "pageErrors": [],
+   "refusedOrFailed": [
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks"
+   ]
+  },
+  {
+   "user": 3,
+   "views": 9,
+   "lines": 44,
+   "pauses": 44,
+   "rowsReads": 134,
+   "rowsReadsFirst60s": 121,
+   "rowsStatuses": {
+    "200": 82,
+    "429": 52
+   },
+   "pageErrors": [],
+   "refusedOrFailed": [
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks"
+   ]
+  },
+  {
+   "user": 4,
+   "views": 9,
+   "lines": 44,
+   "pauses": 44,
+   "rowsReads": 132,
+   "rowsReadsFirst60s": 122,
+   "rowsStatuses": {
+    "200": 105,
+    "429": 27
+   },
+   "pageErrors": [],
+   "refusedOrFailed": [
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks",
+    "429 /collection/tracks"
+   ]
+  }
+ ],
+ "visitorAt60s": {
+  "note": "a separate browser context that never hovered; the others kept mousing until its three steps were done",
+  "steps": [
+   {
+    "step": "browse",
+    "atSecond": 60.1,
+    "status": 200,
+    "error": null,
+    "query": "?offset=0&limit=12&facets=1",
+    "ui": {
+     "position": "Page 1 of 56",
+     "heading": "Collection",
+     "status": "Recorded catalog entries, read page by page from this server. No description was sent. Choose a recording, then find its audio neighbors.",
+     "results": 12
+    },
+    "screenshot": "visitor-at-60s-browse.jpg"
+   },
+   {
+    "step": "next-page",
+    "atSecond": 61.5,
+    "status": 429,
+    "error": "Collection page budget exhausted",
+    "query": "?offset=12&limit=12",
+    "ui": {
+     "position": "Page 1 of 56",
+     "heading": "Collection",
+     "status": "Collection page unavailable: Collection page budget exhausted. Previous results remain.",
+     "results": 12
+    },
+    "screenshot": "visitor-at-60s-next-page.jpg"
+   },
+   {
+    "step": "lookup",
+    "atSecond": 62.2,
+    "status": 429,
+    "error": "Collection page budget exhausted",
+    "query": "?q=love&offset=0&limit=12&facets=1",
+    "ui": {
+     "position": "Page 1 of 56",
+     "heading": "Title / artist matches",
+     "status": "Collection page unavailable: Collection page budget exhausted. Previous results remain.",
+     "results": 12
+    },
+    "screenshot": "visitor-at-60s-lookup.jpg"
+   }
+  ]
+ },
+ "user1AfterMousing": {
+  "note": "the first mousing page, right after the mousing stopped",
+  "steps": [
+   {
+    "step": "browse",
+    "atSecond": 63.4,
+    "status": 429,
+    "error": "Collection page budget exhausted",
+    "query": "?offset=0&limit=12&facets=1",
+    "ui": {
+     "position": "Page 1 of 1",
+     "heading": "Collection",
+     "status": "Collection page unavailable: Collection page budget exhausted. Previous results remain.",
+     "results": 5
+    },
+    "screenshot": "user1-after-mousing-browse.jpg"
+   },
+   {
+    "step": "next-page",
+    "atSecond": 64.1,
+    "status": "not sent: #next-page is disabled",
+    "error": null,
+    "query": null,
+    "ui": {
+     "position": "Page 1 of 1",
+     "heading": "Collection",
+     "status": "Collection page unavailable: Collection page budget exhausted. Previous results remain.",
+     "results": 5
+    },
+    "screenshot": "user1-after-mousing-next-page.jpg"
+   },
+   {
+    "step": "lookup",
+    "atSecond": 64.7,
+    "status": 200,
+    "error": null,
+    "query": "?q=love&offset=0&limit=12&facets=1",
+    "ui": {
+     "position": "Page 1 of 1",
+     "heading": "Title / artist matches",
+     "status": "Matched recorded names on this server: 8 recordings.",
+     "results": 8
+    },
+    "screenshot": "user1-after-mousing-lookup.jpg"
+   }
+  ]
+ },
+ "refusedRequests": 249,
+ "firstRefusalAtSecond": 34.5,
+ "refusedPageReads": [
+  {
+   "who": "user 1",
+   "atSecond": 63.4,
+   "path": "/collection/tracks",
+   "query": "?offset=0&limit=12&facets=1"
+  },
+  {
+   "who": "visitor",
+   "atSecond": 61.5,
+   "path": "/collection/tracks",
+   "query": "?offset=12&limit=12"
+  },
+  {
+   "who": "visitor",
+   "atSecond": 62.4,
+   "path": "/collection/tracks",
+   "query": "?q=love&offset=0&limit=12&facets=1"
+  }
+ ],
+ "refusedRowsReads": 246
+}

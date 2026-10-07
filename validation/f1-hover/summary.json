@@ -1,0 +1,246 @@
+{
+ "finding": "F1 (High) of the scale UI code review: map hover reads drained the shared /collection/tracks budget",
+ "fix": {
+  "code": "8a1208223ef1c60dfe14df91a562ab03daf3abe1",
+  "documents": "df16a362c5eaf955dfffed1b1521bc950e7ba38a"
+ },
+ "before": "777a886ef59c65c0d7b551f4acbc585a34a88c77",
+ "after": "df16a362c5eaf955dfffed1b1521bc950e7ba38a (HEAD; the same code as 8a12082)",
+ "setup": {
+  "release": "fma2000-v2, release format 2.1, b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740; the serving list serves 670 of 1,992",
+  "roots": "git worktrees of each commit put through the image build steps (build-*.json)",
+  "server": "server/hosting.py on CPython 3.12.14 (venv-3.12.14), anonymous preview, audio on, behind the local TLS terminator; a fresh process per run",
+  "browser": "Playwright 1.63.0, headless Chromium, 1440 x 900",
+  "date": "2026-10-07, 12:51-13:02 EDT, load average 50-210 (a shared machine)"
+ },
+ "sweeps": {
+  "what": "ten 1 s, 500 px pointer sweeps at 60 Hz (five lines at the overview, five at 4.3x zoom), a fresh page each, then a 750 ms rest",
+  "before-777a886": {
+   "rowReadsIncludingRest": 42,
+   "rowReadsWhileMoving": 41,
+   "maxInOneSweep": 8,
+   "perSweep": [
+    1,
+    8,
+    5,
+    4,
+    5,
+    1,
+    3,
+    2,
+    6,
+    7
+   ],
+   "unreadServedDotsCrossed": 42,
+   "perSweepCrossed": [
+    1,
+    8,
+    5,
+    4,
+    5,
+    1,
+    3,
+    2,
+    6,
+    7
+   ]
+  },
+  "after-df16a36": {
+   "rowReadsIncludingRest": 2,
+   "rowReadsWhileMoving": 0,
+   "maxInOneSweep": 1,
+   "perSweep": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+    0,
+    1
+   ],
+   "unreadServedDotsCrossed": 42,
+   "perSweepCrossed": [
+    1,
+    8,
+    5,
+    4,
+    5,
+    1,
+    3,
+    2,
+    6,
+    7
+   ]
+  }
+ },
+ "mousing": {
+  "what": "60 s of continuous mousing (zigzag at 800 px/s, 300 ms pause at each turn, view changes); at 60 s a visitor who never hovered browses, pages and looks up \"love\" while the others keep mousing; then user 1 does the same",
+  "before-777a886 1 user(s)": {
+   "rowReadsFirst60s": 133,
+   "rowReadsRefused": 0,
+   "firstRefusalAtSecond": null,
+   "visitorAt60s": {
+    "browse": 200,
+    "next-page": 200,
+    "lookup": 200
+   },
+   "user1AfterMousing": {
+    "browse": 200,
+    "next-page": 200,
+    "lookup": 200
+   },
+   "serverCpuSeconds": 0.29,
+   "loadavg": [
+    "{ 52.96 49.58 35.64 }",
+    "{ 98.51 62.08 41.26 }"
+   ]
+  },
+  "before-777a886 4 user(s)": {
+   "rowReadsFirst60s": 519,
+   "rowReadsRefused": 246,
+   "firstRefusalAtSecond": 34.5,
+   "visitorAt60s": {
+    "browse": 200,
+    "next-page": "429 Collection page budget exhausted",
+    "lookup": "429 Collection page budget exhausted"
+   },
+   "user1AfterMousing": {
+    "browse": "429 Collection page budget exhausted",
+    "next-page": "not sent: #next-page is disabled",
+    "lookup": 200
+   },
+   "serverCpuSeconds": 0.82,
+   "loadavg": [
+    "{ 128.45 80.61 50.55 }",
+    "{ 204.54 108.57 63.03 }"
+   ]
+  },
+  "after-df16a36 1 user(s)": {
+   "rowReadsFirst60s": 2,
+   "rowReadsRefused": 0,
+   "firstRefusalAtSecond": null,
+   "visitorAt60s": {
+    "browse": 200,
+    "next-page": 200,
+    "lookup": 200
+   },
+   "user1AfterMousing": {
+    "browse": 200,
+    "next-page": 200,
+    "lookup": 200
+   },
+   "serverCpuSeconds": 0.21,
+   "loadavg": [
+    "{ 105.06 64.71 42.44 }",
+    "{ 135.09 78.31 49.04 }"
+   ]
+  },
+  "after-df16a36 4 user(s)": {
+   "rowReadsFirst60s": 14,
+   "rowReadsRefused": 0,
+   "firstRefusalAtSecond": null,
+   "visitorAt60s": {
+    "browse": 200,
+    "next-page": 200,
+    "lookup": 200
+   },
+   "user1AfterMousing": {
+    "browse": 200,
+    "next-page": 200,
+    "lookup": 200
+   },
+   "serverCpuSeconds": 0.22,
+   "loadavg": [
+    "{ 182.90 111.36 65.37 }",
+    "{ 123.58 108.28 67.61 }"
+   ]
+  }
+ },
+ "rowsBudget": {
+  "what": "rows= reads of 64 distinct served rows each, as fast as one connection sends them, on a fresh server, after 14 page reads that list the served rows",
+  "before-777a886": {
+   "admitted": 286,
+   "firstRefusal": {
+    "request": 287,
+    "error": "Collection page budget exhausted",
+    "retryAfter": "60"
+   },
+   "serverCpuSeconds": 0.27,
+   "pageReadsAfterwards": {
+    "browse": 429,
+    "next page": 429,
+    "lookup": 429,
+    "refinement": 429
+   },
+   "searchAfterwards": 200,
+   "loadavg": "{ 120.89 107.97 67.74 }"
+  },
+  "after-df16a36": {
+   "admitted": 600,
+   "firstRefusal": {
+    "request": 601,
+    "error": "Collection row budget exhausted",
+    "retryAfter": "59"
+   },
+   "serverCpuSeconds": 0.8,
+   "pageReadsAfterwards": {
+    "browse": 200,
+    "next page": 200,
+    "lookup": 200,
+    "refinement": 200
+   },
+   "searchAfterwards": 200,
+   "loadavg": "{ 128.52 110.11 68.98 }"
+  },
+  "after-df16a36 (second sample)": {
+   "admitted": 600,
+   "firstRefusal": {
+    "request": 601,
+    "error": "Collection row budget exhausted",
+    "retryAfter": "59"
+   },
+   "serverCpuSeconds": 0.74,
+   "pageReadsAfterwards": {
+    "browse": 200,
+    "next page": 200,
+    "lookup": 200,
+    "refinement": 200
+   },
+   "searchAfterwards": 200,
+   "loadavg": "{ 94.87 104.63 72.73 }"
+  }
+ },
+ "pageChecksAtHead": {
+  "browser_v2_check (EXPECT_COUNT=670)": "28/28",
+  "live_check_v2": "27/27",
+  "browser_credits_v2": "12 + 12 (desktop and mobile)"
+ },
+ "harness": {
+  "what": "tests/web_collection_v2.test.mjs: a 1 s, 500 px sweep at 60 Hz through the real AudioMap in the app harness, then a 250 ms rest",
+  "777a886 page": {
+   "overview": {
+    "unreadDotsCrossed": 23,
+    "read": 23,
+    "readWhileMoving": 23
+   },
+   "4x zoom": {
+    "unreadDotsCrossed": 16,
+    "read": 16,
+    "readWhileMoving": 16
+   }
+  },
+  "df16a36 page": {
+   "overview": {
+    "unreadDotsCrossed": 23,
+    "read": 0
+   },
+   "4x zoom": {
+    "unreadDotsCrossed": 16,
+    "read": 1
+   }
+  }
+ }
+}

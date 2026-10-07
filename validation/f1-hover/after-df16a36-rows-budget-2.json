@@ -1,0 +1,63 @@
+{
+ "origin": "https://127.0.0.1:8872",
+ "servedRowsRead": 670,
+ "setupPageReads": [
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200,
+  200
+ ],
+ "rowsPerRead": 64,
+ "admitted": 600,
+ "otherStatuses": [
+  429
+ ],
+ "firstRefusal": {
+  "request": 601,
+  "retryAfter": "59",
+  "body": {
+   "error": "Collection row budget exhausted"
+  }
+ },
+ "seconds": 1.27,
+ "serverCpuSeconds": 0.74,
+ "serverCpuMsPerRequest": 1.231,
+ "pageReadsAfterwards": {
+  "browse": {
+   "status": 200,
+   "retryAfter": null,
+   "error": null,
+   "total": 670
+  },
+  "next page": {
+   "status": 200,
+   "retryAfter": null,
+   "error": null,
+   "total": 670
+  },
+  "lookup": {
+   "status": 200,
+   "retryAfter": null,
+   "error": null,
+   "total": 8
+  },
+  "refinement": {
+   "status": 200,
+   "retryAfter": null,
+   "error": null,
+   "total": 0
+  }
+ },
+ "searchAfterwards": 200,
+ "loadavg": "{ 94.87 104.63 72.73 }"
+}

@@ -1,0 +1,436 @@
+{
+ "origin": "https://127.0.0.1:8872",
+ "expectCount": 670,
+ "startedAt": "2026-10-07T16:59:52.886Z",
+ "loadavg": "{ 134.08 111.57 69.73 }",
+ "checks": [
+  {
+   "viewport": "desktop",
+   "name": "loads only the pinned v2 data (no catalog, vectors, index or ids)",
+   "pass": true,
+   "value": {
+    "readyMs": 460,
+    "dataFiles": [
+     [
+      "/search-studio/data/manifest.json",
+      4467
+     ],
+     [
+      "/search-studio/data/examples.json",
+      586812
+     ],
+     [
+      "/search-studio/data/layout.json",
+      98099
+     ]
+    ],
+    "dataBytes": 689378,
+    "pageBytesAtReady": 917020,
+    "collectionCallsAtReady": 1,
+    "collectionCallsTotal": 18
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "collection count and server readiness",
+   "pass": true,
+   "value": {
+    "count": "670 recordings",
+    "engine": "Server ready"
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "density cloud is drawn from the layout sample and points are selectable",
+   "pass": true,
+   "value": {
+    "painted": 19212,
+    "pixels": 686368,
+    "caption": "94 selectable · 5 links of the selection",
+    "paintedFraction": 0.028
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "browse reads server pages: Page 1 of 56",
+   "pass": true,
+   "value": {
+    "rows": 12,
+    "scope": "Showing 1–12 of 670 recordings · 670 recordings in the collection. Refinements use recorded metadata.",
+    "collectionCall": {
+     "path": "/collection/tracks?offset=0&limit=12&facets=1",
+     "status": 200,
+     "bytes": 4444
+    }
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "next page and absolute ranks",
+   "pass": true,
+   "value": {
+    "rank": "13"
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "last page holds the final 10 recordings",
+   "pass": true,
+   "value": {
+    "rows": 10,
+    "indicator": "661–670 / 670"
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "page jump clamps out-of-range input and returns to page 1",
+   "pass": true,
+   "value": {
+    "position": "Page 1 of 56",
+    "clampRequests": [
+     "/collection/tracks?offset=1199976&limit=12",
+     "/collection/tracks?offset=660&limit=12"
+    ]
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "genre refinement is applied by the server with collection-wide facets",
+   "pass": true,
+   "value": {
+    "folk": "Folk (26)",
+    "indicator": "1–12 / 26",
+    "genreOptions": 14
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "title/artist lookup runs on the server",
+   "pass": true,
+   "value": {
+    "indicator": "1–8 / 8",
+    "first": "Love",
+    "call": {
+     "path": "/collection/tracks?q=love&offset=0&limit=12&facets=1",
+     "status": 200
+    }
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "live server search returns rows with their own metadata and positions",
+   "pass": true,
+   "value": {
+    "scope": "1–12 of 16 · searched 670",
+    "first": "Lost Star",
+    "status": "33 ms server compute; network time is additional. Results ready. The map follows this search through the collection. 2 exact results are outside the approximate graph shortlist."
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "audio neighbors come from /collection/neighbors",
+   "pass": true,
+   "value": {
+    "call": {
+     "path": "/collection/neighbors?row=266",
+     "status": 200,
+     "bytes": 90092
+    },
+    "first": "Άλλες Ζωές"
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "a preview plays from the lazily verified pack",
+   "pass": true,
+   "value": {
+    "readyState": 4,
+    "currentTime": 0.305303,
+    "src": "https://127.0.0.1:8872/audio/113281.mp3",
+    "paused": false
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "no page errors and no horizontal overflow",
+   "pass": true,
+   "value": {
+    "errors": [],
+    "overflow": 0,
+    "requests": 46
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "loads only the pinned v2 data (no catalog, vectors, index or ids)",
+   "pass": true,
+   "value": {
+    "readyMs": 249,
+    "dataFiles": [
+     [
+      "/search-studio/data/manifest.json",
+      4467
+     ],
+     [
+      "/search-studio/data/examples.json",
+      586812
+     ],
+     [
+      "/search-studio/data/layout.json",
+      98099
+     ]
+    ],
+    "dataBytes": 689378,
+    "pageBytesAtReady": 917020,
+    "collectionCallsAtReady": 1,
+    "collectionCallsTotal": 18
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "collection count and server readiness",
+   "pass": true,
+   "value": {
+    "count": "670 recordings",
+    "engine": "Server ready"
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "density cloud is drawn from the layout sample and points are selectable",
+   "pass": true,
+   "value": {
+    "painted": 8993,
+    "pixels": 105846,
+    "caption": "123 selectable · 5 links of the selection",
+    "paintedFraction": 0.085
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "browse reads server pages: Page 1 of 56",
+   "pass": true,
+   "value": {
+    "rows": 12,
+    "scope": "Showing 1–12 of 670 recordings · 670 recordings in the collection. Refinements use recorded metadata.",
+    "collectionCall": {
+     "path": "/collection/tracks?offset=0&limit=12&facets=1",
+     "status": 200,
+     "bytes": 4444
+    }
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "next page and absolute ranks",
+   "pass": true,
+   "value": {
+    "rank": "13"
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "last page holds the final 10 recordings",
+   "pass": true,
+   "value": {
+    "rows": 10,
+    "indicator": "661–670 / 670"
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "page jump clamps out-of-range input and returns to page 1",
+   "pass": true,
+   "value": {
+    "position": "Page 1 of 56",
+    "clampRequests": [
+     "/collection/tracks?offset=1199976&limit=12",
+     "/collection/tracks?offset=660&limit=12"
+    ]
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "genre refinement is applied by the server with collection-wide facets",
+   "pass": true,
+   "value": {
+    "folk": "Folk (26)",
+    "indicator": "1–12 / 26",
+    "genreOptions": 14
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "title/artist lookup runs on the server",
+   "pass": true,
+   "value": {
+    "indicator": "1–8 / 8",
+    "first": "Love",
+    "call": {
+     "path": "/collection/tracks?q=love&offset=0&limit=12&facets=1",
+     "status": 200
+    }
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "live server search returns rows with their own metadata and positions",
+   "pass": true,
+   "value": {
+    "scope": "1–12 of 16 · searched 670",
+    "first": "Scientology and the Masses",
+    "status": "65 ms server compute; network time is additional. Results ready. The map follows this search through the collection. 7 exact results are outside the approximate graph shortlist."
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "audio neighbors come from /collection/neighbors",
+   "pass": true,
+   "value": {
+    "call": {
+     "path": "/collection/neighbors?row=862",
+     "status": 200,
+     "bytes": 107317
+    },
+    "first": "1982"
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "a preview plays from the lazily verified pack",
+   "pass": true,
+   "value": {
+    "readyState": 4,
+    "currentTime": 0.310091,
+    "src": "https://127.0.0.1:8872/audio/024420.mp3",
+    "paused": false
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "no page errors and no horizontal overflow",
+   "pass": true,
+   "value": {
+    "errors": [],
+    "overflow": 0,
+    "requests": 46
+   }
+  },
+  {
+   "viewport": "desktop",
+   "name": "server-search animation plays through its phases at a smooth frame rate",
+   "pass": true,
+   "value": {
+    "notes": [
+     "Ready",
+     "Starting",
+     "Exploring",
+     "Narrowing",
+     "Matches"
+    ],
+    "durationMs": 5017,
+    "frames": 301,
+    "fps": 59.8,
+    "p95FrameMs": 16.799999999999272,
+    "engine": "Live · server"
+   }
+  },
+  {
+   "viewport": "mobile",
+   "name": "server-search animation plays through its phases at a smooth frame rate",
+   "pass": true,
+   "value": {
+    "notes": [
+     "Ready",
+     "Starting",
+     "Exploring",
+     "Narrowing",
+     "Matches"
+    ],
+    "durationMs": 5017,
+    "frames": 302,
+    "fps": 60,
+    "p95FrameMs": 16.799999999999272,
+    "engine": "Live · server"
+   }
+  }
+ ],
+ "network": {
+  "desktop": {
+   "readyMs": 460,
+   "dataFiles": [
+    [
+     "/search-studio/data/manifest.json",
+     4467
+    ],
+    [
+     "/search-studio/data/examples.json",
+     586812
+    ],
+    [
+     "/search-studio/data/layout.json",
+     98099
+    ]
+   ],
+   "dataBytes": 689378,
+   "pageBytesAtReady": 917020,
+   "collectionCallsAtReady": 1,
+   "collectionCallsTotal": 18
+  },
+  "mobile": {
+   "readyMs": 249,
+   "dataFiles": [
+    [
+     "/search-studio/data/manifest.json",
+     4467
+    ],
+    [
+     "/search-studio/data/examples.json",
+     586812
+    ],
+    [
+     "/search-studio/data/layout.json",
+     98099
+    ]
+   ],
+   "dataBytes": 689378,
+   "pageBytesAtReady": 917020,
+   "collectionCallsAtReady": 1,
+   "collectionCallsTotal": 18
+  }
+ },
+ "fps": {
+  "desktop": {
+   "notes": [
+    "Ready",
+    "Starting",
+    "Exploring",
+    "Narrowing",
+    "Matches"
+   ],
+   "durationMs": 5017,
+   "frames": 301,
+   "fps": 59.8,
+   "p95FrameMs": 16.799999999999272,
+   "engine": "Live · server"
+  },
+  "mobile": {
+   "notes": [
+    "Ready",
+    "Starting",
+    "Exploring",
+    "Narrowing",
+    "Matches"
+   ],
+   "durationMs": 5017,
+   "frames": 302,
+   "fps": 60,
+   "p95FrameMs": 16.799999999999272,
+   "engine": "Live · server"
+  }
+ },
+ "browser": "153.0.8010.12",
+ "finishedAt": "2026-10-07T17:00:32.898Z",
+ "passed": 28,
+ "total": 28
+}

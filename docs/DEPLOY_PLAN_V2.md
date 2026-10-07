@@ -4,9 +4,25 @@ Status, 2026-10-06: ready for the manager's decision. Nothing has been pushed or
 
 **Stage 2 is on hold.** The code review of the scale UI (2026-10-06) asks that v2 not be activated publicly until map hover reads stop draining the shared `/collection/tracks` budget (its F1; section 3.2). Its F2 is fixed in `dbb99f1`. Stage 1 serves the v1 selection, which reaches neither finding.
 
+**The serving list: stage 1 serves 670 of the release's 1,992 recordings.** On the manager's decision of 2026-10-06, production must match the rights decision on the day of the push. `corpus-releases/serving.json` is a request-time list: every recording of the selected release, with `serve` true or false and a reason code. The server reads it at start, refuses to start without a list that matches the selected catalog, and applies it to every request:
+
+- A held recording is absent from search results, browse, lookups, neighbors, tiles, links and the credits pages.
+- Its preview route answers 404, and `/v1/manifest` counts only served recordings.
+- The page reads the same list from `/serving.json` for the parts it computes itself.
+
+**The list's content.** The rights decision's keep set (1,236), minus the cautious-counsel review's 47 hold-trigger rows (collages, film audio, third-party remixes, featured performers, other composers, contradicting notices), minus the 532 rows whose MP3 carries an FMA-written licence notice naming NC, ND or SA (13 overlap). That leaves **670 served (CC BY 4.0 406, CC BY 3.0 264) and 1,322 held**.
+
+- `scripts/derive_serving_list.py` reproduces it from the receipts named in the integration receipt.
+- Nothing is deleted from the release: a held row returns by editing its entry once a Wayback or Internet Archive check clears it.
+- **On the stage 1 push the live catalogue drops from 2,000 to 670.**
+
 **Rights fix (merged from `rights-fix-2000`).** The rights research of 2026-10-06 found eight rows of the live 2,000 that must not be served. fma2000 is rebuilt without them: 1,992 recordings, release `32015637…` (was `af67c98a…`). The digests, counts and commands below are the rebuilt release's; `docs/RIGHTS_QUARANTINE.md` has the list, the reasons and the procedure. Stage 1 takes the eight rows off the live site.
 
-**The adopted rights decision goes further.** The decision of the same day (`rights/RIGHTS_DECISION_2026-10-06.md` section 7 and `rights/DECISION.json` in the project workspace) takes 764 of the 2,000 off now through a request-time suppression list and keeps 1,236 serving. Its section 7.2 also lists site changes for before the next deploy: credits beside the player, the takedown page and others. This branch implements 8 of the 764 and none of the site changes. Both stages remove rows and add none.
+**The adopted rights decision goes further.** The decision of the same day (`rights/RIGHTS_DECISION_2026-10-06.md` section 7 and `rights/DECISION.json` in the project workspace) takes 764 of the 2,000 off now through a request-time suppression list and keeps 1,236 serving. Its section 7.2 also lists site changes for before the next deploy: credits beside the player, the takedown page and others.
+
+- **The 764.** Eight are out of the rebuilt release (the quarantine), and the serving list holds the other 756, plus 566 rows of the keep set that the review's rules hold.
+- **The 7.2 changes.** The request-time list (item 1) and the takedown page (item 3, its contact still to come) are built. Items 2 and 4 to 8 are not.
+- **Rows.** Both stages remove rows and add none.
 
 **Scale UI and release format 2.1 (merged from `v2-scale-ui`).** The converter now writes release format 2.1 by default: `catalog.sqlite` also carries an FTS5 trigram index that prefilters name lookups (`docs/PLATFORM_V2.md` 10.2). Stage 2 therefore pins the 2.1 conversion of the rebuilt release, `b537a7ac…`. The 2.0 conversion `279cd21b…` stays the fallback (section 3.2). The merge also brings the paged credits at `/collection/credits`, level of detail for the v2 map and module preloads on the page (`PLATFORM_V2.md` section 10).
 
@@ -48,9 +64,10 @@ The deploy serves the same 1,992 recordings with the same rankings, scores and s
 | `09117d2` | The audio publication verifier keeps no cookies, with a test that can fail (C6, T-6) |
 | `c38bcc5`, `0c57040` | This document, `PLATFORM_V2.md` and `RIGHTS_QUARANTINE.md` updated to the merged branch. `0c57040` corrects the suite counts in 3.1 and 3.2 and two leftover status lines, and adds the head check to 3.1 and the non-fast-forward rollback to 3.4 |
 | `dbb99f1` | A NUL in a lookup or refinement word no longer makes a 2.1 catalog answer 500 (code review of the scale UI, F2); `server/release_v2.py` re-pinned |
-| the documents commit after it | Stage 2 on hold for the review's F1 (3.2); `PLATFORM_V2.md` 10.8 lists the review's open findings |
+| `7404bb6` | Stage 2 on hold for the review's F1 (3.2); `PLATFORM_V2.md` 10.8 lists the review's open findings |
+| the serving-list commits | The request-time serving list (`corpus-releases/serving.json`, `server/serving.py`, the API, gateway and collection routes, the page's `serving.mjs`) with its derivation script; the takedown page; the documents |
 
-**v1 behaviour is unchanged.** For a v1, disabled or absent selection, the new Docker step prints `{"installed": false, ...}` and exits 0. The hydration entrypoint runs its v1 code exactly as before; the new dispatch only takes a pinned, parseable `schemaVersion: 2` file. The v1 server path is untouched. On the v1 page the merged scale UI adds only module preloads and one more map module; its level-of-detail paths are v2-only. Stage 1 below was proved locally with the unmodified production live check, on the merged branch too (section 5.2).
+**v1 behaviour changes only through the serving list.** The server now serves the list's 670 recordings (above); everything else is as before. For a v1, disabled or absent selection, the new Docker step prints `{"installed": false, ...}` and exits 0. The hydration entrypoint runs its v1 code exactly as before; the new dispatch only takes a pinned, parseable `schemaVersion: 2` file. The v1 server path is untouched. On the v1 page the merged scale UI adds only module preloads and one more map module; its level-of-detail paths are v2-only. Stage 1 below was proved locally with the unmodified production live check, on the merged branch too (section 5.2).
 
 **What has never run:**
 
@@ -84,22 +101,27 @@ The deploy serves the same 1,992 recordings with the same rankings, scores and s
    - **At start.** It verifies the package and streams the 24 MB of core release assets.
    - **Audio.** It checks the audio inventory and sizes at start, and hashes each MP3 on its first request.
 
-**Service environment: no change needed.** The live service (configured in the Render dashboard, not by `render.yaml`) plays previews, so it already points at the hydrator's outputs. The v2 build writes the same paths:
+**Service environment: one new variable before stage 1.** The live service (configured in the Render dashboard, not by `render.yaml`) plays previews, so it already points at the hydrator's outputs. The v2 build writes the same paths:
 
 | Variable | Value |
 |---|---|
 | `MUSIC_ENABLE_AUDIO_PREVIEWS` | `1` |
 | `MUSIC_AUDIO_PACK_DIR` | `/app/audio-preview` |
 | `MUSIC_AUDIO_MANIFEST_PATH` | `/app/audio-delivery.verified.json` |
+| `MUSIC_RIGHTS_CONTACT` | **new, set before the stage 1 push:** the e-mail address the takedown page names. The user supplies it |
 
 The anonymous-preview variables also stay as they are.
+
+**The rights contact.** `/notices/takedown.html` is served only with a valid `MUSIC_RIGHTS_CONTACT`. Without one it answers 404, because a page with a blank contact is worse than none (`docs/RIGHTS_QUARANTINE.md` section 6). The address stays out of Git. An unset or malformed value does not stop the server; the page just stays 404.
 
 - **Confirm in the dashboard first.** These values could not be read from here, so confirm them before stage 2.
 - **If they differ, the deploy fails closed.** For example, a manifest path pointing at the disabled `audio-delivery.json` makes the v2 server refuse to start. Render then keeps the previous deploy.
 
 ## 3. Steps
 
-### 3.1 Stage 1: the code and the rights fix, with the v1 selection
+### 3.1 Stage 1: the code, the rights fix and the serving list, with the v1 selection
+
+First, in the Render dashboard, set `MUSIC_RIGHTS_CONTACT` to the address the user gives (section 2). Then:
 
 ```sh
 B=/Users/yipengandrewwang/SOP_2027/music_app_2026-10-05
@@ -124,14 +146,17 @@ git push origin platform-v2:main
 
 ```sh
 O=https://music-discovery-atlas.onrender.com
-curl -s $O/v1/manifest | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['catalogCount'], m['corpusReleaseSha256'])"
-# expect: 1992 32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42   (old deploy: 2000 af67c98a…)
-for f in collection-api.mjs map-lod.mjs; do curl -s -o /dev/null -w "$f %{http_code}\n" $O/search-studio/src/$f; done
+curl -s $O/v1/manifest | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['catalogCount'], m['corpusReleaseSha256'], m.get('serving'))"
+# expect: 670 32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42 {'sha256': '24515e93d87eedad2a58b490979a419e982eba7d026eb53ea2930d00b2792b1f', 'served': 670, 'held': 1322}
+#         (old deploy: 2000 af67c98a… None)
+for f in collection-api.mjs map-lod.mjs serving.mjs; do curl -s -o /dev/null -w "$f %{http_code}\n" $O/search-studio/src/$f; done
 # expect: 200 for each   (old deploy: 404)
 curl -s $O/search-studio/src/app.mjs | shasum -a 256
-# expect: a7fadc1d54b79fe8ae6240b8a219217bdd1611ec3a1f5aeb02b8a62299a61b7b   (old deploy: 0ff395de…)
-for id in 001382 093518 093519 093520 093521 098077 125279 154569; do curl -s -o /dev/null -w "$id %{http_code}\n" $O/audio/$id.mp3; done
-# expect: 404 for each quarantined recording   (old deploy: 200 or 206)
+# expect: 1c037ecfa80100e9a6693bf56f9d0c7f5745389eb66d8468ed58172bba31b005   (old deploy: 0ff395de…)
+for id in 001382 093518 093519 093520 093521 098077 125279 154569 020086 006679 039539 054465; do curl -s -o /dev/null -w "$id %{http_code}\n" -r 0-1 $O/audio/$id.mp3; done
+# expect: 404 for each: the eight quarantined recordings, then four the serving list holds   (old deploy: 206)
+curl -s -o /dev/null -w "takedown %{http_code}\n" $O/notices/takedown.html; curl -s $O/notices/takedown.html | grep -c 'RIGHTS CONTACT'
+# expect: takedown 200, then 0 (no placeholder left)   (404 if MUSIC_RIGHTS_CONTACT is unset or malformed)
 ```
 
 Also confirm in the Render dashboard that the deploy of the pushed commit (`git rev-parse platform-v2`) is Live. The server exposes no commit identifier, so the release digest and these files stand in for one.
@@ -248,7 +273,7 @@ The selection the activation writes:
 B=/Users/yipengandrewwang/SOP_2027/music_app_2026-10-05
 cd $B/repo/.worktrees/activate-fma2000-v2        # any checkout that has tests/live_check_v2.mjs
 NODE_PATH=$B/tooling/node_modules OUT_DIR=$B/validation/v2-deploy/live-production \
-node tests/live_check_v2.mjs                     # expect LIVE_CHECK_V2 26/26 (EXPECT_RELEASE=279cd21b… after the 2.0 fallback)
+node tests/live_check_v2.mjs                     # expect LIVE_CHECK_V2 27/27 (EXPECT_RELEASE=279cd21b… after the 2.0 fallback)
 NODE_PATH=$B/tooling/node_modules MUSIC_UI_EVIDENCE_DIR=$B/validation/v2-deploy/live-production/credits \
 node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web/notices/track-attribution.html
                                                  # expect "v2 credits browser checks passed ... (12 + 12 checks ...)"
@@ -256,7 +281,7 @@ node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web
 
 Neither live check reads the paged credits, so the second command checks them in a real browser: the landmarks, headings and keyboard order, the page jump and its clamping, the ID redirects, the small page's forward of old `#fma-N` links, and no horizontal scroll at desktop and phone widths.
 
-**What the 26 checks cover:**
+**What the 27 checks cover:**
 
 - **Production checks (17).** The same 17 checks as `live_check_atlas.mjs`, on desktop 1440×1000 and mobile 390×844:
   - the h1;
@@ -265,13 +290,14 @@ Neither live check reads the paged credits, so the second command checks them in
   - playback advancing and an `/audio/` 206;
   - no page errors;
   - `?direction=list`.
-- **v2 checks (9):**
+- **v2 checks (10):**
   - `/healthz`;
   - `/v1/manifest` with `releaseFormat` 2, `verified-corpus-release-v2` and the expected release digest;
-  - the delivery summary: local, 1,992 of 1,992 available;
+  - the delivery summary: local, 670 available of 1,992 (the serving list's served rows);
   - server-side collection pages and neighbors;
   - an exact audio range;
   - the excluded `fma:30702`, every recording on the quarantine list and the whole-catalog files return 404;
+  - recordings the serving list holds: previews 404, absent from a lookup of a held title, a held ID's credit 404, and `/serving.json` matches the committed list;
   - on each viewport, the page downloads only the three pinned v2 data files.
 - **Search budget.** The run uses 2 live searches and 1 neighbor read. With the optional probe below it uses 12 of the process's 30 anonymous searches in the hour after the deploy (6 a minute), so run both off-peak.
 
@@ -306,7 +332,8 @@ cd .worktrees/$R
 
   Render rebuilds the v1 image, including the 1.95 GB hydration (about 4 minutes). The v2 deploy keeps serving until the new one is healthy.
 - **Stage 1, and stage 2 with it if it landed:**
-  - Stage 1 carries the rights fix. Returning to `35cec9e` puts the eight quarantined recordings back on the live site, so do it only on the user's decision, as the stop-gap before a rights-only backport.
+  - Stage 1 carries the rights fix and the serving list. Returning to `35cec9e` puts all 2,000 recordings back on the live site: the eight quarantined ones and the 1,322 the list holds. Do it only on the user's decision, as the stop-gap before a rights-only backport.
+  - To return held recordings without touching the code, edit their entries in `corpus-releases/serving.json`, re-pin it (`package-manifest.json`) and push. No release rebuild is needed.
   - `git revert 35cec9e..<stage 1 head>` does not work: the range holds three merge commits, and git refuses to revert a merge without `-m`. Restore the tree instead, as a new commit on top of `origin/main`:
 
     ```sh
@@ -326,7 +353,7 @@ cd .worktrees/$R
     It is not prepared or tested.
   - The commits of `platform-v2`, `v2-deploy` and `v2-scale-ui` change no release data; the `rights-fix-2000` commits do.
 - **A failed build** changes nothing live. Render keeps the most recent successful deploy, and the installer, the hydrator and the server's start-up checks all fail closed.
-- **For an emergency only,** the Render dashboard's rollback to the previous deploy is immediate. Follow it at once with the matching push above, so that `main` matches what runs; otherwise the next push to `main` redeploys the bad head. After stage 1, the previous deploy is the 2,000-track one, so a dashboard rollback past stage 1 brings the quarantined recordings back until the backport is live.
+- **For an emergency only,** the Render dashboard's rollback to the previous deploy is immediate. Follow it at once with the matching push above, so that `main` matches what runs; otherwise the next push to `main` redeploys the bad head. After stage 1, the previous deploy is the 2,000-track one, so a dashboard rollback past stage 1 brings the quarantined and held recordings back until the backport is live.
 - Afterwards: `cd $B/repo && git worktree remove .worktrees/$R`.
 
 ## 4. Object-store mode (for the record; not used for fma2000)
@@ -538,15 +565,33 @@ Two probes were repeated at lower load; the first attempts' receipts are kept:
 
 The stalls follow the machine's swap, not the page. They move between phases and runs; the p95 frame stayed at 16.8 ms in the stalled runs, and the repeats reach 57–60 fps. On v2 the page downloads 0.69 MB of data; on v1, 10.3 MB. At 4× CPU the first map frame came 1.1–2.4 s after navigation on v2 and 1.6–3.2 s on v1.
 
+### 5.3 The serving list at the final head (2026-10-06, evening)
+
+`validation/INTEGRATION_RECEIPT_V2.md` records this run. It covers the suites, the build roots, and real servers for both stages behind the TLS terminator.
+
+**The serving-list checks:**
+
+- `catalogCount` is 670.
+- `/serving.json` matches the committed list.
+- Held previews answer 404, plain and ranged.
+- Search, browse, lookups and neighbors return served recordings only.
+- The credits list the 670.
+- The takedown page answers 200 with a contact set and 404 without.
+
+**Two limits of this run:**
+
+- **No browser.** The workstation's console session ended at 21:45, and no browser could start afterwards: Chromium's Mach-port check-in is refused. So the page was driven by its own code in Node's VM against the real servers (`validation/v2-integrate/final/tools/page_vm_check.mjs`). The browser checks of 5.2 ran on `7404bb6`, before the serving list. Run them again before or right after the stage 1 push.
+- **No new unit tests.** The serving list has none in the repository: writes of `tests/test_serving.py` and `tests/web_serving.test.mjs` were refused in the integrator's session. The real-server checks stand in for them, and adding the tests is an open item.
+
 ## 6. Acceptance on Render (1 CPU, 2 GB)
 
 The local figures above are evidence, not acceptance. Record these after stage 2:
 
 | Measure | How | Accept if |
 |---|---|---|
-| Live check | `tests/live_check_v2.mjs` | 26/26 |
+| Live check | `tests/live_check_v2.mjs` | 27/27 |
 | Paged credits | `tests/browser_credits_v2.mjs` (section 3.3) | 12 + 12 checks pass |
-| Hosted playback | in the live check: a desktop and a mobile preview advance past 1.2 s, `/audio/` answers 206, exact range on the first row's file (`/audio/001383.mp3`) | all pass |
+| Hosted playback | in the live check: a desktop and a mobile preview advance past 1.2 s, `/audio/` answers 206, exact range on the first served row's file | all pass |
 | Memory | Render metrics, the service's memory after the live check and the latency probe | under 700 MiB (local peak 351 MiB, 347 MiB on the merged branch; the v1 baseline measured 370–381 MiB locally) |
 | Cold start | Render deploy log: container start to healthy; then the dashboard's restart of the instance | healthy within Render's health-check window; record the seconds (local 1.5–5.7 s; v1 hashed 2 GB of audio at start) |
 | Search latency | `p95.py` with 10 searches | server compute p95 under 150 ms; record round trip |
@@ -556,6 +601,12 @@ If memory, start or latency miss, roll back stage 2 (section 3.4) and keep the m
 
 ## 7. Still undecided
 
+0. **The 1,322 held recordings.** They return one by one through `corpus-releases/serving.json` as the checks the rights decision names clear them:
+   - the Wayback and Internet Archive checks for the 532 rows with NC, ND or SA notices in their files;
+   - the manual and authority checks;
+   - the review's 47 trigger rows.
+
+   The six collage tracks (fma:6674, 6675, 6677, 6679, 6680, 6684) and the two third-party remixes (fma:39539, 39540) go onto `corpus-releases/quarantine.json` at the next release rebuild. Until then they are held at request time (reasons `R.COLLAGE`, `R.REMIX`).
 1. **An audio host for anything larger than fma2000.**
    - **What exists:** remote mode, the content-addressed key scheme, the publication verifier and its tests. There is no bucket, custom domain, account or budget.
    - **The recommendation:** Cloudflare R2 behind a custom domain (`corpus200k/SOURCES_AND_PLAN.md` 6.7). It needs the user's account and payment decision.

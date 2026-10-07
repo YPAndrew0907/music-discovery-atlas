@@ -2,6 +2,8 @@
 
 Status, 2026-10-06: built on the local branch `rights-fix-2000` (from `v2-deploy`) and merged into `platform-v2`. Nothing is pushed or deployed. The live site (`main` = `35cec9e`) still serves all 2,000 recordings, including the eight below, until `platform-v2` reaches `main` (stage 1 of `DEPLOY_PLAN_V2.md`).
 
+Two lists now apply. This document's quarantine (build time, section 1) takes a recording out of the release itself. The serving list (request time, section 1.1) holds a recording back without a rebuild. With both applied, stage 1 serves 670 of the 2,000.
+
 This document explains the quarantine list, what the first entries are and why, what the rebuild without them changed, and the procedure for the next entry. The evidence comes from the rights research of 2026-10-06 (`rights/research/fma-dataset-and-automated-screen.md` in the project workspace, sections 0, 4.3, 4.5, 7 and 8, Appendix B).
 
 ## 1. The list
@@ -26,7 +28,25 @@ This document explains the quarantine list, what the first entries are and why, 
 - Tests: `tests/test_rights_quarantine.py` (the list itself), `tests/test_fma2000_release.py` (the release, plan, credits and page data hold none of it) and `tests/test_corpus_rebuild_tools.py`.
 - After a deploy, `tests/live_check_v2.mjs` requests every listed preview route and expects 404.
 
-**Who does not read it.** The server never reads the list at run time. A removal reaches the live site only through a rebuilt, re-pinned release and a deploy (section 5). The Docker image carries the file next to the releases, so the list ships with the release it shaped.
+**Who does not read it.** The server never reads the quarantine list at run time. A removal through it reaches the live site only by a rebuilt, re-pinned release and a deploy (section 5). The Docker image carries the file next to the releases, so the list ships with the release it shaped.
+
+### 1.1 The serving list (request time)
+
+`corpus-releases/serving.json` names every recording of the selected release with `serve` true or false and one or more reason codes, which the file defines.
+
+- **How it is applied.** `server/serving.py` binds it to the selected catalog at start; a missing or mismatched list stops the server. The server applies it to every request:
+  - held recordings are absent from search, browse, lookups, neighbors, map tiles and links, and the credits;
+  - their preview routes answer 404;
+  - `/v1/manifest` counts the served recordings and names the list's digest;
+  - `/serving.json` publishes the served rows, so the page applies the same list to what it computes itself.
+- **Where it came from.** It was derived on 2026-10-06 by `scripts/derive_serving_list.py` from:
+  - the rights decision's row buckets;
+  - the embedded-tag scan;
+  - the cautious-counsel review's 47 hold triggers (`rights/SKEPTIC_REVIEW_2026-10-06.md`, findings F2 and F3).
+
+  Of the release's 1,992 recordings it serves **670** (CC BY 4.0 406, CC BY 3.0 264) and holds 1,322. The input digests are in the integration receipt.
+- **What it never does.** It never deletes anything. A held recording stays in the release, so it returns by setting its entry back to served (with the reason for the change in the commit) and deploying.
+- **Which list to use.** Use the serving list for holds that may lift. Use this document's quarantine for rows the evidence rules out for good.
 
 ## 2. The entries of 2026-10-06
 
@@ -148,7 +168,7 @@ The research proposes these response times (section 8.4 of the FMA note; T3 of t
 3. **Run the gates** (5.3).
 4. **Commit and deploy.** Deploying is the user's decision. On Render a push to `main` is live in about 4 minutes. The build hydrates only the plan's ranges, so a removed row's audio is not even downloaded.
 
-There is no faster runtime switch. The server does not read the list. The audio delivery manifest pins every file, and a changed inventory fails closed, which would take the whole site down rather than hide one track. The rebuild below is scripted and takes minutes.
+**The faster switch.** The serving list (section 1.1) takes a recording off at request time without a rebuild: set its entry to `"serve": false` with a reason code, re-pin `corpus-releases/serving.json` in `package-manifest.json`, and deploy. Use it first. Add the quarantine entry and rebuild when the decision is final. The rebuild below is scripted and takes minutes.
 
 ### 5.2 Rebuild
 
@@ -196,7 +216,8 @@ $PY scripts/pin_corpus_release.py --expected-manifest-sha256 $NEW --count N --ch
 - Both browser fixtures (`tests/browser_search_ui.mjs`, `tests/browser_collection_v2.mjs`).
 - The pins `--check`, `scripts/verify_corpus_release.py` and `scripts/hydrate_corpus_audio.py --verify-plan`.
 - A local real server behind the TLS terminator, with `validation/atlas/live_check_atlas.mjs` (its local copy) at 17/17.
-- For v2: the conversion, the activation `--check` and `tests/live_check_v2.mjs` at 26/26.
+- For v2: the conversion, the activation `--check` and `tests/live_check_v2.mjs` at 27/27.
+- The serving list: re-derive it with `scripts/derive_serving_list.py --check` when its inputs change. The server refuses a list that does not name every recording of the selected catalog.
 
 `validation/rights-fix-2000/build_root.sh` runs the image build's steps on a disposable root; `MODE=v1` gives the v1 selection, the default gives an activated v2 root.
 
@@ -204,40 +225,33 @@ $PY scripts/pin_corpus_release.py --expected-manifest-sha256 $NEW --count N --ch
 
 Delete the entry in a reviewed commit that says why. The commit should cite new evidence: the licensor's written permission, or the licensor's page showing an admitted licence again. Then rebuild. A `remove` entry should not return unless the evidence itself turns out to be wrong.
 
-## 6. Takedown contact and proposed page
+## 6. The takedown page
 
-No takedown contact exists in the repository or on the site, and none is invented here.
+**The page.** `web/notices/takedown.html` carries the text recommended by the attribution research of 2026-10-06 (`rights/ATTRIBUTION_PRECEDENTS_2026-10-06.md` section 6, in the project workspace). It covers:
 
-**Contact.** The contact is `[TAKEDOWN CONTACT: to be added by the user]`. It should be an e-mail address the user reads, plus, if the user registers a DMCA agent, the agent's name and postal address. The hosting research recommends registering (T1: $6 in the Copyright Office directory, renewed every three years). That registration needs the user's full legal name and a street address, which only the user can decide to publish.
+- what a rights holder can ask for: removal, a changed or removed credit, a fix, an unlicensed-rights claim, a formal notice under 17 U.S.C. §512(c)(3);
+- what happens next: a reply and the recording switched off within 2 business days;
+- copies elsewhere, privacy, and a list of recordings withdrawn after a request.
 
-**Do not serve the page until the contact is filled in.** A page with a blank contact is worse than none.
+**The contact.** The site has no takedown contact yet, and none is invented here.
 
-Proposed `/notices/takedown.html`, linked from the credits page header and the About dialog:
+- The page names the address given in the service environment as `MUSIC_RIGHTS_CONTACT`: an e-mail address the user reads.
+- The server replaces both `[RIGHTS CONTACT: …]` placeholders with a `mailto:` link.
+- Without a valid address the route answers 404, because a page with a blank contact is worse than none. The checked-in template is never served as it stands.
+- The address stays out of Git.
 
-> **Rights and removal requests**
->
-> Music Discovery Atlas is a non-commercial research demo. It streams 30-second excerpts of recordings that their creators published on the Free Music Archive under CC BY 4.0, CC BY 3.0 or CC0, with the credit and licence of each recording on the [track credits page](/notices/track-attribution.html). It has no ads, payments or sponsors, and no user uploads.
->
-> If you hold rights in a recording here and did not license it this way, or if you want your credit changed or removed, write to **[TAKEDOWN CONTACT]**. Please include:
->
-> 1. the recording's title, or its credits-page link (each entry has its own anchor, such as `#fma-1383`);
-> 2. who you are and how the recording is yours, or whom you act for;
-> 3. what you would like: removal of the recording, or removal or correction of the credit;
-> 4. a way to reach you.
->
-> For a notice under the U.S. Digital Millennium Copyright Act, please also include the elements of 17 U.S.C. §512(c)(3)(A): your physical or electronic signature; identification of the work and of the material you say infringes it; a statement of your good-faith belief that the use is not authorized by the owner, its agent or the law; and a statement, under penalty of perjury, that your notice is accurate and that you are authorized to act for the owner.
->
-> We acknowledge requests within two working days. We take the recording out of the search, the map and playback while we look into it, usually within one business day and always within seven days. We restore it only if the question is settled in writing. Removing a credit on request is an obligation of the CC licences, and we honour it the same way. If a source turns out to have mislabelled rights, we stop taking recordings from that source until its other recordings have been checked.
+**The DMCA agent.** The research recommends not registering a designated agent yet. Registration publishes a full legal name and street address, and the safe harbour it unlocks covers material stored at a user's direction, which this catalogue is not. Register before any user uploads. The decision is the user's.
 
-**Supporting changes when the page goes live:**
+**Still to do** (rights decision 7.2):
 
-- Add the page to `web-manifest.json`, the Git and Docker allowlists, and `package-manifest.json`, as for every served file.
-- Link it from the credits page header (`scripts/build_corpus_credits.py`) and the About dialog.
+- link the page from the credits page header, the About dialog and the player;
+- add the non-commercial statement;
+- add the "Report a rights problem / remove my credit" link on each credit.
 
 ## 7. Open items
 
-1. **Deploy.** Deploying `platform-v2` (stage 1 of `DEPLOY_PLAN_V2.md`) is the user's decision. Until then the eight rows are live.
-2. **The contact and the takedown page** (section 6).
+1. **Deploy.** Deploying `platform-v2` (stage 1 of `DEPLOY_PLAN_V2.md`) is the user's decision. Until then all 2,000 rows are live. On the push the live catalogue drops to the 670 the serving list serves.
+2. **The contact.** `MUSIC_RIGHTS_CONTACT` must be set in the Render dashboard before the push (section 6). The address is the user's.
 3. **The review is not finished for the rest of the 2,000.** The research expects about 1,500 of the 2,000 to pass the full conservative gate. The other two groups:
    - 444 deployed rows are no longer listed on FMA. Their 2017 grant still stands, and the policy for them is a decision still to take.
    - About 4% of the listed rows are expected to show a changed licence.
@@ -254,6 +268,14 @@ Proposed `/notices/takedown.html`, linked from the credits page header and the A
    - 5 contest and song-title holds;
    - 156 manual or authority checks.
 
-   It asks for a request-time suppression list rather than a rebuild per row, and for the site changes of its section 7.2 before the next deploy. This list carries 8 of the 764. The suppression list and the site changes are not built.
+   It asks for a request-time suppression list rather than a rebuild per row, and for the site changes of its section 7.2 before the next deploy.
+
+   **What is built:**
+   - **The suppression list** (section 1.1). It holds 1,322 rows: the decision's 764, less the 8 this quarantine removed, plus 566 that the cautious-counsel review's rules hold.
+   - **The takedown page** (section 6), pending its contact.
+
+   The other site changes of 7.2 are not built.
 4. **The 122 deployed pre-2013 rows labelled "CC BY 4.0"** need the mandatory per-row live and Wayback check (research section 7, step 7). fma:1382 came from that stratum. fma:125279 did not, so the live check is needed across the whole release too.
 5. **The legacy 108 fallback** still contains fma:1382 (section 4).
+6. **The six collage tracks and the two third-party remixes** (fma:6674, 6675, 6677, 6679, 6680, 6684; fma:39539, 39540; rights/ATTRIBUTION_PRECEDENTS_2026-10-06.md finding F2). They are held at request time and go onto this list as `hold` entries at the next release rebuild.
+7. **532 kept MP3s carry an FMA-written licence notice naming NC, ND or SA** (CC BY 4.0 453, CC BY 3.0 79). The serving list holds them until a dated Wayback or Internet Archive check clears each one. The embedded tags are weak evidence of today's licence, and they stay in the files unchanged.

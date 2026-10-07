@@ -683,6 +683,13 @@ Merged on 2026-10-06 on `v2-integrate` and fast-forwarded into `platform-v2`. `v
   - `87b6f11`: the activation refreshes only its own pins;
   - `b34f0ab`: a per-minute budget for `/collection/tracks`;
   - `09117d2`: the verifier keeps no cookies.
+- **The serving list, added after the integration.** A request-time list holds 1,322 of fma2000's 1,992 recordings (`DEPLOY_PLAN_V2.md` section 2; `RIGHTS_QUARANTINE.md` 1.1). In v2 it reaches every collection route:
+  - pages and lookups, through a SQL function in `page_query`;
+  - neighbors, through an `allowed` set in both exact searches;
+  - tiles, which are built over served rows only;
+  - links, `rows=` reads and the paged credits; a held row answers 404.
+
+  Held dots of the pinned overview sample stay on the map, unlabelled and unselectable.
 - **The tests to run.** Both browser fixtures and the Python (170) and Node (92) suites. After stage 2, also `node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web/notices/track-attribution.html`, because neither live check reads the credits pages.
 
 ### 10.8 Still open

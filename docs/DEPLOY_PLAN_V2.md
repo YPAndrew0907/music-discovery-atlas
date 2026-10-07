@@ -2,7 +2,7 @@
 
 Status, 2026-10-06: ready for the manager's decision. Nothing has been pushed or deployed, and production (`main` = `35cec9e`, the Atlas page on the v1 fma2000 release) is unchanged. The work is on the local branch `platform-v2`, which now carries `v2-deploy`, `rights-fix-2000` and `v2-scale-ui` as real merges (section 2) and fast-forwards production `main`. `validation/INTEGRATION_RECEIPT_V2.md` in the project workspace records the merge, every suite and the local proof of the merged branch (section 5.2).
 
-**Stage 2 is on hold.** The code review of the scale UI (2026-10-06) asks that v2 not be activated publicly until map hover reads stop draining the shared `/collection/tracks` budget (its F1; section 3.2). Its F2 is fixed in `dbb99f1`. Stage 1 serves the v1 selection, which reaches neither finding.
+**Stage 2 is no longer on hold for the scale UI review.** The review (2026-10-06) asked that v2 not be activated publicly until map hover reads stop draining the shared `/collection/tracks` budget (its F1). That is fixed in `8a12082` (section 3.2), and its F2 in `dbb99f1`. Stage 1 serves the v1 selection, which reaches neither finding. Stage 2 still comes after stage 1 and needs the user's acceptance of the anonymous CPU budget's residual (section 7, item 6).
 
 **The serving list: stage 1 serves 670 of the release's 1,992 recordings.** On the manager's decision of 2026-10-06, production must match the rights decision on the day of the push. `corpus-releases/serving.json` is a request-time list: every recording of the selected release, with `serve` true or false and a reason code. The server reads it at start, refuses to start without a list that matches the selected catalog, and applies it to every request:
 
@@ -66,6 +66,8 @@ The deploy serves the same 1,992 recordings with the same rankings, scores and s
 | `dbb99f1` | A NUL in a lookup or refinement word no longer makes a 2.1 catalog answer 500 (code review of the scale UI, F2); `server/release_v2.py` re-pinned |
 | `7404bb6` | Stage 2 on hold for the review's F1 (3.2); `PLATFORM_V2.md` 10.8 lists the review's open findings |
 | the serving-list commits | The request-time serving list (`corpus-releases/serving.json`, `server/serving.py`, the API, gateway and collection routes, the page's `serving.mjs`) with its derivation script; the takedown page; the documents |
+| `8a12082` | The map reads a hovered row only after a 250 ms rest and never twice in flight; `rows=` reads have their own budget, 600 a minute (code review of the scale UI, F1). `app.mjs`, `collection-api.mjs` and `server/collection_v2.py` re-pinned |
+| the documents commit after it | Stage 2 no longer on hold for F1 (3.2); the new `app.mjs` digest and suite counts in 3.1 and 3.2; the budgets in section 7, item 6; `PLATFORM_V2.md` 10.8 |
 
 **v1 behaviour changes only through the serving list.** The server now serves the list's 670 recordings (above); everything else is as before. For a v1, disabled or absent selection, the new Docker step prints `{"installed": false, ...}` and exits 0. The hydration entrypoint runs its v1 code exactly as before; the new dispatch only takes a pinned, parseable `schemaVersion: 2` file. The v1 server path is untouched. On the v1 page the merged scale UI adds only module preloads and one more map module; its level-of-detail paths are v2-only. Stage 1 below was proved locally with the unmodified production live check, on the merged branch too (section 5.2).
 
@@ -131,8 +133,8 @@ git rev-parse --abbrev-ref HEAD                                   # must print p
 git merge-base --is-ancestor origin/main platform-v2 && echo fast-forward   # must print fast-forward
 git status --short                                                # must be empty
 git rev-parse platform-v2                                         # must print the head in validation/INTEGRATION_RECEIPT_V2.md
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 170 OK
-node --test tests/web_*.test.mjs                                  # expect 92 pass
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'   # expect 171 OK
+node --test tests/web_*.test.mjs                                  # expect 95 pass
 git push origin platform-v2:main
 ```
 
@@ -152,7 +154,7 @@ curl -s $O/v1/manifest | python3 -c "import json,sys; m=json.load(sys.stdin); pr
 for f in collection-api.mjs map-lod.mjs serving.mjs; do curl -s -o /dev/null -w "$f %{http_code}\n" $O/search-studio/src/$f; done
 # expect: 200 for each   (old deploy: 404)
 curl -s $O/search-studio/src/app.mjs | shasum -a 256
-# expect: 1c037ecfa80100e9a6693bf56f9d0c7f5745389eb66d8468ed58172bba31b005   (old deploy: 0ff395de…)
+# expect: 15ab5ee3aec9a0c74093f3d5d9f5daa5c7136e8beba14bbcbc8cd89c5e0fd124   (old deploy: 0ff395de…)
 for id in 001382 093518 093519 093520 093521 098077 125279 154569 020086 006679 039539 054465; do curl -s -o /dev/null -w "$id %{http_code}\n" -r 0-1 $O/audio/$id.mp3; done
 # expect: 404 for each: the eight quarantined recordings, then four the serving list holds   (old deploy: 206)
 curl -s -o /dev/null -w "takedown %{http_code}\n" $O/notices/takedown.html; curl -s $O/notices/takedown.html | grep -c 'RIGHTS CONTACT'
@@ -174,11 +176,11 @@ curl -s https://music-discovery-atlas.onrender.com/v1/manifest | python3 -c "imp
 
 ### 3.2 Stage 2: activate fma2000-v2 (bundled)
 
-**On hold until the scale UI review's F1 is fixed** (`personal_website_2026-10-05/receipts/relay/scale-ui-code-review/REPORT.md` in the workspace). Hovering the v2 map reads each point's row from `/collection/tracks?rows=N`, without a delay and without skipping reads in flight. That route's budget (300 a minute since `b34f0ab`) is shared by every visitor, so about 15 seconds of mouse movement exhausts it. Browse, lookup and paging then answer 429 for everyone until the minute's window clears. The review's fix:
+**The scale UI review's F1 is fixed in `8a12082`** (the review: `personal_website_2026-10-05/receipts/relay/scale-ui-code-review/REPORT.md` in the workspace; the proof: `validation/F1_FIX_RECEIPT.md`). Hovering the v2 map read each point's row from `/collection/tracks?rows=N` at once, and again while a read was in flight. That route's budget (300 a minute since `b34f0ab`) is shared by every visitor, so mousing made browse, lookup and paging answer 429 for everyone until the minute's window cleared. Now:
 
-- **The page.** Read a hovered row only after about 250 ms on the point, and skip rows already in flight (`onHover` in `app.mjs`).
-- **The server.** Give `rows=` reads (at most 64 primary-key lookups) their own, larger budget.
-- **A test.** Sweep the pointer through the real `AudioMap` in the app harness; today the harness replaces it with `TestAudioMap`.
+- **The page.** A hovered row is read only after the pointer has rested on its dot for 250 ms (`HOVER_READ_MS` in `app.mjs`). Moving on drops the pending read, and `Collection.ensure` joins a read already in flight instead of sending another. A 1 s, 500 px pointer sweep reads nothing while the pointer moves.
+- **The server.** `rows=` reads (at most 64 primary-key lookups each) have their own budget, 600 a minute, apart from the pages' 300. One visitor's hovering sends at most 240 a minute.
+- **The tests.** `tests/web_collection_v2.test.mjs` sweeps the pointer through the real `AudioMap` in the app harness (0 reads at the overview and 1 at 4× zoom, 23 and 16 before) and checks the hover timing with mock timers. `tests/test_api_v2.py` checks that a burst of 600 row reads leaves every page read at 200.
 
 Its F2, a 500 for a NUL in a lookup word on 2.1, is fixed in `dbb99f1`. Before a release above about 8K rows, where tiles switch on, the review also asks for F3 (the 8× zoom cap), F4 (one shared queue and `no-store` for tiles, links, credits and pages) and F5 (region labels at a 40% share); see `PLATFORM_V2.md` 10.8.
 
@@ -200,8 +202,8 @@ $B/venv-3.12.14/bin/python scripts/activate_release_v2.py \
   --expected-manifest-sha256 b537a7ace86ea6eebdd95b2d4cfc908e75487aeef8408295330d02c3e278d740 \
   --name fma2000-v2
 $B/venv-3.12.14/bin/python scripts/activate_release_v2.py --check   # expect "ok": true, lookupIndex fts5-trigram-v1
-$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 170 OK
-node --test tests/web_*.test.mjs                                      # expect 92 pass
+$B/venv/bin/python -m unittest discover -s tests -p 'test_*.py'      # expect 171 OK
+node --test tests/web_*.test.mjs                                      # expect 95 pass
 NODE_PATH=$B/tooling/node_modules node tests/browser_search_ui.mjs       # v1 page fixture: passes
 NODE_PATH=$B/tooling/node_modules node tests/browser_collection_v2.mjs   # v2 page fixture: passes
 git status --short        # exactly the files listed below
@@ -627,9 +629,9 @@ If memory, start or latency miss, roll back stage 2 (section 3.4) and keep the m
 5. **Two things only the dashboard shows.** The service's audio and anonymous-mode environment variables (section 2), and whether the Starter build allowance covers another hydration per deploy.
 6. **The anonymous search budget counts all process CPU** (security review B2).
    - **How it bites.** `PreviewBudget` allows 30 CPU-seconds an hour and counts every route's CPU. Once that is spent, every visitor's search answers 429 for the rest of the hour. v1 has the same weakness through static files and audio; v2 adds the `/collection/` routes.
-   - **What is fixed.** Since `b34f0ab` every collection route has a per-minute cap: pages and lookups 300 (new), credit pages 300, neighbors 60, tiles 2,400, links 600.
+   - **What is fixed.** Since `b34f0ab` every collection route has a per-minute cap: pages and lookups 300 (new), credit pages 300, neighbors 60, tiles 2,400, links 600. Since `8a12082` explicit `rows=` reads, the map's hover and click reads, have their own 600, apart from the pages (scale UI review F1).
    - **Measured on fma2000, through the TLS terminator.** 300 page requests of the review's worst case (`?preview=1&q=a`) cost 0.38 CPU-s. The 301st was refused (429, `Retry-After` 60), and a search right after still answered 200. So pages alone can no longer drain the hour.
-   - **What remains.** With every route at its cap, a client could still spend about 4 CPU-s a minute and drain the budget in about 7 minutes. This estimate uses handler CPU measured in process plus about 0.5 ms of framework overhead per request.
+   - **What remains.** With every route at its cap, a client could still spend about 4.7 CPU-s a minute and drain the budget in about 6½ minutes (about 4 CPU-s and 7 minutes before the `rows=` budget). This estimate uses handler CPU measured in process plus about 0.5 ms of framework overhead per request. For `rows=` that is up to about 0.6 ms for a read of 64 rows, so at most about 0.7 CPU-s a minute; 600 such reads measured 0.34 CPU-s on a local server.
    - **The proper fix.** Charge the budget only for search CPU (thread CPU around encode and search). It changes v1 too and needs its own review.
    - **The decision.** Going ahead with stage 2 before that fix accepts the risk at demo traffic.
 

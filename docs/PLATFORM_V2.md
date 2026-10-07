@@ -148,7 +148,7 @@ In every oracle and benchmark query the first proposal was accepted (no widening
   - Refinement follows `refineCandidates`: every folded word must appear in "title artist album", and the genre must match exactly.
   - `facets=1` returns genre counts over the unrefined set, like `sourceGenres`.
   - `limit` is at most 48.
-- `GET /collection/tracks?rows=…` returns up to 64 explicit rows.
+- `GET /collection/tracks?rows=…` returns up to 64 explicit rows. These are the map's hover and click reads; since `8a12082` they have their own per-minute budget (600), apart from pages and lookups (300).
 - `GET /collection/neighbors?row=R` is the v1 page's neighbor computation on the server: exact top 16 excluding R, plus the trace at k 17, ef 32, trace limit 2,048. It is limited to 60 per minute per process.
 - On `v2-scale-ui`, `GET /collection/tiles` and `/collection/links` serve the map's level of detail, and `GET /collection/credits` serves the track credits page by page. Each has its own per-minute budget (section 10).
 - Every route rejects unknown or oversized parameters with 400 and runs on a two-thread executor with at most 8 pending reads; beyond that it returns 429.
@@ -375,7 +375,7 @@ Today the Dockerfile runs `scripts/hydrate_corpus_audio.py`, which:
    - Starting the budget at readiness is a one-line change. It would change v1 behaviour, so it is left for review.
    - v2 startup costs 1.4–1.9 CPU-seconds warm (v1: 3.8–9.8 at 2,000, 9.5–22 at 5,777).
    - Neighbor exploration now costs server CPU (about 10–20 ms each) and counts against the same hourly budget.
-   - `/collection/tracks` had a concurrency bound (8 pending, then 429) but no per-minute budget. Neighbors had one, and on `v2-scale-ui` so do tiles, links and credits. Since `b34f0ab` it has one too: 300 a minute (`DEPLOY_PLAN_V2.md` section 7, item 6).
+   - `/collection/tracks` had a concurrency bound (8 pending, then 429) but no per-minute budget. Neighbors had one, and on `v2-scale-ui` so do tiles, links and credits. Since `b34f0ab` it has one too: 300 a minute, and since `8a12082` its explicit `rows=` reads have their own 600 (`DEPLOY_PLAN_V2.md` section 7, item 6).
      - At 5,777 a lookup costs 3–10 ms.
      - At 200K a rare-word lookup costs 0.34–0.41 s of CPU. In anonymous mode that would drain the same 30 CPU-seconds per hour that live search needs.
      - Add a per-minute read budget before serving 200K anonymously. Release format 2.1's FTS5 prefilter (section 10.2) takes rare-word lookups to milliseconds, but a word in every row, or one of one or two letters, still scans.
@@ -690,16 +690,17 @@ Merged on 2026-10-06 on `v2-integrate` and fast-forwarded into `platform-v2`. `v
   - links, `rows=` reads and the paged credits; a held row answers 404.
 
   Held dots of the pinned overview sample stay on the map, unlabelled and unselectable.
-- **The tests to run.** Both browser fixtures and the Python (170) and Node (92) suites. After stage 2, also `node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web/notices/track-attribution.html`, because neither live check reads the credits pages.
+- **The tests to run.** Both browser fixtures and the Python (171) and Node (95) suites. After stage 2, also `node tests/browser_credits_v2.mjs https://music-discovery-atlas.onrender.com web/notices/track-attribution.html`, because neither live check reads the credits pages.
 
 ### 10.8 Still open
 
 - **The code review of the scale UI** (2026-10-06, `personal_website_2026-10-05/receipts/relay/scale-ui-code-review/REPORT.md` in the workspace). It keeps the branch merged and confirms release format 2.1, the prefilter, the paged credits and the page-jump fix. Open:
-  - **F1 (High), before v2 goes public:** a hover on the map reads its row from `/collection/tracks` at once and repeats reads in flight, and that route's 300-a-minute budget is shared by every visitor, so about 15 seconds of mousing exhausts it. The fix: a 250 ms hover delay with in-flight dedupe in the page, a separate larger budget for `rows=` reads, and a test through the real map.
   - **Before a release above about 8K rows** (tiles switch on): F3, the 8× zoom cap, which keeps 200K tiles at sample density from the overview (phone z=2, desktop z=3); F4, tiles, links, credits and pages sharing one 2-worker, 8-slot queue with `no-store` replies and per-process budgets; F5, region labels at a 40% genre share with the share not shown.
   - **Lower:** F6, the credits behind a global budget; F7, no context links on the fma2000-v2 map; F8, main-thread rasterising and about 90 MB of canvases; F9, `Retry-After` ignored and failed tiles never evicted; F10, control characters in catalog text; F11, release-format nits; F12, native validation on the credits page jump; F13, failure-path test gaps.
-  - **Fixed:** F2, a NUL in a lookup word answered 500 on 2.1 (`dbb99f1`).
-- **The tracks budget.** Since `b34f0ab`, `/collection/tracks` has a per-minute budget (300). The 2.1 index takes rare and medium lookups from hundreds of milliseconds to a few at 100K–200K. But a word in every row, or one of one or two letters, still scans: 0.40–0.51 s at 200K in-process. A browse page near the end costs an OFFSET walk: 22–32 ms over HTTP at 100K. At 200K the cap alone would let lookups spend the anonymous CPU budget quickly; the anonymous budget counts all process CPU (`DEPLOY_PLAN_V2.md` section 7, item 6).
+  - **Fixed:**
+    - F1, hover reads drained the shared `/collection/tracks` budget (`8a12082`): the page reads a hovered row only after a 250 ms rest and joins reads in flight, and `rows=` reads have their own budget of 600 a minute;
+    - F2, a NUL in a lookup word answered 500 on 2.1 (`dbb99f1`).
+- **The tracks budget.** Since `b34f0ab`, `/collection/tracks` has a per-minute budget (300), and since `8a12082` its explicit `rows=` reads have their own (600). The 2.1 index takes rare and medium lookups from hundreds of milliseconds to a few at 100K–200K. But a word in every row, or one of one or two letters, still scans: 0.40–0.51 s at 200K in-process. A browse page near the end costs an OFFSET walk: 22–32 ms over HTTP at 100K. At 200K the cap alone would let lookups spend the anonymous CPU budget quickly; the anonymous budget counts all process CPU (`DEPLOY_PLAN_V2.md` section 7, item 6).
 - **Measurement conditions.** fps and first paint were measured on a shared Mac whose load swung between 14 and 930 within minutes. The interleaved before/after pairs are the comparable figures; Render's single CPU will be slower per frame of server work, though the page's frame cost is the browser's own.
 - **Synthetic graphs.** The synthetic graphs are random (100K) or JS-built with a test-only orphan repair (200K, round 1). A real 200K build still needs the reviewed connectivity repair (9.4).
 - **The v1 credits page.** The checked-in v1 page still overflows on phones; it is v1 and left unchanged.

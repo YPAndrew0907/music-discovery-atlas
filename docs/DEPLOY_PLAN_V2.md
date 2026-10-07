@@ -2,6 +2,8 @@
 
 Status, 2026-10-06: ready for the manager's decision. Nothing has been pushed or deployed, and production (`main` = `35cec9e`, the Atlas page on the v1 fma2000 release) is unchanged. The work is on the local branch `platform-v2`, which now carries `v2-deploy`, `rights-fix-2000` and `v2-scale-ui` as real merges (section 2) and fast-forwards production `main`. `validation/INTEGRATION_RECEIPT_V2.md` in the project workspace records the merge, every suite and the local proof of the merged branch (section 5.2).
 
+**Stage 2 is on hold.** The code review of the scale UI (2026-10-06) asks that v2 not be activated publicly until map hover reads stop draining the shared `/collection/tracks` budget (its F1; section 3.2). Its F2 is fixed in `dbb99f1`. Stage 1 serves the v1 selection, which reaches neither finding.
+
 **Rights fix (merged from `rights-fix-2000`).** The rights research of 2026-10-06 found eight rows of the live 2,000 that must not be served. fma2000 is rebuilt without them: 1,992 recordings, release `32015637…` (was `af67c98a…`). The digests, counts and commands below are the rebuilt release's; `docs/RIGHTS_QUARANTINE.md` has the list, the reasons and the procedure. Stage 1 takes the eight rows off the live site.
 
 **The adopted rights decision goes further.** The decision of the same day (`rights/RIGHTS_DECISION_2026-10-06.md` section 7 and `rights/DECISION.json` in the project workspace) takes 764 of the 2,000 off now through a request-time suppression list and keeps 1,236 serving. Its section 7.2 also lists site changes for before the next deploy: credits beside the player, the takedown page and others. This branch implements 8 of the 764 and none of the site changes. Both stages remove rows and add none.
@@ -44,7 +46,9 @@ The deploy serves the same 1,992 recordings with the same rankings, scores and s
 | `87b6f11` | The activation refuses stale pins and refreshes only its own (security review B1) |
 | `b34f0ab` | `/collection/tracks` has a per-minute budget, 300 by default (B2) |
 | `09117d2` | The audio publication verifier keeps no cookies, with a test that can fail (C6, T-6) |
-| `c38bcc5` and the sweep after it | This document, `PLATFORM_V2.md` and `RIGHTS_QUARANTINE.md` updated to the merged branch. The sweep corrects the suite counts in 3.1 and 3.2 and two leftover status lines, and adds the head check to 3.1 and the non-fast-forward rollback to 3.4 |
+| `c38bcc5`, `0c57040` | This document, `PLATFORM_V2.md` and `RIGHTS_QUARANTINE.md` updated to the merged branch. `0c57040` corrects the suite counts in 3.1 and 3.2 and two leftover status lines, and adds the head check to 3.1 and the non-fast-forward rollback to 3.4 |
+| `dbb99f1` | A NUL in a lookup or refinement word no longer makes a 2.1 catalog answer 500 (code review of the scale UI, F2); `server/release_v2.py` re-pinned |
+| the documents commit after it | Stage 2 on hold for the review's F1 (3.2); `PLATFORM_V2.md` 10.8 lists the review's open findings |
 
 **v1 behaviour is unchanged.** For a v1, disabled or absent selection, the new Docker step prints `{"installed": false, ...}` and exits 0. The hydration entrypoint runs its v1 code exactly as before; the new dispatch only takes a pinned, parseable `schemaVersion: 2` file. The v1 server path is untouched. On the v1 page the merged scale UI adds only module preloads and one more map module; its level-of-detail paths are v2-only. Stage 1 below was proved locally with the unmodified production live check, on the merged branch too (section 5.2).
 
@@ -110,7 +114,7 @@ node --test tests/web_*.test.mjs                                  # expect 92 pa
 git push origin platform-v2:main
 ```
 
-**What else stage 1 ships.** The merged scale UI. On the v1 page that is the module preloads and the extra map module. The v2 code (format 2.1, paged credits, tiles and links) is never reached with a v1 selection. Section 5.2 proved this code on a stage 1 root (later commits change only documents): the unmodified production check passed 17/17. Any new test of the v1 page must read its data through `tests/v1_page_data.mjs`, or it fails once v2 is active.
+**What else stage 1 ships.** The merged scale UI. On the v1 page that is the module preloads and the extra map module. The v2 code (format 2.1, paged credits, tiles and links) is never reached with a v1 selection. Section 5.2 proved this code on a stage 1 root, and the integration receipt repeats the proof at the final head: the unmodified production check passed 17/17. Any new test of the v1 page must read its data through `tests/v1_page_data.mjs`, or it fails once v2 is active.
 
 **What Render does.** It builds the image with the v1 selection, so the new installer step is a no-op. The v1 selection is now the rebuilt 1,992-track release, and the hydration fetches only its 1,992 planned ranges; the quarantined recordings are never fetched. Expect the usual build-to-live time: the last two deploys were live 230 s and 244 s after their push. Those times include the 1.95 GB hydration, which runs after `COPY web/` and so repeats on every deploy.
 
@@ -144,6 +148,14 @@ curl -s https://music-discovery-atlas.onrender.com/v1/manifest | python3 -c "imp
 ```
 
 ### 3.2 Stage 2: activate fma2000-v2 (bundled)
+
+**On hold until the scale UI review's F1 is fixed** (`personal_website_2026-10-05/receipts/relay/scale-ui-code-review/REPORT.md` in the workspace). Hovering the v2 map reads each point's row from `/collection/tracks?rows=N`, without a delay and without skipping reads in flight. That route's budget (300 a minute since `b34f0ab`) is shared by every visitor, so about 15 seconds of mouse movement exhausts it. Browse, lookup and paging then answer 429 for everyone until the minute's window clears. The review's fix:
+
+- **The page.** Read a hovered row only after about 250 ms on the point, and skip rows already in flight (`onHover` in `app.mjs`).
+- **The server.** Give `rows=` reads (at most 64 primary-key lookups) their own, larger budget.
+- **A test.** Sweep the pointer through the real `AudioMap` in the app harness; today the harness replaces it with `TestAudioMap`.
+
+Its F2, a 500 for a NUL in a lookup word on 2.1, is fixed in `dbb99f1`. Before a release above about 8K rows, where tiles switch on, the review also asks for F3 (the 8× zoom cap), F4 (one shared queue and `no-store` for tiles, links, credits and pages) and F5 (region labels at a 40% share); see `PLATFORM_V2.md` 10.8.
 
 Work in a fresh worktree on `main` after stage 1. The main checkout stays on its own branch, which other work uses.
 
@@ -480,7 +492,7 @@ The latency probe (`p95.py`) was not re-run: at these load averages its timings 
   - roots on the external volume, because the internal disk was full;
   - the merged commit and the 2.1 release by default;
   - a plain copy of the model.
-- **Code.** The final code head is `09117d2`. The later commits change only documents, which neither the image nor the pins contain.
+- **Code.** The code head of these runs is `09117d2`; `c38bcc5` and `0c57040` change only documents, which neither the image nor the pins contain. `dbb99f1` then changed `server/release_v2.py` (v2 lookups only), so the integration receipt repeats the suites, the build proofs and both servers at the final head.
 - **Servers.** One at a time, behind the TLS terminator, in anonymous mode, with audio from the hydrated paths.
 - **Machine.** Heavily loaded: load average 20 to 450, swap nearly full. Every figure below names its load.
 

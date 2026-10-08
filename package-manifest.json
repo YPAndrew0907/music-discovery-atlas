@@ -18,8 +18,8 @@
   "files": [
     {
       "path": "active-corpus.json",
-      "bytes": 282,
-      "sha256": "e816a5d2cf0cd7c26e85cc97823b434c33bb33c07a7c69d1aa045e243ea7ec97"
+      "bytes": 257,
+      "sha256": "b9d3df1b0d3bed8b308404d8e562b0c4804d6004fe660946db73039755badf7d"
     },
     {
       "path": "audio-delivery.json",
@@ -18158,8 +18158,8 @@
     },
     {
       "path": "web-manifest.json",
-      "bytes": 9242,
-      "sha256": "9093da6992e3e058bcd19b16d57c276fdfbaaf871b628ebbae10f51d1680af66"
+      "bytes": 8394,
+      "sha256": "cbdd0ce17286053ec854314c6fb6581d361a860870857aeb8b5093cb7c6b3d13"
     },
     {
       "path": "web/listen-lab/runtime/ort-wasm-simd-threaded.mjs",
@@ -18298,48 +18298,23 @@
     },
     {
       "path": "web/notices/track-attribution.html",
-      "bytes": 3832239,
-      "sha256": "45ae129825ac4d6ae279eab4546553670eeab4738bb1bf4d68f4fb2d040ae569"
-    },
-    {
-      "path": "web/search-studio/data/artist-records.json",
-      "bytes": 160829,
-      "sha256": "5a28677a9c7f1bafb76b30e410925c6c9a8a5dd33e50131f448a9fc722d4f5e6"
-    },
-    {
-      "path": "web/search-studio/data/catalog.json",
-      "bytes": 4520886,
-      "sha256": "357e1db3de4e83e82f0daf03c10d0f392369e45346b4d8084a692ebd334a67db"
+      "bytes": 975,
+      "sha256": "b0ff9f7a42510b2eee91a32b05674fa078d6c26fb476a857019a0daec94ddc15"
     },
     {
       "path": "web/search-studio/data/examples.json",
-      "bytes": 1209863,
-      "sha256": "5e9ab0e42c105059bc1117b157c36fc2bc2de043ab3a051f0e2f2b242939ec0d"
-    },
-    {
-      "path": "web/search-studio/data/ids.json",
-      "bytes": 31167,
-      "sha256": "edeb1206bcd5096eb2ad81a3748980b621b44ca117134c4bd4cc83bbd58cc7b4"
-    },
-    {
-      "path": "web/search-studio/data/index.json",
-      "bytes": 122147,
-      "sha256": "5bec8ddc4c9532e83b3c0045d6ee02b59fb4306c6918009780a4f2aa491d6e54"
+      "bytes": 586812,
+      "sha256": "2dbcf7482a4bca7e033eb2412e864e856b6de1523a124a6dcd64d3523c9b68e1"
     },
     {
       "path": "web/search-studio/data/layout.json",
-      "bytes": 167598,
-      "sha256": "f49d8688047644b95b8547d963efd7c2f64def7f702185f7bb04306ab08d35cb"
+      "bytes": 98099,
+      "sha256": "2ec27c27bcc27a751b074ce6a534a6f3fbc06955e850eb1f12b6911d045d03fe"
     },
     {
       "path": "web/search-studio/data/manifest.json",
-      "bytes": 47973,
-      "sha256": "afabc1692312ab4f8170a5c44112aa7250730be8051e3ff61d99062e23182766"
-    },
-    {
-      "path": "web/search-studio/data/vectors.f32",
-      "bytes": 4079616,
-      "sha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba"
+      "bytes": 4467,
+      "sha256": "cebbefa8a90dc43473b5c9ff77480e73ec6a52dcd58155292862e170f8dcaf4f"
     },
     {
       "path": "web/search-studio/index.html",
@@ -18404,7 +18379,7 @@
     {
       "path": "web/search-studio/src/studio-release.mjs",
       "bytes": 195,
-      "sha256": "1d05a2cb3aa9390cd389cdb6c620c87c97e4e50cb1073d8b8e5f2a7b21f1efa2"
+      "sha256": "3cbd8eac649445464a4a06b31209866916ed5e1ed4383593a57fef2b4fca8842"
     },
     {
       "path": "web/search-studio/src/map-lod.mjs",

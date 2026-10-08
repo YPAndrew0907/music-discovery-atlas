@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 2,
+  "kind": "music-corpus-release-v2",
+  "minorVersion": 1,
+  "catalogId": "fma2000:5b0a3ccd9307b284ff90416b1722cc7a8620573858663c05450595ea7a0e7531",
+  "graphId": "experimental-clap-audio-graph:a894cb5f38ffed73548969aacb821b348a02312cbc0e1087141e73946849f45a",
+  "count": 1992,
+  "dimensions": 512,
+  "pairId": "experimental-fma-q8:3d5a3ebe3ac4bd09fa96f05fdefc2df1ae841d2562dea913abb8a5990b377566",
+  "orderedIdsSha256": "e7dac8948f1a787835a556e2376fcae976af2c4a728e60d73b45fed24ecd8a01",
+  "vectorsSha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba",
+  "assets": {
+    "catalog": {
+      "path": "catalog.sqlite",
+      "bytes": 10039296,
+      "sha256": "7550c4dd34218c930be2ad03d7126574d4e2d08ac63fa5e9d438ce08f8fb1e6e"
+    },
+    "evidence": {
+      "path": "evidence.sqlite",
+      "bytes": 9134080,
+      "sha256": "37b977e13bc45f1a7a8f7377bd463d0559fbb1940498d9f2a1d300e6837aca4c"
+    },
+    "vectors": {
+      "path": "vectors.f32",
+      "bytes": 4079616,
+      "sha256": "5a11cc9be05d30553d61c5d798b8b6b8dba5268f30b081440f91e1d03bed49ba"
+    },
+    "graph": {
+      "path": "graph.bin",
+      "bytes": 121840,
+      "sha256": "09f63fc6abcedb948552c49d5d7350b684e3bb6a912e23de07b872a14ccc83f7"
+    },
+    "layout": {
+      "path": "layout.f32",
+      "bytes": 15936,
+      "sha256": "976f2c4dcadb6b2062c8e5cd9a080a3646a0a1ad3d5e1c0e9eb5ce98bfa7a774"
+    },
+    "graphManifest": {
+      "path": "graph-manifest.json",
+      "bytes": 40962,
+      "sha256": "6a452e56fa96ab932ff552e62d8e81dcc8368dcfc19c244436e7804e66c413a6"
+    },
+    "examples": {
+      "path": "examples.json",
+      "bytes": 1209863,
+      "sha256": "5e9ab0e42c105059bc1117b157c36fc2bc2de043ab3a051f0e2f2b242939ec0d"
+    }
+  },
+  "graph": {
+    "algorithm": "hnsw-static-cosine-v1",
+    "encoding": "csr-int32-v1",
+    "M": 12,
+    "efConstruction": 100,
+    "seed": 43,
+    "entry": 294,
+    "maxLevel": 3,
+    "layers": 2164,
+    "links": 26285
+  },
+  "layout": {
+    "method": "t-SNE",
+    "settings": {
+      "n_components": 2,
+      "perplexity": 30,
+      "early_exaggeration": 12,
+      "learning_rate": 100,
+      "max_iter": 1500,
+      "metric": "euclidean",
+      "init": "random",
+      "random_state": 20261004,
+      "method": "barnes_hut",
+      "angle": 0.5,
+      "n_jobs": 1
+    },
+    "fitInputs": "All512 components of each stored L2-normalized real audio vector; no metadata, genre or query labels",
+    "displayTransform": {
+      "center": [
+        -4.731647491455078,
+        -3.611347198486328
+      ],
+      "uniformScale": 63.05250930786133
+    },
+    "metrics": {
+      "8": {
+        "neighborRecall": 0.4582705823293173,
+        "minimumNeighborRecall": 0.0,
+        "trustworthiness": 0.969797413954885
+      }
+    },
+    "klDivergence": 1.4201985597610474,
+    "iterations": 1499,
+    "environment": {
+      "scikit-learn": "1.8.0",
+      "numpy": "2.3.5",
+      "threads": 1
+    },
+    "limitations": [
+      "Projection loses512-dimensional information; positions never determine search ranking.",
+      "Neighborhood preservation is a geometry diagnostic, not listener relevance."
+    ],
+    "count": 1992,
+    "bounds": [
+      -0.8697790503501892,
+      -1.0,
+      0.8697790503501892,
+      1.0
+    ]
+  },
+  "source": {
+    "kind": "music-corpus-release",
+    "manifestSha256": "32015637189671d9f2fa44429bd8baa56696439fa6b8f1967337c2d10bbfbe42",
+    "catalogSha256": "357e1db3de4e83e82f0daf03c10d0f392369e45346b4d8084a692ebd334a67db",
+    "rightsSha256": "a7f8a51038a3412eabd467a2beb84708696d3ab02b41a27d40b20deba3e70e5a",
+    "idsSha256": "edeb1206bcd5096eb2ad81a3748980b621b44ca117134c4bd4cc83bbd58cc7b4",
+    "indexSha256": "5bec8ddc4c9532e83b3c0045d6ee02b59fb4306c6918009780a4f2aa491d6e54",
+    "graphManifestSha256": "6a452e56fa96ab932ff552e62d8e81dcc8368dcfc19c244436e7804e66c413a6",
+    "layoutSha256": "f49d8688047644b95b8547d963efd7c2f64def7f702185f7bb04306ab08d35cb",
+    "artistRecordsSha256": "5a28677a9c7f1bafb76b30e410925c6c9a8a5dd33e50131f448a9fc722d4f5e6",
+    "examplesSha256": "5e9ab0e42c105059bc1117b157c36fc2bc2de043ab3a051f0e2f2b242939ec0d",
+    "evidenceFiles": 1992,
+    "evidenceBytes": 6997754
+  },
+  "build": {
+    "tool": "scripts/convert_release_v1_to_v2.py",
+    "python": "3.12.14",
+    "sqlite": "3.54.0",
+    "numpy": "2.3.5",
+    "v1ValidationLimits": {
+      "maxTracks": 2000,
+      "coreBytes": 16000000,
+      "evidenceBytes": 8000000,
+      "jsonBytes": 8000000
+    }
+  }
+}

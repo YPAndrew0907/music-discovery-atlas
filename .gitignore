@@ -3956,3 +3956,12 @@ __pycache__/
 !/validation/f1-hover/stop_server.sh
 !/validation/f1-hover/suites.txt
 !/validation/f1-hover/summary.json
+!/corpus-releases/fma2000-v2/
+!/corpus-releases/fma2000-v2/release.json
+!/corpus-releases/fma2000-v2/catalog.sqlite
+!/corpus-releases/fma2000-v2/evidence.sqlite
+!/corpus-releases/fma2000-v2/examples.json
+!/corpus-releases/fma2000-v2/graph-manifest.json
+!/corpus-releases/fma2000-v2/graph.bin
+!/corpus-releases/fma2000-v2/layout.f32
+!/corpus-releases/fma2000-v2/vectors.f32
